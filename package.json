@@ -1,0 +1,40 @@
+{
+  "name": "emu-base",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "fi": "npx rimraf **/node_modules/** && npx rimraf yarn.lock && yarn install",
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "keywords": [],
+  "author": "<%= author %> <<%= email %>>",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.21.0",
+    "husky": "^7.0.4",
+    "lint-staged": "^12.1.4",
+    "prettier": "^2.5.1",
+    "rimraf": "^3.0.2",
+    "turbo": "1.1.1",
+    "typescript": "^4.7.4"
+  },
+  "workspaces": {
+    "packages": [
+      "components/*",
+      "config/*",
+      "tools/*"
+    ],
+    "nohoist": [
+      "**/types",
+      "**/types/**",
+      "**/typescript",
+      "**/typescript/**"
+    ]
+  },
+  "packageManager": "yarn@1.22.18"
+}

@@ -1,0 +1,33 @@
+{
+  "name": "eslint-config-app",
+  "version": "0.0.0",
+  "description": "",
+  "private": true,
+  "main": "base.js",
+  "exports": {
+    ".": "./base.js",
+    "./react": "./react.js",
+    "./node": "./node.js",
+    "./electron": "./electron.js",
+    "./solid": "./solid.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^5.10.1",
+    "@typescript-eslint/parser": "^5.10.1",
+    "eslint-config-airbnb": "^19.0.4",
+    "eslint-config-airbnb-typescript": "^16.1.0",
+    "eslint-import-resolver-typescript": "^2.7.1",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-import": "^2.25.4",
+    "eslint-plugin-jsx-a11y": "^6.5.1",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-react": "^7.28.0",
+    "eslint-plugin-react-hooks": "^4.3.0",
+    "eslint-plugin-solid": "^0.4.7"
+  },
+  "gitHead": "63dbb270f1ae625566479126f444166084c1c93c",
+  "dependencies": {}
+}

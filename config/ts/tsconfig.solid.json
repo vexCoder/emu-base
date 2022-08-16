@@ -1,0 +1,19 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "lib": [
+            "dom",
+            "dom.iterable",
+            "esnext",
+        ],
+        "skipLibCheck": true,
+        // tell typescript how to import/export modules
+        // https://www.typescriptlang.org/tsconfig#module
+        "module": "esnext",
+        // https://www.typescriptlang.org/docs/handbook/module-resolution.html#node
+        "moduleResolution": "node",
+        "jsx": "preserve",
+        "jsxImportSource": "solid-js"
+    }
+  }
+  

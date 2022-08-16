@@ -1,0 +1,12 @@
+{
+    "extends": "ts-config/tsconfig.node.json",
+    "compilerOptions": {
+      "outDir": "dist",
+      "baseUrl": ".",
+      "paths": {
+        "@types": ["./types/index.ts"],
+      }
+    },
+    "include": ["types/*.ts", "./index.ts", "node_modules/7d2d-core/types/*.d.ts"]
+  }
+  

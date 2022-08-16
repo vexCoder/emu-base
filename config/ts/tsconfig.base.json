@@ -1,0 +1,33 @@
+{
+    "compilerOptions": {
+      // so you can use import star and dont have to deal with exports that has `default` in it
+      "esModuleInterop": true,
+      "forceConsistentCasingInFileNames": true,
+      "strict": true,
+      "strictNullChecks": true,
+      "strictFunctionTypes": true,
+      "noImplicitThis": true,
+      "alwaysStrict": true,
+      "noUnusedLocals": true,
+      "noUnusedParameters": true,
+      // avoid using `import * as X from Y` instead use `import X from Y`
+      "allowSyntheticDefaultImports": true,
+      // if imported libs rules collide with yours or to other libs, you can use this option
+      // https://stackoverflow.com/questions/52311779/usage-of-the-typescript-compiler-argument-skiplibcheck
+      "skipLibCheck": true,
+      // https://www.typescriptlang.org/tsconfig#isolatedModules
+      // just set this to true for now, since you dont want files without exports
+      "isolatedModules": true,
+      "resolveJsonModule": false,
+      // TURN THESE ON ALWAYS FOR DEBUGGING
+      // allows debugger to check where the file is coming from
+      "sourceMap": true,
+      // just set this to true always as you might want to import the project package to another package
+      "declaration": true,
+      // decrease compile time as it saves you from having to compile the same code over and over again
+      "incremental": true,
+      // should always land to one of the case/default inside a switch statement
+      "noFallthroughCasesInSwitch": true
+    }
+  }
+  

@@ -1,0 +1,13 @@
+{
+  "extends": "ts-config/tsconfig.electron.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@types/*": ["./types/*"],
+      "@preload/*": ["./preload/*"],
+      "@root/*": ["./src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "preload/**/*.ts", "types/*.ts", "node_modules/types/*.d.ts"],
+  "exclude": []
+}

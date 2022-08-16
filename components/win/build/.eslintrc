@@ -1,0 +1,17 @@
+{
+    "root": true,
+    "extends": [
+        "app/node"
+    ],
+    "parserOptions": {
+        "project": "./tsconfig.json",
+        "tsconfigRootDir": "./app/win/build",
+        "ecmaVersion": 2021,
+        "sourceType": "module"
+    },
+    "rules": {
+        "no-console": "off",
+        "no-plusplus": "off",
+        "import/no-extraneous-dependencies": "off"
+    }
+}

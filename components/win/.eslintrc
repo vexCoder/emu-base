@@ -1,0 +1,21 @@
+{
+  "extends": ["app/electron"],
+  "parserOptions": {
+    "project": "./tsconfig.json",
+    "tsconfigRootDir": "./app/win",
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "ignorePatterns": ["**/*.d.*", "**/*.js", "src/app.ts", "forge.config.ts"],
+  "rules": {
+    "no-console": "off",
+    "no-plusplus": "off"
+  },
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+          "project": "app/win/tsconfig.json"
+      }
+    }
+  }
+}
