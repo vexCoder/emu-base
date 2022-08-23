@@ -1,5 +1,10 @@
 import { BrowserWindow, Rectangle, screen } from "electron";
-import { join } from "path";
+import { dirname, join } from "path";
+
+/* eslint-disable import/prefer-default-export */
+
+import fs from "fs-extra";
+import got from "got";
 
 export interface WinSettings {
   x: number;
@@ -87,4 +92,22 @@ export const createWindow = (opts?: CreateWindowOptions) => {
   }
 
   return win;
+};
+
+export const fetchImage = async (url: string) => {
+  const test = await got(url, {
+    responseType: "buffer",
+  });
+
+  // @ts-ignore
+  const image = Buffer.from(test.body).toString("base64");
+
+  return image;
+};
+
+export const saveImage = async (path: string, url: string) => {
+  const base64 = await fetchImage(url);
+
+  await fs.ensureDir(dirname(path));
+  await fs.writeFile(path, base64, "base64");
 };

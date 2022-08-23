@@ -1,0 +1,45 @@
+{
+  "name": "games-scraper",
+  "version": "0.0.0",
+  "description": "",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:scrape": "ts-node --esm src/index.ts",
+    "execute": "set NODE_ENV=production && ts-node --esm -T src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "cheerio": "^1.0.0-rc.12",
+    "dayjs": "^1.11.5",
+    "fs-extra": "^10.1.0",
+    "got": "^12.3.1",
+    "lowdb": "^3.0.0",
+    "meow": "^10.1.3",
+    "nanoid": "^4.0.0",
+    "p-map": "^5.5.0",
+    "puppeteer": "^16.1.1",
+    "puppeteer-extra": "^3.3.4",
+    "puppeteer-extra-plugin-stealth": "^2.11.1",
+    "rambda": "^7.2.1",
+    "ramda": "^0.28.0",
+    "ts-node": "^10.4.0",
+    "x-ray": "^2.3.4"
+  },
+  "devDependencies": {
+    "@types/cheerio": "^0.22.31",
+    "@types/fs-extra": "^9.0.13",
+    "@types/lowdb": "^1.0.11",
+    "@types/node": "^18.7.8",
+    "@types/ramda": "^0.28.15",
+    "@types/x-ray": "^2.3.3",
+    "eslint-config-app": "*",
+    "ts-config": "*",
+    "types": "*"
+  },
+  "gitHead": "63dbb270f1ae625566479126f444166084c1c93c"
+}

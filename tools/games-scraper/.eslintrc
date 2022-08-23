@@ -1,21 +1,20 @@
 {
-  "extends": ["app/electron"],
+  "extends": ["app/node"],
   "parserOptions": {
     "project": "./tsconfig.json",
-    "tsconfigRootDir": "./components/win",
+    "tsconfigRootDir": "./tools/games-scraper",
     "ecmaVersion": 2021,
     "sourceType": "module"
   },
   "ignorePatterns": ["**/*.d.*", "**/*.js", "src/app.ts", "forge.config.ts"],
   "rules": {
     "no-console": "off",
-    "no-plusplus": "off",
-    "class-methods-use-this": "off"
+    "no-plusplus": "off"
   },
   "settings": {
     "import/resolver": {
       "typescript": {
-          "project": "components/win/tsconfig.json"
+          "project": "tools/games-scraper"
       }
     }
   }

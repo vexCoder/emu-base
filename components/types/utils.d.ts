@@ -1,0 +1,1 @@
+type InferPromise<T extends Promise<any>> = T extends Promise<infer U> ? U : T;

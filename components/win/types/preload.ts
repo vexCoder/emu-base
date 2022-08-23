@@ -20,12 +20,22 @@ export type RemoveIPC<T> = T extends []
     : [H, ...RemoveIPC<R>]
   : never;
 
-export type WindowFunction<T> = T extends (...args: any[]) => any
-  ? (...p: RemoveIPC<Parameters<T>>) => ReturnType<T>
+export type WindowFunction<T extends InferConnection<any>> = T extends {
+  parameters: any;
+  return: any;
+}
+  ? (...p: T["parameters"]) => T["return"]
+  : T;
+
+type InferConnection<T> = T extends Connection<infer P, infer R>
+  ? {
+      parameters: P;
+      return: R;
+    }
   : T;
 
 export type ExtendWindow = {
   [K in keyof Handles]: {
-    [K2 in HandlesKeys<K>]: WindowFunction<ExtractHandle<Handles[K][K2]>>;
+    [K2 in HandlesKeys<K>]: WindowFunction<InferConnection<Handles[K][K2]>>;
   };
 };

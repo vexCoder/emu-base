@@ -15,6 +15,12 @@ bind("win", (h, i) => {
   h("maximize", () => i(`win:maximize`));
 });
 
-bind("core", (h, i) => {
-  h("progression", () => i(`core:progression`));
+bind("data", (h, i) => {
+  h(
+    "getGames",
+    (keyword: string, console: string, limit?: number, offset?: number) =>
+      i(`data:getGames`, keyword, console, limit, offset)
+  );
+
+  h("getImage", (path: string, url?: string) => i(`data:getImage`, path, url));
 });

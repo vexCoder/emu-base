@@ -11,3 +11,6 @@ dist
 
 app/core/node
 app/core/dom
+
+dump
+temp

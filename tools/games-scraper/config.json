@@ -1,0 +1,13 @@
+{
+  "consoles": {
+    "ps1": {
+      "gameDb": "https://psxdatacenter.com/games/",
+      "parts": [
+        "https://archive.org/download/redump.psx",
+        "https://archive.org/download/redump.psx.p2",
+        "https://archive.org/download/redump.psx.p3",
+        "https://archive.org/download/redump.psx.p4"
+      ]
+    }
+  }
+}

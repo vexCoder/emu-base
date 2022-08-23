@@ -1,0 +1,30 @@
+{
+    "extends": [
+        "app/react"
+    ],
+    "parserOptions": {
+        "project": "./tsconfig.json",
+        "tsconfigRootDir": "./components/interface",
+        "ecmaVersion": 2021,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "jsx": true
+        }
+    },
+    "ignorePatterns": [
+        "vite.config.ts",
+        "**/*.d.*"
+    ],
+    "rules": {
+        "react/require-default-props": "off",
+        "react/jsx-props-no-spreading": "off",
+        "react/jsx-first-prop-new-line": [
+            "error",
+            "multiline"
+        ],
+        "react/react-in-jsx-scope": "off",
+        "react/jsx-max-props-per-line": "off",
+        "no-plusplus": "off",
+        "import/prefer-default-export": "off"
+    }
+}

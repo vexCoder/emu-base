@@ -1,0 +1,17 @@
+{
+    "extends": "ts-config/tsconfig.react.json",
+    "compilerOptions": {
+        "jsx": "react-jsx",
+        "paths": {
+            "@components/*": ["./src/components/*"],
+            "@providers/*": ["./src/providers/*"],
+            "@utils/*": ["./src/utils/*"],
+            "@hooks/*": ["./src/hooks/*"],
+            "@elements/*": ["./src/elements/*"],
+            "@page/*": ["./src/page/*"],
+            "@root/*": ["./src/*"]
+        }
+    },
+    "include": ["src/**/*.tsx", "src/**/*.ts", "node_modules/types/*.ts"],
+    "exclude": [ ]
+}

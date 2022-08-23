@@ -7,6 +7,6 @@
         "@types": ["./types/index.ts"],
       }
     },
-    "include": ["types/*.ts", "./index.ts", "node_modules/7d2d-core/types/*.d.ts"]
+    "include": ["types/*.ts", "./index.ts", "node_modules/types/*.d.ts"]
   }
   

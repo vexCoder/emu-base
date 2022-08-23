@@ -1,8 +1,8 @@
 /* eslint-disable import/prefer-default-export */
 import { app, BrowserWindow } from "electron";
+import { DataApi } from "./api/data";
 import { Handlers } from "./handlers";
 import { createWindow } from "./helper";
-import {ProgressionParser} from 'core/node'
 
 export class Application {
   win?: BrowserWindow;
@@ -19,11 +19,11 @@ export class Application {
       isDev,
       browserOptions: {
         webPreferences: {
-          webSecurity: false
-        }
-      }
+          webSecurity: false,
+        },
+      },
     });
-    
+
     return this;
   }
 
@@ -46,20 +46,32 @@ export class Application {
 
   attachHandlers() {
     // NOTE attach handlers for preload scripts
+    const Data = new DataApi.Resolver();
 
-    Handlers.register("win", "minimize",  () => this.win?.minimize());
-    Handlers.register("core", "progression",  async () => {
-      const parser = new ProgressionParser()
-      await parser.parse()
-      return parser.parsedData.progression
-    });
+    Handlers.register("win", "minimize", () => this.win?.minimize());
 
+    Handlers.register(
+      "data",
+      "getGames",
+      async (_evt, keyword, cns, limit, ) =>
+        await Data.getGames({ keyword, console: cns, limit, offset })
+    );
+
+    Handlers.register(
+      "data",
+      "getImage",
+      async (_evt, path, url) =>
+        await Data.getImage({ path, url })
+    );
+
+
+    
     return this;
   }
 
   static async boot() {
-    if(require('electron-squirrel-startup')) return;
-    
+    if (require("electron-squirrel-startup")) return;
+
     await app.whenReady();
     // eslint-disable-next-line prettier/prettier
     new Application().init().makeWindow().startEvents().attachHandlers();
