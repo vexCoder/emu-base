@@ -29,6 +29,7 @@ const init = async () => {
   const ids: string[] = [];
   const consoleSettings = await pMap(consoles, async (consoleName) => {
     const pathToConsoleDump = getDumpPath(consoleName);
+    await fs.ensureDir(pathToConsoleDump);
 
     const consoleData = settings.consoles.find((v) => v.key === consoleName);
 
@@ -50,6 +51,18 @@ const init = async () => {
       consoleData?.pathToData ?? join(pathToConsoleDump, "dump.json");
 
     settings.consoles.push();
+    // playstation-icon.svg
+    const assets = await fs.readdir(join(process.cwd(), "assets"));
+    const consoleAssetsPath = assets
+      .filter((v) => v.split("-").includes(consoleName))
+      .map((v) => ({
+        src: join(process.cwd(), "assets", v),
+        dest: join(pathToConsoleDump, v.split("-")[1]),
+      }));
+
+    await pMap(consoleAssetsPath, async (p) => {
+      await fs.copyFile(p.src, p.dest);
+    });
 
     return {
       id,

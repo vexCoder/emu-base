@@ -1,33 +1,15 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable import/prefer-default-export */
-import { join } from "path";
+import { getConsoleDump, saveImage } from "@utils/helper";
 import fs from "fs-extra";
-import { saveImage } from "@root/helper";
-import Db from "@root/api/db";
+import { join } from "path";
 
 export namespace DataApi {
   export class Resolver {
-    async getGames({
-      keyword,
-      console: cns,
-      limit = 10,
-      offset = 1,
-    }: GetGameParams) {
-      const db = new Db(cns);
+    async getGames({ console: cns }: GetGameParams) {
+      const db = await getConsoleDump(cns);
 
-      const arr = ((await db.getData("/parsed")) ?? []) as ConsoleGameData[];
-
-      const filter = arr.filter(({ official, common }) => {
-        const check = [official, common].some((v) => {
-          const lc = v.toLowerCase();
-
-          return !!lc.match(new RegExp(keyword.toLowerCase(), "g"));
-        });
-
-        return check;
-      });
-
-      return filter.slice(offset, offset + limit);
+      return db.value();
     }
 
     async getImage({ path, url }: GetImageParams) {
@@ -44,10 +26,7 @@ export namespace DataApi {
   }
 
   interface GetGameParams {
-    keyword: string;
     console: string;
-    limit?: number;
-    offset?: number;
   }
 
   interface GetImageParams {

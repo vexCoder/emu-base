@@ -8,10 +8,7 @@ export interface Handles {
 
   data: {
     // Paginate
-    getGames: Connection<
-      [keyword: string, console: string, limit?: number, offset?: number],
-      Promise<ConsoleGameData[]>
-    >;
+    getGames: Connection<[console: string], Promise<ConsoleGameData[]>>;
 
     getGame: Connection<[unique: number], Promise<ConsoleGameData>>;
 

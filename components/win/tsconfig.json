@@ -2,9 +2,12 @@
   "extends": "ts-config/tsconfig.electron.json",
   "compilerOptions": {
     "baseUrl": ".",
+    "esModuleInterop": true,
     "paths": {
       "@types/*": ["./types/*"],
       "@preload/*": ["./preload/*"],
+      "@utils/*": ["./src/utils/*"],
+      "@api/*": ["./src/api/*"],
       "@root/*": ["./src/*"]
     }
   },

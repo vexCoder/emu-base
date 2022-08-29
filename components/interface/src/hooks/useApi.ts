@@ -1,8 +1,5 @@
-import {
-  useAsyncAbortable,
-  useMountEffect,
-  useUnmountEffect,
-} from "@react-hookz/web";
+import { useAsyncEffect, useToggle } from "ahooks";
+import { useState } from "react";
 
 type ExtractReturn<T extends () => Promise<any> | any> = InferPromise<
   ReturnType<T>
@@ -12,23 +9,30 @@ const useApi = <T extends () => Promise<any> | any>(
   callback: T,
   initial: ExtractReturn<T>
 ) => {
-  const fetch = () => callback();
+  const [data, setData] = useState(initial);
+  const [error, setError] = useState<Error>();
+  const [loading, actions] = useToggle<boolean>();
+  const [timestamp, setTimestamp] = useState(new Date().toISOString());
+  // eslint-disable-next-line func-names
+  const fetch = async function* () {
+    try {
+      actions.set(true);
+      const res = await callback();
+      yield;
+      setData(res);
+      actions.set(false);
+    } catch (err) {
+      setError(err as Error);
+    }
+  };
 
-  const [state, actions] = useAsyncAbortable(fetch, initial);
-
-  useMountEffect(() => {
-    actions.execute();
-  });
-
-  useUnmountEffect(() => {
-    actions.abort();
-  });
+  useAsyncEffect(fetch, [timestamp]);
 
   return {
-    data: state.result,
-    refetch: actions.execute,
-    loading: state.status === "loading",
-    error: state.error,
+    data,
+    refetch: () => setTimestamp(new Date().toISOString()),
+    loading,
+    error,
   };
 };
 

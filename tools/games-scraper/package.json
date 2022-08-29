@@ -27,6 +27,8 @@
     "puppeteer-extra-plugin-stealth": "^2.11.1",
     "rambda": "^7.2.1",
     "ramda": "^0.28.0",
+    "scrape-youtube": "^2.3.2",
+    "string-similarity": "^4.0.4",
     "ts-node": "^10.4.0",
     "x-ray": "^2.3.4"
   },
@@ -36,6 +38,7 @@
     "@types/lowdb": "^1.0.11",
     "@types/node": "^18.7.8",
     "@types/ramda": "^0.28.15",
+    "@types/string-similarity": "^4.0.0",
     "@types/x-ray": "^2.3.3",
     "eslint-config-app": "*",
     "ts-config": "*",

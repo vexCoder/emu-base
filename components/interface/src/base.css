@@ -1,0 +1,123 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+@layer base {
+  html {
+    min-height: 100%;
+  }
+
+  body {
+    background: rgb(var(--color-primary));
+    transition: background 0.2s ease-in-out;
+    min-height: 100%;
+  }
+
+  .scroll1::-webkit-scrollbar {
+    width: 5px;
+  }
+   
+  .scroll1::-webkit-scrollbar-track {
+    background: #ddd;
+  }
+   
+  .scroll1::-webkit-scrollbar-thumb {
+    background: #666; 
+  }
+  
+  .scroll2::-webkit-scrollbar {
+    width: 5px;
+  }
+   
+  .scroll2::-webkit-scrollbar-thumb {
+    background: #666; 
+  }
+  
+  .scroll3::-webkit-scrollbar {
+    width: 5px;
+  }
+   
+  .scroll3::-webkit-scrollbar-thumb {
+    background: #ddd; 
+  }
+  
+  .scroll3::-webkit-scrollbar-track {
+    background: #666; 
+  }
+  
+  .scroll4::-webkit-scrollbar {
+    width: 10px;
+  }
+   
+  .scroll4::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 20px;
+  }
+  
+  .scroll4::-webkit-scrollbar-track {
+    background: #ddd;
+    border-radius: 20px;
+  }
+  
+  .scroll5::-webkit-scrollbar {
+    width: 15px;
+  }
+   
+  .scroll5::-webkit-scrollbar-thumb {
+    background: #666;
+  }
+  
+  .scroll5::-webkit-scrollbar-track {
+    background: #ddd;
+  }
+  
+  .scroll5::-webkit-scrollbar-button {
+    background: #666;
+    height: 15px;
+    border-radius: 50%;
+  }
+}
+
+@layer components {
+  #root {
+    min-height: 100%;
+  }
+
+  .game-list-flex {
+    @apply w-64 h-96 rounded-xl;
+  }
+
+  .game-item-image-selected {
+    @apply w-96 h-96 rounded-xl;
+  }
+
+  .game-item-image-unselected {
+    @apply w-48 h-48 rounded-xl;
+  }
+
+  .image-cache-container {
+    @apply block relative bg-secondary/10 animate-mount-enter-fade shadow-gentle-fade shadow-black/20 overflow-hidden;
+  }
+
+  .image-cache-image {
+    @apply w-full h-full animate-mount-enter-fade shadow-gentle-fade shadow-black/20 object-cover;
+  }
+}
+
+@layer utilities {
+  .v-stack {
+    @apply flex flex-col;
+  }
+
+  .v-stack-reverse {
+    @apply flex flex-col-reverse;
+  }
+
+  .h-stack {
+    @apply flex flex-row;
+  }
+
+  .h-stack-reverse {
+    @apply flex flex-row-reverse;
+  }
+}

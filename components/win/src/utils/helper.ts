@@ -1,9 +1,9 @@
-import { BrowserWindow, Rectangle, screen } from "electron";
+import { app, BrowserWindow, Rectangle, screen } from "electron";
 import { dirname, join } from "path";
+import FileAsync from "lowdb/adapters/FileAsync";
+import low from "lowdb";
 
-/* eslint-disable import/prefer-default-export */
-
-import fs from "fs-extra";
+import fs, { ensureDirSync } from "fs-extra";
 import got from "got";
 
 export interface WinSettings {
@@ -80,11 +80,11 @@ export const createWindow = (opts?: CreateWindowOptions) => {
 
     win.once("blur", () => {
       // Select which monitor to use
-      moveToMonitor(monitor, win, undefined, true);
+      moveToMonitor(monitor, win, undefined, false);
     });
   } else {
     // Select which monitor to use
-    moveToMonitor(monitor, win, undefined, true);
+    moveToMonitor(monitor, win, undefined, false);
   }
 
   if (browserOptions.alwaysOnTop) {
@@ -110,4 +110,46 @@ export const saveImage = async (path: string, url: string) => {
 
   await fs.ensureDir(dirname(path));
   await fs.writeFile(path, base64, "base64");
+};
+
+export const getDumpPath = (consoleName?: string) => {
+  const isDev = process.env.NODE_ENV === "development";
+
+  const base = isDev ? __dirname : app.getPath("appData");
+  const path = consoleName
+    ? join(base, "dump", consoleName)
+    : join(base, "dump");
+
+  ensureDirSync(path);
+  return path;
+};
+
+export const getEmuSettings = async () => {
+  const pathToDump = getDumpPath();
+  fs.removeSync(pathToDump);
+  fs.ensureDirSync(pathToDump);
+  const adapter = new FileAsync<AppSettings>(join(pathToDump, `settings.json`));
+  const db = await low(adapter);
+  await db.read();
+  return db;
+};
+
+export const getConsoleDump = async (consoleName: string) => {
+  const pathToDump = getDumpPath(consoleName);
+  fs.ensureDirSync(pathToDump);
+  const adapter = new FileAsync<ConsoleGameData[]>(
+    join(pathToDump, `dump.json`)
+  );
+  const db = await low(adapter);
+  await db.read();
+  return db;
+};
+
+export const getConsoleLinks = async (consoleName: string) => {
+  const pathToDump = getDumpPath(consoleName);
+  fs.ensureDirSync(pathToDump);
+  const adapter = new FileAsync<ConsoleLinks>(join(pathToDump, `links.json`));
+  const db = await low(adapter);
+  await db.read();
+  return db;
 };

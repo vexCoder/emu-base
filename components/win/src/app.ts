@@ -1,8 +1,8 @@
 /* eslint-disable import/prefer-default-export */
 import { app, BrowserWindow } from "electron";
 import { DataApi } from "./api/data";
-import { Handlers } from "./handlers";
-import { createWindow } from "./helper";
+import { Handlers } from "@utils/handlers";
+import { createWindow } from "@utils/helper";
 
 export class Application {
   win?: BrowserWindow;
@@ -53,19 +53,15 @@ export class Application {
     Handlers.register(
       "data",
       "getGames",
-      async (_evt, keyword, cns, limit, ) =>
-        await Data.getGames({ keyword, console: cns, limit, offset })
+      async (_evt, cns) => await Data.getGames({ console: cns })
     );
 
     Handlers.register(
       "data",
       "getImage",
-      async (_evt, path, url) =>
-        await Data.getImage({ path, url })
+      async (_evt, path, url) => await Data.getImage({ path, url })
     );
 
-
-    
     return this;
   }
 
@@ -73,6 +69,7 @@ export class Application {
     if (require("electron-squirrel-startup")) return;
 
     await app.whenReady();
+
     // eslint-disable-next-line prettier/prettier
     new Application().init().makeWindow().startEvents().attachHandlers();
   }

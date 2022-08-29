@@ -1,25 +1,43 @@
-import { useMountEffect } from "@react-hookz/web";
-import { HTMLAttributes, useState } from "react";
+import { useMount } from "ahooks";
+import clsx from "clsx";
+import { useState } from "react";
 
-interface ImageCacheProps extends HTMLAttributes<HTMLImageElement> {
+type ImageCacheProps = BaseComponentProps<"div"> & {
   path: string;
   url: string;
-}
+  imageProps?: BaseComponentProps<"img">;
+};
 
-const ImageCache = ({ path, url, ...rest }: ImageCacheProps) => {
-  const [img, setImage] = useState<HTMLImageElement | null>(null);
-  useMountEffect(async () => {
-    const image = new Image();
+const ImageCache = ({
+  path,
+  url,
+  imageProps = {},
+  ...rest
+}: ImageCacheProps) => {
+  const [image, setImage] = useState<HTMLImageElement | null>(null);
+  useMount(async () => {
+    const loadImage = new Image();
 
     const imagePath = await window.data.getImage(path, url);
-    image.src = imagePath || url;
+    loadImage.src = imagePath || url;
 
-    image.onload = () => {
-      setImage(image);
+    loadImage.onload = () => {
+      setImage(loadImage);
     };
   });
 
-  return <img src={img?.src} {...rest} alt="test" />;
+  return (
+    <div {...rest} className={clsx(rest.className, "image-cache-container")}>
+      {image && (
+        <img
+          {...imageProps}
+          className={clsx(imageProps.className, "image-cache-image")}
+          src={image.src}
+          alt="test"
+        />
+      )}
+    </div>
+  );
 };
 
 export default ImageCache;

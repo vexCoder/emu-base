@@ -6,6 +6,7 @@ interface Config {
 }
 
 interface GameConsole {
+  name: string;
   gameDb: string;
   parts: string[];
 }
@@ -45,15 +46,14 @@ interface ParsedLinks {
 }
 
 interface Scraper {
-  getLinks: (parts: string[]) => Promise<ParsedLinks[]>;
-  getDescriptions: (db: string) => Promise<Description[]>;
+  getLinks: (parts: string[]) => Promise<ConsoleLinks>;
+  getDescriptions: (db: GameConsole) => Promise<ConsoleGameData[]>;
 }
 
 interface BasicDescription {
-  id: string;
   cover: string;
   official: string;
-  common: string;
+  common: string[];
   serial: string[];
   region: string;
   genre: string[];
@@ -62,10 +62,6 @@ interface BasicDescription {
   released: number;
   ratings: string;
   unique: string;
-}
-
-interface Description extends BasicDescription {
-  screenshots: string[];
 }
 
 type BasicDescriptionRaw = {
@@ -76,23 +72,32 @@ interface DescriptionRaw {
   basic: BasicDescriptionRaw;
 }
 
+interface GameRegion {
+  title: string;
+  serials: string[];
+  region: string;
+}
+
 interface ConsoleGameData {
   id: string;
   // Description
   official: string;
-  common: string;
-  serial: string[];
-  region: string;
+  common: string[];
   genre: string[];
   developer: string;
   publisher: string;
   released: number;
   unique: string;
+  regions: GameRegion[];
+  description: string;
   
   // Images
   ratings: string;
   screenshots: string[];
   cover: string;
+
+  // Music
+  opening: string;
 
   // Parsed Links
   links: string[];

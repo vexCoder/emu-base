@@ -7,11 +7,13 @@
             "@providers/*": ["./src/providers/*"],
             "@utils/*": ["./src/utils/*"],
             "@hooks/*": ["./src/hooks/*"],
+            "@api/*": ["./src/api/*"],
             "@elements/*": ["./src/elements/*"],
-            "@page/*": ["./src/page/*"],
+            "@containers/*": ["./src/containers/*"],
+            "@css/*": ["./src/css/*"],
             "@root/*": ["./src/*"]
         }
     },
     "include": ["src/**/*.tsx", "src/**/*.ts", "node_modules/types/*.ts"],
-    "exclude": [ ]
+    "exclude": [ "tailwind.config.js" ]
 }

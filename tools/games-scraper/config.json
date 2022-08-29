@@ -1,6 +1,7 @@
 {
   "consoles": {
     "ps1": {
+      "name": "ps1",
       "gameDb": "https://psxdatacenter.com/games/",
       "parts": [
         "https://archive.org/download/redump.psx",

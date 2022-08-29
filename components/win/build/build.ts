@@ -1,6 +1,5 @@
 import dotenv from "dotenv";
 import { join } from "path";
-import fs from "fs-extra";
 import electron from "./electron";
 import obfuscator from "./obfuscator";
 import makeEsbuild from "./utils";
@@ -30,9 +29,6 @@ const build = async () => {
   }
 
   if (isDev) plugins.push(obfuscator());
-
-  const xmlConfig = join(process.cwd(), "..", "..", ".config");
-  await fs.copy(xmlConfig, join(pathToBuild, ".config"));
 
   await makeEsbuild(["src/index.ts", "preload/preload.ts"], pathToBuild, {
     watch: isDev,

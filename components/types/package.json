@@ -9,6 +9,8 @@
     "keywords": [],
     "author": "",
     "license": "ISC",
-    "gitHead": "63dbb270f1ae625566479126f444166084c1c93c"
-  }
-  
+    "gitHead": "63dbb270f1ae625566479126f444166084c1c93c",
+    "dependencies": {
+        "react": "18.2.0"
+    }
+}
