@@ -1,4 +1,4 @@
-import useGamePad from "@hooks/useGamePad";
+import useGamePad from "@hooks/useGamePad-01";
 import { useMemoizedFn, useToggle } from "ahooks";
 import { head, move } from "ramda";
 import { useRef } from "react";

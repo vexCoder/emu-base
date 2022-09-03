@@ -1,37 +1,17 @@
-import CONSTANTS from "@utils/constants.utils";
-import { mapAxes, mapButtons } from "@utils/gamepad.utils";
+import { getButtonName } from "@utils/gamepad.utils";
+import {
+  createCustomEvent,
+  createTimer,
+  CustomEventFactory,
+} from "@utils/helper";
 import { useGamepadStore } from "@utils/store.utils";
-import {
-  useDeepCompareEffect,
-  useMemoizedFn,
-  useMount,
-  useUnmount,
-} from "ahooks";
-import {} from "crypto";
+import { useEventListener, useMemoizedFn, useMount, useUnmount } from "ahooks";
 import { nanoid } from "nanoid";
-import {
-  allPass,
-  clamp,
-  curry,
-  equals,
-  evolve,
-  filter,
-  find,
-  is,
-  isNil,
-  keys,
-  mapObjIndexed,
-  mergeRight,
-  pickBy,
-  pipe,
-  propEq,
-  propOr,
-  slice,
-} from "ramda";
+import { filter, find, isNil, keys, pipe, propEq, propOr } from "ramda";
 import { useRef, useState } from "react";
 
 interface UseGamePadProps {
-  deadZone?: Partial<Record<AxesKeys, number>>;
+  pressOnly?: boolean;
   /** If keypress is attached to animation add a delay equals to anumation duration * 2 */
   delay?: number;
   /** Only pass boolean for exact matches & combinations */
@@ -40,188 +20,106 @@ interface UseGamePadProps {
     | Record<string, (isPressed?: boolean) => void>;
 }
 
+interface EventData {
+  data: [ButtonKeys, boolean];
+}
+
 const useGamePad = (props?: UseGamePadProps) => {
-  const {
-    deadZone = CONSTANTS.DEFAULT_DEADZONE,
-    events: evs = {},
-    delay = 50,
-  } = props || {};
-  const historyRef = useRef<ButtonKeys[]>([]);
-  const combinationRef = useRef<ButtonKeys[]>([]);
-  const buttonStatesRef = useRef<Record<ButtonKeys, boolean>>();
-  const axesRef = useRef<Record<AxesKeys, number>>();
-  const parsingRef = useRef<[boolean, boolean]>([false, false]);
-  const store = useGamepadStore();
+  const { events: evs = {}, delay = 100, pressOnly } = props || {};
   const [id] = useState(() => nanoid(21));
+  const gpRef = useRef<Gamepad>();
+  const buttonStateRef = useRef<Partial<Record<ButtonKeys, boolean>>>({});
+  const timerRef = useRef<() => void>();
+  const eventRef = useRef<CustomEventFactory<EventData>>();
+  const store = useGamepadStore();
 
   const [events] = useState(() => evs);
 
   const getIndex = propOr(-1, "index") as (gp: Maybe<Gamepad>) => number;
   const gamepadIndex = getIndex(store.gamepad);
 
-  const dz = pipe<
-    [Partial<Record<AxesKeys, number>>],
-    Partial<Record<AxesKeys, number>>,
-    Record<AxesKeys, number>
-  >(
-    pickBy(is(Number)),
-    mergeRight(CONSTANTS.DEFAULT_DEADZONE)
-  )(deadZone);
-
-  const clampAxes = useMemoizedFn(
-    curry((clamper: number, value: number) =>
-      value < 0 ? clamp(-1, -clamper, value) : clamp(clamper, 1, value)
-    )
-  );
-
   const getGamepad = pipe(
     filter((gp: Maybe<Gamepad>) => !!gp),
     find<Gamepad>(propEq("index", gamepadIndex))
   );
 
-  useDeepCompareEffect(() => {
-    if (gamepadIndex >= 0) {
-      const listener = () => {
-        if (!isNil(gamepadIndex)) {
-          const current = getGamepad(navigator.getGamepads());
+  const event = eventRef.current;
 
-          if (current) {
-            const mappedButtons = mapButtons([...current.buttons]);
-            const check = equals(mappedButtons, buttonStatesRef.current);
-
-            if (!check || !buttonStatesRef.current) {
-              if (parsingRef.current[0]) return;
-              parsingRef.current[0] = true;
-              const diff = pipe<
-                [Record<ButtonKeys, boolean>],
-                ButtonKeys[],
-                ButtonKeys[]
-              >(
-                keys<Record<ButtonKeys, boolean>>,
-                filter((key: ButtonKeys) => {
-                  const last = buttonStatesRef.current?.[key];
-                  const now = mappedButtons[key];
-                  return !equals(now, last);
-                })
-              )(mappedButtons);
-
-              const lastCombination = [
-                ...combinationRef.current,
-              ] as Pair<ButtonKeys>;
-
-              for (let i = 0; i < diff.length; i++) {
-                const key = diff[i];
-                const last = buttonStatesRef.current?.[key];
-                const now = mappedButtons[key];
-                const pressed = !last && now;
-                const released = last && !now;
-                if (pressed) {
-                  combinationRef.current = [
-                    ...combinationRef.current.slice(-1),
-                    key,
-                  ];
-                } else if (released) {
-                  // combinationRef.current = filter(
-                  //   (k: ButtonKeys) => !equals(k, key),
-                  //   combinationRef.current
-                  // );
-
-                  historyRef.current =
-                    historyRef.current.length === 5
-                      ? [...historyRef.current.slice(1), key]
-                      : [...historyRef.current, key];
-                }
+  const startTimer = () => {
+    timerRef.current = createTimer(() => {
+      const current = getGamepad(navigator.getGamepads());
+      if (!isNil(current) && event) {
+        current.buttons.forEach((button, index) => {
+          const name = getButtonName(index);
+          if (name) {
+            const last = buttonStateRef.current[name];
+            if (last !== button.pressed) {
+              if (button.pressed && name && pressOnly) {
+                event.dispatch({
+                  data: [name, button.pressed],
+                });
+              } else if (name) {
+                event.dispatch({
+                  data: [name, button.pressed],
+                });
               }
-
-              const newCombination = combinationRef.current as Pair<ButtonKeys>;
-              const eventKeys = keys(events);
-              for (let i = 0; i < eventKeys.length; i++) {
-                const key = eventKeys[i];
-                if (key.indexOf("+") > -1) {
-                  const [first, second] = key
-                    .split("+")
-                    .filter((v) => v.length) as Pair<ButtonKeys>;
-
-                  const pass = allPass([propEq(0, first), propEq(1, second)]);
-
-                  if (pass(newCombination)) {
-                    events[key](true);
-                  } else if (pass(lastCombination)) {
-                    events[key](false);
-                  }
-                } else if (key.indexOf(" ") > -1) {
-                  const matchKeys = key
-                    .split(" ")
-                    .filter((v) => v.length) as ButtonKeys[];
-
-                  const history = slice(
-                    -matchKeys.length,
-                    historyRef.current.length,
-                    historyRef.current
-                  );
-
-                  if (equals(matchKeys, history)) {
-                    events[key]();
-                  }
-                } else if (diff.includes(key as ButtonKeys)) {
-                  events[key](mappedButtons[key as ButtonKeys]);
-                }
-              }
-
-              buttonStatesRef.current = mappedButtons;
-              store.setMappedButtons(mappedButtons);
-
-              setTimeout(() => {
-                parsingRef.current[0] = false;
-              }, delay);
             }
 
-            const mappedAxes = mapAxes([...current.axes]);
-            const evolverDz = mapObjIndexed((v: number) => clampAxes(v), dz);
-            const clampedAxesState = evolve(evolverDz, mappedAxes);
-            const checkAxes = equals(clampedAxesState, axesRef.current);
-
-            if (!checkAxes || !axesRef.current) {
-              // axesRef.current = clampedAxesState;
-              // store.setMappedAxes(clampedAxesState);
-            }
+            buttonStateRef.current[name] = button.pressed;
           }
-        }
-      };
+        });
+      }
+    }, delay);
+  };
 
-      store.resetLoop(id, listener);
+  const listener = (_e: CustomEvent<EventData>, { data }: EventData) => {
+    const eventKeys = keys(events);
+
+    for (let i = 0; i < eventKeys.length; i++) {
+      const key = eventKeys[i];
+      if (data[0] === key) {
+        if (pressOnly && data[1]) {
+          events[key](true);
+        } else if (!pressOnly) {
+          events[key](data[1]);
+        }
+      }
     }
-  }, [gamepadIndex, dz, events, delay]);
+  };
 
   useMount(() => {
-    const connected = (ev: GamepadEvent) => {
-      const gamepads = navigator.getGamepads().filter((v): v is Gamepad => !!v);
-      store.set((prev) => ({
-        gamepads,
-        gamepad: !prev.gamepad ? ev.gamepad : prev.gamepad,
-        connected: true,
-      }));
-    };
+    eventRef.current = createCustomEvent("onpressgamepad", id);
+    eventRef.current.subscribe(listener);
+  });
 
-    const disconnected = (ev: GamepadEvent) => {
-      const gamepads = navigator.getGamepads().filter((v): v is Gamepad => !!v);
-      store.set((prev) => ({
-        gamepads,
-        gamepad:
-          prev.gamepad && prev.gamepad.id === ev.gamepad.id
-            ? undefined
-            : prev.gamepad,
-        connected: false,
-      }));
-    };
+  useUnmount(() => {
+    timerRef.current?.();
+    event?.unsubscribe(listener);
+  });
 
-    window.addEventListener("gamepadconnected", connected);
-    window.addEventListener("gamepaddisconnected", disconnected);
+  const setGamepad = useMemoizedFn((ev: GamepadEvent) => {
+    const gamepads = navigator.getGamepads().filter((v): v is Gamepad => !!v);
+    store.set((prev) => ({
+      gamepads,
+      gamepad: !prev.gamepad ? ev.gamepad : prev.gamepad,
+      connected: !ev.gamepad && !prev.gamepad,
+    }));
 
-    return () => {
-      window.removeEventListener("gamepadconnected", connected);
-      window.removeEventListener("gamepaddisconnected", disconnected);
-    };
+    gpRef.current = ev.gamepad;
+
+    const connectedGamepads = gamepads.filter((v) => v.connected).length;
+    if (!timerRef.current) startTimer();
+    if (timerRef.current && !connectedGamepads) timerRef.current = undefined;
+  });
+
+  useEventListener("gamepadconnected", (ev) => {
+    // console.log(`${ev.gamepad.id} connected`);
+    setGamepad(ev);
+  });
+
+  useEventListener("gamepaddisconnected", (ev) => {
+    // console.log(`${ev.gamepad.id} disconnected`);
+    setGamepad(ev);
   });
 
   useUnmount(() => {

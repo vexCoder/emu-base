@@ -1,69 +1,87 @@
-import * as R from "ramda";
-import { findBestMatch } from "string-similarity";
+import { curry } from "ramda";
 
-export const scoreMatchStrings = (
-  src: string,
-  target: string
-  // outliers: number = 0.25
+export const createTimer = <T extends (ts: number, elapsed: number) => void>(
+  step: T,
+  wait: number = 100,
+  timeout: number = 0
 ) => {
-  const keywords = R.pipe(
-    R.toLower,
-    R.split(" "),
-    R.map(R.trim),
-    R.map(R.replace(/([^a-z0-9])/g, ""))
-  )(target);
+  const timestamp = {
+    start: 0,
+    end: 0,
+  };
 
-  // const bestMatch = (src2: string) => R.curry(findBestMatch)(src2)(keywords);
+  const timerStep = (ts: number) => {
+    if (!timestamp.start) timestamp.start = ts;
+    const elapsed = ts - timestamp.start;
+    if (timestamp.end !== ts) {
+      if (timeout ? elapsed >= timeout : timestamp.start === -1) return;
+      step(ts, elapsed);
+    }
 
-  const split = R.pipe(
-    R.split(" "),
-    R.map(R.toLower),
-    R.map(R.replace(/([^a-z0-9])/g, "")),
-    R.map(R.trim),
-    R.filter((v: string) => !!v.length)
-  )(src);
+    setTimeout(() => {
+      timestamp.end = ts;
+      window.requestAnimationFrame(timerStep);
+    }, wait);
+  };
 
-  const intersected = R.intersection(split, keywords);
+  timerStep(0);
 
-  // const ratings = R.pipe(
-  //   R.map(bestMatch),
-  //   R.map((m) => m.bestMatch.rating),
-  //   (list) => R.reject((o: number) => o <= outliers, list)
-  // )(intersected);
-
-  // const averageScore = R.mean(ratings);
-
-  return intersected.length / keywords.length;
+  return () => {
+    timestamp.start = -1;
+  };
 };
 
-export const scoreMatchStringsSc = (
-  src: string[],
-  target: string
-  // outliers: number = 0.25
-) => {
-  const keywords = R.pipe(R.toLower, R.split(" "), R.map(R.trim))(target);
-  const bestMatch = (src2: string) => R.curry(findBestMatch)(src2)(keywords);
+export interface CustomEventFactory<T = {}> {
+  subscribers: string[];
+  subscribe: (listener: (e: CustomEvent<T>, data: T) => void) => void;
+  unsubscribe: (listener: (e: CustomEvent<T>, data: T) => void) => void;
+  dispatch: (data: T) => void;
+}
 
-  const check = src.some((v) => {
-    const split = R.pipe(
-      R.split(" "),
-      R.map(R.replace(/([^a-z0-9])/g, "")),
-      R.map(R.trim),
-      R.map(R.toLower)
-    )(v);
-
-    const ratings = R.pipe(
-      R.map(bestMatch),
-      R.map((m) => m.bestMatch.rating),
-      (list) => list.filter((o) => o > 0.5)
-    )(split);
-
-    const averageScore = R.mean(ratings);
-
-    const match = averageScore > 0.7;
-
-    return match;
-  });
-
-  return check;
+export const createCustomEvent = <T extends object = {}>(
+  name: "onpressgamepad",
+  id: string
+): CustomEventFactory<T> => {
+  const target = new EventTarget();
+  const obj: CustomEventFactory<T> = {
+    subscribers: [],
+    subscribe(callback: (e: CustomEvent<T>, data: T) => void) {
+      if (!this.subscribers.includes(id)) {
+        this.subscribers.push(id);
+        target.addEventListener(name, (e) => {
+          const cast = e as CustomEvent<T>;
+          callback(cast, cast.detail);
+        });
+      }
+    },
+    unsubscribe(callback: (e: CustomEvent<T>, data: T) => void) {
+      if (this.subscribers.includes(id)) {
+        this.subscribers = this.subscribers.filter((v) => v !== id);
+        target.removeEventListener(name, (e) => {
+          const cast = e as CustomEvent<T>;
+          callback(cast, cast.detail);
+        });
+      }
+    },
+    dispatch(data: T) {
+      const event = new CustomEvent<T>(name, { detail: data });
+      target.dispatchEvent(event);
+    },
+  };
+  return obj;
 };
+
+export const extractString = curry(
+  (regexp: RegExp, text: string, trim?: boolean) => {
+    const res = new RegExp(regexp).exec(text)?.[1];
+
+    return trim ? res?.trim() : res;
+  }
+);
+
+export const extractMatches = curry(
+  (regexp: RegExp, text: string, trim?: boolean) => {
+    const arr = text.match(new RegExp(regexp)) ?? [];
+    return arr?.map((o) => (trim ? o.trim() : o));
+  }
+);

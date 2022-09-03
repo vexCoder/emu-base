@@ -1,7 +1,7 @@
 import { ThemeKeys, themeKeys } from "@root/themes";
 import { clamp } from "ramda";
 import create from "zustand";
-import { subscribeWithSelector } from "zustand/middleware";
+import { persist, subscribeWithSelector } from "zustand/middleware";
 import CONSTANTS from "./constants.utils";
 
 export interface ThemeStore {
@@ -138,3 +138,15 @@ export const useMainStore = create(
     },
   }))
 );
+
+export interface DebugStore {
+  test: number;
+}
+
+export const useDebugStore = create<
+  DebugStore,
+  [
+    ["zustand/subscribeWithSelector", DebugStore],
+    ["zustand/persist", DebugStore]
+  ]
+>(subscribeWithSelector(persist(() => ({ test: 0 }), { name: "debug" })));

@@ -5,6 +5,19 @@ import low from "lowdb";
 
 import fs, { ensureDirSync } from "fs-extra";
 import got from "got";
+import {
+  toLower,
+  split,
+  map,
+  trim,
+  replace,
+  filter,
+  intersection,
+  curry,
+  mean,
+  pipe,
+} from "ramda";
+import { findBestMatch } from "string-similarity";
 
 export interface WinSettings {
   x: number;
@@ -152,4 +165,71 @@ export const getConsoleLinks = async (consoleName: string) => {
   const db = await low(adapter);
   await db.read();
   return db;
+};
+
+export const scoreMatchStrings = (
+  src: string,
+  target: string
+  // outliers: number = 0.25
+) => {
+  const targetSegment = pipe(
+    toLower,
+    split(" "),
+    map(trim),
+    map(replace(/([^a-z0-9])/g, ""))
+  )(target);
+
+  // const bestMatch = (src2: string) => curry(findBestMatch)(src2)(keywords);
+
+  const sourceSegment = pipe(
+    split(" "),
+    map(toLower),
+    map(replace(/([^a-z0-9])/g, "")),
+    map(trim),
+    filter((v: string) => !!v.length)
+  )(src);
+
+  const intersected = intersection(sourceSegment, targetSegment);
+
+  // const ratings = pipe(
+  //   map(bestMatch),
+  //   map((m) => m.bestMatch.rating),
+  //   (list) => reject((o: number) => o <= outliers, list)
+  // )(intersected);
+
+  // const averageScore = mean(ratings);
+
+  return intersected.length / targetSegment.length;
+};
+
+export const scoreMatchStringsSc = (
+  src: string[],
+  target: string
+  // outliers: number = 0.25
+) => {
+  const keywords = pipe(toLower, split(" "), map(trim))(target);
+  const bestMatch = (src2: string) => curry(findBestMatch)(src2)(keywords);
+
+  const check = src.some((v) => {
+    const sourceSegment = pipe(
+      split(" "),
+      map(replace(/([^a-z0-9])/g, "")),
+      map(trim),
+      map(toLower)
+    )(v);
+
+    const ratings = pipe(
+      map(bestMatch),
+      map((m) => m.bestMatch.rating),
+      (list) => list.filter((o) => o > 0.5)
+    )(sourceSegment);
+
+    const averageScore = mean(ratings);
+
+    const match = averageScore > 0.7;
+
+    return match;
+  });
+
+  return check;
 };

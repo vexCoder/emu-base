@@ -53,13 +53,31 @@ export class Application {
     Handlers.register(
       "data",
       "getGames",
-      async (_evt, cns) => await Data.getGames({ console: cns })
+      async (_evt, keyword, cns, page, limit) => await Data.getGames({ console: cns, keyword, page, limit })
+    );
+
+    Handlers.register(
+      "data",
+      "getGameFiles",
+      async (_evt, id, cons) => await Data.getGameFiles({ id, console: cons })
     );
 
     Handlers.register(
       "data",
       "getImage",
       async (_evt, path, url) => await Data.getImage({ path, url })
+    );
+
+    Handlers.register(
+      "data",
+      "getGameLinks",
+      async (_evt, keyword, tags, cons) => await Data.getGameLinks({ keyword, tags, console: cons })
+    );
+
+    Handlers.register(
+      "data",
+      "setGameLinks",
+      async (_evt, id, serials, links, cons) => await Data.setGameLinks({ id, serials, links, console: cons })
     );
 
     return this;

@@ -95,6 +95,10 @@
     @apply w-48 h-48 rounded-xl;
   }
 
+  .game-item-button {
+    @apply w-96 py-2 rounded-xl font-bold uppercase;
+  }
+
   .image-cache-container {
     @apply block relative bg-secondary/10 animate-mount-enter-fade shadow-gentle-fade shadow-black/20 overflow-hidden;
   }

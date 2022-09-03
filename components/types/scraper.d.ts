@@ -75,6 +75,7 @@ interface DescriptionRaw {
 interface GameRegion {
   title: string;
   serials: string[];
+  links?: string[];
   region: string;
 }
 

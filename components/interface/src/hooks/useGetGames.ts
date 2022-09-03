@@ -1,6 +1,4 @@
-import { scoreMatchStrings } from "@utils/helper";
-import { useEffect } from "react";
-import useApi from "./useApi";
+import { useRequest } from "ahooks";
 
 interface UseGetGamesParams {
   keyword: string;
@@ -9,43 +7,28 @@ interface UseGetGamesParams {
   page?: number;
 }
 
+const getGames = async (
+  keyword: string,
+  cons: string,
+  page: number,
+  limit: number
+) => {
+  if (!cons) throw new Error("Please provide a console");
+  const d = await window.data.getGames(keyword, cons, limit, page);
+  return d;
+};
+
 const useGetGames = ({
-  console: cns,
+  console: cons,
   keyword,
-  limit = Infinity,
+  limit = 5,
   page = 0,
 }: UseGetGamesParams) => {
-  // {
-  //   keyword: "final fantasy",
-  //   console: "ps1",
-  //   limit: store.count + 4,
-  //   page,
-  // }
-
-  const getGames = async () => {
-    if (!cns) throw new Error("Please provide a console");
-    const d = await window.data.getGames(cns);
-    return d;
-  };
-
-  const res = useApi(getGames, []);
-
-  useEffect(() => {
-    if (res.data) {
-      res.refetch();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cns]);
-
-  const parsed = res.data;
-
-  const filter = parsed.filter(({ official }) => {
-    return scoreMatchStrings(official, keyword) > 0.5;
+  const res = useRequest(() => getGames(keyword, cons, limit, page), {
+    refreshDeps: [keyword, cons, limit, page],
   });
 
-  const arr: ConsoleGameData[] = filter.slice(page, page + limit);
-
-  return { ...res, data: arr };
+  return res;
 };
 
 export default useGetGames;
