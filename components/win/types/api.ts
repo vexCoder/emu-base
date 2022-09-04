@@ -22,6 +22,11 @@ export interface Handles {
 
     getGameFiles: Connection<
       [id: string, console: string],
+      Promise<GameRegionFiles | undefined>
+    >;
+
+    getGameRegionSettings: Connection<
+      [id: string, console: string],
       Promise<GameRegionFiles[]>
     >;
 
@@ -31,8 +36,23 @@ export interface Handles {
     >;
 
     setGameLinks: Connection<
-      [id: string, serials: string[], links: string[], console: string],
-      Promise<ConsoleGameData>
+      [id: string, serials: string[], links: ParsedLinks[], console: string],
+      Promise<{ [key: string]: string }>
+    >;
+
+    downloadDisc: Connection<
+      [serial: string, id: string, cons: string],
+      Promise<boolean>
+    >;
+
+    getDownloadProgress: Connection<
+      [serial: string],
+      Promise<DownloadProgress | undefined>
+    >;
+
+    play: Connection<
+      [serial: string, id: string, console: string],
+      Promise<boolean>
     >;
   };
 }

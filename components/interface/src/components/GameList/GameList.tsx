@@ -17,7 +17,7 @@ import GameDetails from "./GameDetails";
 import GameImage from "./GameImage";
 
 const selector = (v: MainStore) =>
-  pick(["selected", "select", "count", "cycle", "set", "games"], v);
+  pick(["selected", "select", "count", "cycle", "set", "games", "disc"], v);
 
 const GameList = () => {
   const [max, maxCounter] = useCounter(0);
@@ -49,7 +49,7 @@ const GameList = () => {
     <div className="relative mt-[15vh] w-full h-[75vh]">
       <div className="h-[22rem]">
         <Segment
-          keyword="final fantasy"
+          keyword="parasite eve"
           selected={selected}
           increaseMax={(n: number) => maxCounter.inc(n)}
         />

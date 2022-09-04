@@ -1,17 +1,24 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable import/prefer-default-export */
+import Constants from "@utils/constants";
+import Globals from "@utils/globals";
 import {
   getConsoleDump,
   getConsoleLinks,
+  getDiscMappings,
   getDumpPath,
   saveImage,
   scoreMatchStrings,
 } from "@utils/helper";
-import fs from "fs-extra";
+import fs, { createWriteStream } from "fs-extra";
+import got from "got";
 import { ObjectChain } from "lodash";
 import pMap from "p-map";
-import { join } from "path";
-import { filter, head, is, mergeRight, toLower } from "ramda";
+import { extname, join } from "path";
+import { filter, head, is, toLower, intersection } from "ramda";
+import { DownloadStatus } from "types/enums";
+import extract from "extract-zip";
+import execa from "execa";
 
 export namespace DataApi {
   export class Resolver {
@@ -53,9 +60,48 @@ export namespace DataApi {
       }
     }
 
-    async getGameFiles({ id, console: cons }: CheckGameParams) {
+    async getGameFiles({ id, console: cons }: GetGameFilesParams) {
       const pathToDump = getDumpPath(cons);
       const db = await getConsoleDump(cons);
+      const mappings = await getDiscMappings(cons);
+      const game = db.find({ id }).value() as ConsoleGameData;
+      const serialMappings = Object.keys(mappings.get(id).value() ?? {});
+      const region = game?.regions.find(
+        ({ serials }) =>
+          intersection(serials, serialMappings).length === serials.length
+      );
+
+      if (!game || !game?.regions.length || !serialMappings || !region)
+        return undefined;
+
+      const gameFilePath = join(pathToDump, game.unique);
+      const gameFiles = await pMap(region.serials, async (serial) => {
+        const exts = ["iso", "bin"];
+        const extFiles = await pMap(exts, async (ext) => {
+          const pathToFile = join(gameFilePath, serial, `${serial}.${ext}`);
+          const check = await fs.pathExists(pathToFile);
+          return check ? pathToFile : undefined;
+        });
+
+        return {
+          serial,
+          playable: extFiles.some(is(String)),
+          link: mappings.get(`${id}.${serial}`).value(),
+          path: head(filter(is(String), extFiles)),
+        };
+      });
+
+      return {
+        title: region.title,
+        region: region.region,
+        gameFiles,
+      };
+    }
+
+    async getGameRegionSettings({ id, console: cons }: GetGameFilesParams) {
+      const pathToDump = getDumpPath(cons);
+      const db = await getConsoleDump(cons);
+      const mappings = await getDiscMappings(cons);
       const game = db.find({ id }).value() as ConsoleGameData;
 
       if (!game || !game.regions.length) return [];
@@ -64,7 +110,7 @@ export namespace DataApi {
         const gameFiles = await pMap(region.serials, async (serial) => {
           const exts = ["iso", "bin"];
           const extFiles = await pMap(exts, async (ext) => {
-            const pathToFile = join(gameFilePath, `${serial}.${ext}`);
+            const pathToFile = join(gameFilePath, serial, `${serial}.${ext}`);
             const check = await fs.pathExists(pathToFile);
             return check ? pathToFile : undefined;
           });
@@ -72,6 +118,7 @@ export namespace DataApi {
           return {
             serial,
             playable: extFiles.some(is(String)),
+            link: mappings.get(`${id}.${serial}`).value(),
             path: head(filter(is(String), extFiles)),
           };
         });
@@ -89,46 +136,21 @@ export namespace DataApi {
     async getGameLinks({ keyword, tags, console: cons }: GetGameLinksParams) {
       const db = await getConsoleLinks(cons);
 
-      const PalRegions = [
-        "Germany",
-        "Sweden",
-        "Finland",
-        "Denmark",
-        "Norway",
-        "France",
-        "Spain",
-        "Italy",
-        "Netherlands",
-        "Belgium",
-        "Austria",
-      ];
-
-      const NTSCURegions = [
-        "USA",
-        "Canada",
-        "Mexico",
-        "Brazil",
-        "Argentina",
-        "Chile",
-      ];
-
-      const NTSCJRegions = ["Japan", "Korea", "Taiwan"];
-
       const filtered = db.filter(({ title, tags: linkTags }: ParsedLinks) => {
         const score = scoreMatchStrings(title, keyword) > 0.5;
         const isPal =
           linkTags.some((t) =>
-            PalRegions.map(toLower).includes(t.toLowerCase())
+            Constants.PAL.map(toLower).includes(t.toLowerCase())
           ) && tags.map(toLower).includes("pal");
 
         const isNTSCU =
           linkTags.some((t) =>
-            NTSCURegions.map(toLower).includes(t.toLowerCase())
+            Constants.NTSCU.map(toLower).includes(t.toLowerCase())
           ) && tags.map(toLower).includes("ntsc-u");
 
         const isNTSCJ =
           linkTags.some((t) =>
-            NTSCJRegions.map(toLower).includes(t.toLowerCase())
+            Constants.NTSCJ.map(toLower).includes(t.toLowerCase())
           ) && tags.map(toLower).includes("ntsc-j");
 
         return score && (isPal || isNTSCU || isNTSCJ);
@@ -152,6 +174,7 @@ export namespace DataApi {
       console: cons,
     }: SetGameLinksParams) {
       const db = await getConsoleDump(cons);
+      const mappings = await getDiscMappings(cons);
 
       const find = db.find(
         (v: ConsoleGameData) =>
@@ -161,24 +184,146 @@ export namespace DataApi {
 
       const value = find.value();
 
-      const newRegions = value.regions.map((r) => {
-        console.log(r);
-        const check = r.serials.every((s) => serials.includes(s));
+      if (!value) return false;
 
-        if (check) {
-          return mergeRight(r, { links });
-        }
+      let newMappings = {};
+      for (let i = 0; i < serials.length; i++) {
+        const serial = serials[i];
+        mappings.set(`${value.id}.${serial}`, links[i]).write();
+        newMappings = { ...newMappings, [serial]: links[i] };
+      }
 
-        return r;
+      return newMappings;
+    }
+
+    async downloadDisc({ console: cons, id, serial }: DownloadDiscParams) {
+      const db = await getConsoleDump(cons);
+      const mappings = await getDiscMappings(cons);
+
+      const pathToDump = getDumpPath(cons);
+      const game = db.find({ id }).value() as ConsoleGameData;
+      const link = mappings.get(`${id}.${serial}`).value();
+      if (!game || !link) return false;
+
+      const gameFilePath = join(pathToDump, game.unique, serial);
+      const gameFile = join(pathToDump, game.unique, `${serial}.zip`);
+      const downloadStream = got.stream(link.link);
+      const fileWriterStream = createWriteStream(gameFile);
+
+      await fs.ensureDir(gameFilePath);
+      const handleRemove = (reason: string, error = true) => {
+        if (error) console.error(reason);
+        else console.log(reason);
+        Globals.merge(`download-${serial}-progress`, {
+          status: DownloadStatus.Completed,
+        });
+
+        setTimeout(() => {
+          Globals.remove(`download-${serial}-progress`);
+        }, 5000);
+      };
+
+      downloadStream
+        .on("downloadProgress", ({ transferred, total, percent }) => {
+          console.log(percent);
+          const percentage = Math.round(percent * 100);
+          Globals.merge(`download-${serial}-progress`, {
+            percentage,
+            transferred,
+            total,
+          });
+        })
+        .on("error", (error) => {
+          handleRemove(`Download failed: ${error.message}`);
+        });
+
+      fileWriterStream
+        .on("error", (error) => {
+          handleRemove(`Could not write file to system: ${error.message}`);
+        })
+        .on("finish", () => {
+          console.log(`File downloaded to ${gameFile}`);
+
+          Globals.merge(`download-${serial}-progress`, {
+            status: DownloadStatus.Extracting,
+          });
+
+          extract(gameFile, { dir: gameFilePath }).then(() => {
+            fs.readdirSync(gameFilePath).forEach((v) => {
+              const ext = extname(v);
+              const newPath = join(gameFilePath, `${serial}${ext}`);
+              fs.renameSync(join(gameFilePath, v), newPath);
+            });
+
+            handleRemove(`File downloaded to ${gameFilePath}`, false);
+          });
+        });
+
+      downloadStream.pipe(fileWriterStream);
+
+      Globals.set(`download-${serial}-progress`, {
+        percentage: 0,
+        status: DownloadStatus.Downloading,
+        transferred: 0,
+        total: 0,
       });
 
-      const newValue = mergeRight(value, { regions: newRegions });
-
-      const game = await find.assign(newValue).write();
-
-      console.log(game);
-      return game;
+      return true;
     }
+
+    async getDownloadProgress({ serial }: GetDownloadProgressParams) {
+      const progress = Globals.get(`download-${serial}-progress`) as
+        | DownloadProgress
+        | undefined;
+
+      return (
+        progress ?? {
+          percentage: 0,
+          status: DownloadStatus.NotDownloading,
+          transferred: 0,
+          total: 0,
+        }
+      );
+    }
+
+    async play({ id, console: cons, serial }: PlayParams) {
+      const pathToDump = getDumpPath(cons);
+      const db = await getConsoleDump(cons);
+
+      const game = db.find({ id }).value() as ConsoleGameData;
+      const gameFilePath = join(pathToDump, game.unique, serial);
+      const exts = [".iso", ".bin"];
+      const gameFile = await pMap(await fs.readdir(gameFilePath), async (v) => {
+        const ext = extname(v);
+        if (exts.includes(ext)) return join(gameFilePath, v);
+        return false;
+      });
+
+      const config = join(pathToDump, "config.cfg");
+
+      const disc = head(gameFile.filter(is(String))) as string;
+      if (!disc) return false;
+
+      const core = `F:\\Apps\\RetroArch-Win64\\cores\\swanstation_libretro.dll`;
+
+      await execa(`retroarch`, ["-L", core, "--config", config, disc]);
+      return true;
+    }
+  }
+
+  interface PlayParams {
+    id: string;
+    serial: string;
+    console: string;
+  }
+  interface GetDownloadProgressParams {
+    serial: string;
+  }
+
+  interface DownloadDiscParams {
+    serial: string;
+    id: string;
+    console: string;
   }
 
   interface GetGameParams {
@@ -193,7 +338,7 @@ export namespace DataApi {
     url?: string;
   }
 
-  interface CheckGameParams {
+  interface GetGameFilesParams {
     id: string;
     console: string;
   }
@@ -207,7 +352,7 @@ export namespace DataApi {
   interface SetGameLinksParams {
     id: string;
     serials: string[];
-    links: string[];
+    links: ParsedLinks[];
     console: string;
   }
 }

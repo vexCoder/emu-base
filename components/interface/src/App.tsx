@@ -7,6 +7,7 @@ import { Hotkeys } from "@components/Utils/Hotkeys";
 import Debug from "@containers/Debug";
 import Main from "@containers/Main";
 import MountSubscriber from "@providers/MountSubscriber";
+import { AnimatePresence } from "framer-motion";
 import { HashRouter, Route, Routes } from "react-router-dom";
 
 const App = () => {
@@ -14,14 +15,16 @@ const App = () => {
     <MountSubscriber>
       <HashRouter>
         <Hotkeys />
-        <Routes>
-          <Route path="/" element={<Main />} />
-          <Route path="debug" element={<Debug />}>
-            <Route path="controller" element={<ControllerDebug />} />
-            <Route path="controller2" element={<ControllerDebug2 />} />
-            <Route path="timer" element={<TimerDebug />} />
-          </Route>
-        </Routes>
+        <AnimatePresence>
+          <Routes>
+            <Route path="/" element={<Main />} />
+            <Route path="debug" element={<Debug />}>
+              <Route path="controller" element={<ControllerDebug />} />
+              <Route path="controller2" element={<ControllerDebug2 />} />
+              <Route path="timer" element={<TimerDebug />} />
+            </Route>
+          </Routes>
+        </AnimatePresence>
       </HashRouter>
     </MountSubscriber>
   );

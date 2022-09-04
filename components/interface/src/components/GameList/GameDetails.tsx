@@ -1,15 +1,17 @@
 import Modal from "@elements/Modal";
 import RenderString from "@elements/RenderString";
 import Transition from "@elements/Transition";
-import useGetGameFiles from "@hooks/useGetGamesFiles";
+import useGetGameFiles from "@hooks/useGetGameFiles";
 import { extractString } from "@utils/helper";
 import { MainStore, useMainStore } from "@utils/store.utils";
 import { useToggle } from "ahooks";
 import clsx from "clsx";
 import { pick } from "ramda";
+import { useEffect } from "react";
+import GameRegionSettings from "./GameRegionSettings";
 import GameDiscList from "./GameDiscList";
 
-const selector = (v: MainStore) => pick(["selected", "console"], v);
+const selector = (v: MainStore) => pick(["selected", "console", "play"], v);
 
 const renderer = (c: ChildNode) => {
   if (c.nodeName === "BR")
@@ -37,8 +39,29 @@ const renderer = (c: ChildNode) => {
 const GameDetails = () => {
   const [open, actions] = useToggle(false);
   const [modalOpen, actionsModal] = useToggle(false);
+  const [downloaderOpen, actionsDownloader] = useToggle(false);
   const store = useMainStore(selector);
+  const { selected } = store;
+  const cons = store.console;
+
+  const { data, loading, refresh } = useGetGameFiles({
+    id: selected?.id ?? "",
+    console: cons,
+  });
+
+  useEffect(() => {
+    refresh();
+  }, [modalOpen, refresh]);
+
   if (!store.selected) return null;
+
+  const handlePlay = () => {
+    refresh();
+    if (!data) actionsModal.set(true);
+
+    const isNotPlayable = data?.gameFiles?.some((v) => !v.playable);
+    if (isNotPlayable) actionsDownloader.set(true);
+  };
 
   return (
     <>
@@ -48,7 +71,30 @@ const GameDetails = () => {
           open={modalOpen}
           handleClose={() => actionsModal.set(false)}
         >
-          <GameDiscList id={store.selected.id} console={store.console} />
+          <GameRegionSettings
+            id={store.selected.id}
+            console={store.console}
+            onLinksSave={() => actionsModal.set(false)}
+          />
+        </Modal>
+      )}
+      {store.selected && data && (
+        <Modal
+          duration={0.3}
+          open={downloaderOpen}
+          handleClose={() => actionsDownloader.set(false)}
+        >
+          <GameDiscList
+            game={store.selected}
+            settings={data}
+            console={store.console}
+            onDownload={() => {
+              refresh();
+            }}
+            onPlay={(serial) => {
+              store.play(serial);
+            }}
+          />
         </Modal>
       )}
       <section className="h-stack ml-[20rem]">
@@ -62,9 +108,8 @@ const GameDetails = () => {
             <button
               type="button"
               className="game-item-button bg-highlight mt-5 text-text "
-              onClick={() => {
-                actionsModal.set(true);
-              }}
+              onClick={handlePlay}
+              disabled={loading}
             >
               Play
             </button>

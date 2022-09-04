@@ -147,6 +147,17 @@ export const getEmuSettings = async () => {
   return db;
 };
 
+export const getDiscMappings = async (consoleName: string) => {
+  const pathToDump = getDumpPath(consoleName);
+  fs.ensureDirSync(pathToDump);
+  const adapter = new FileAsync<GameDiscMappings>(
+    join(pathToDump, `mappings.json`)
+  );
+  const db = await low(adapter);
+  await db.read();
+  return db;
+};
+
 export const getConsoleDump = async (consoleName: string) => {
   const pathToDump = getDumpPath(consoleName);
   fs.ensureDirSync(pathToDump);

@@ -1,281 +1,214 @@
 import ConsoleIcon from "@elements/ConsoleIcon";
-import useGetGameLinks from "@hooks/useGetGameLinks";
-import useGetGameFiles from "@hooks/useGetGamesFiles";
-import useSetGameLinks from "@hooks/useSetGameLinks";
-import { useDynamicList } from "ahooks";
-import clsx from "clsx";
-import { AnimatePresence, motion } from "framer-motion";
-import { equals } from "ramda";
-import { useState } from "react";
+import {
+  ArchiveBoxIcon,
+  ArchiveBoxArrowDownIcon,
+  ArchiveBoxXMarkIcon,
+  ArrowDownTrayIcon,
+  PlayIcon,
+} from "@heroicons/react/24/outline";
+import useDownloadDisc from "@hooks/useDownloadDisc";
+import useGetDownloadProgress from "@hooks/useGetDownloadProgress";
+import usePlay from "@hooks/usePlay";
+import { useInterval, useMemoizedFn, useToggle } from "ahooks";
+import { useEffect, useState } from "react";
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { DownloadStatus } from "types/enums";
 
-interface GameDiscListProps {
-  id: string;
+type GameDiscListProps = BaseProps & {
+  game: ConsoleGameData;
+  settings: GameRegionFiles;
   console: string;
-}
-
-const GameDiscList = ({ id, console: cons }: GameDiscListProps) => {
-  const { data, loading } = useGetGameFiles({
-    id,
-    console: cons,
-  });
-
-  const gameFiles = data ?? [];
-
-  const [edit, setEdit] = useState<GameRegionFiles>();
-  const [selected, select] = useState<GameRegionFiles>();
-
-  const selectedDiscs = selected?.gameFiles ?? [];
-  const isComplete =
-    selectedDiscs.filter((o) => !!o.playable)?.length >= selectedDiscs?.length;
-
-  return (
-    <div className="v-stack max-h-[75vh]">
-      <div className="h-stack items-center gap-3">
-        <ConsoleIcon console={cons} size="2em" />
-        <h6 className="font-bold text-text leading-[1em]">Disc List</h6>
-      </div>
-
-      {!!edit && selected && (
-        <LinksList id={id} selected={selected} console={cons} />
-      )}
-      {!edit && (
-        <RegionList
-          gameFiles={gameFiles}
-          handleSelect={(v) => select(v)}
-          selected={selected}
-          loading={loading}
-          handleEdit={() => setEdit(selected)}
-          isComplete={isComplete}
-        />
-      )}
-    </div>
-  );
+  onPlay: (serial: string) => void;
+  onDownload: (serial: string) => void;
 };
 
-interface LinksListProps {
-  selected: GameRegionFiles;
-  console: string;
-  id: string;
-}
+const GameDiscList = ({
+  game,
+  settings,
+  console: cons,
+  onPlay,
+  onDownload,
+}: GameDiscListProps) => {
+  const [, download] = useDownloadDisc();
+  const [, play] = usePlay();
 
-const LinksList = ({ selected, console: cons, id }: LinksListProps) => {
-  const { list: links, resetList, replace } = useDynamicList<string | null>([]);
-  const files = selected.gameFiles;
-
-  const { data, loading } = useGetGameLinks({
-    keyword: selected.title,
-    console: cons,
-    tags: [selected.region],
-  });
-
-  const [, execute, saving] = useSetGameLinks();
-
-  const handleSet = () => {
-    const serials = files.map((o) => o.serial);
-
-    if (links.length !== serials.length) {
-      return;
-    }
-
-    if (links.includes(null)) {
-      return;
-    }
-
-    console.log(serials, links);
-
-    execute(id, serials, links as string[], cons);
+  const handleDownload = (serial: string) => {
+    download(serial, game.id, cons);
   };
 
-  const gameLinks = data ?? [];
+  const handlePlay = (serial: string) => {
+    play(serial, game.id, cons);
+    onPlay(serial);
+  };
+
+  // const downloadAll = () => {
+  //   settings.gameFiles.forEach((v) => {
+  //     if (v.link) download(v.serial, game.id, cons);
+  //   });
+  // };
+
   return (
-    <div className="v-stack">
-      <p className="text-text  mt-4">Select Links In Order:</p>
-      <p className={clsx("text-text mt-6 mb-6")}>
-        {files.map((v, i) => (
-          <span
-            key={v.serial}
-            className={clsx(
-              "mr-2 rounded-xl p-2 bg-transparent border",
-              !links[i] &&
-                "text-secondary/30 border-secondary/30 bg-transparent",
-              !!links[i] && "!border-highlight !bg-highlight/10 !text-text"
-            )}
-          >
-            {v.serial}
-          </span>
+    <div className="v-stack gap-4">
+      <div className="h-stack items-center gap-3">
+        <ConsoleIcon console={cons} size="2em" />
+        <h6 className="font-bold text-text leading-[1em]">
+          {game.official} Files
+        </h6>
+      </div>
+
+      <div className="v-stack gap-2">
+        {settings.gameFiles.map((setting) => (
+          <Disc
+            key={setting.serial}
+            setting={setting}
+            disc={settings}
+            onDownload={onDownload}
+            handleDownload={handleDownload}
+            handlePlay={handlePlay}
+          />
         ))}
-      </p>
-
-      <AnimatePresence>
-        {!loading && (
-          <motion.div
-            key="disc-list"
-            className="v-stack gap-4 overflow-auto py-2 pr-4 origin-top scroll1"
-            initial={{ opacity: 0, maxHeight: "0vh" }}
-            animate={{ opacity: 1, maxHeight: "50vh" }}
-            exit={{ opacity: 0, maxHeight: "0vh" }}
-            transition={{
-              maxHeight: {
-                delay: 0.15,
-                duration: 0.3,
-                ease: "easeInOut",
-              },
-              opacity: {
-                delay: 0.2,
-                duration: 0.5,
-                ease: "easeInOut",
-              },
-            }}
-          >
-            {gameLinks.map((v) => {
-              const isActive = links.includes(v.link);
-              const linksIndex = links.findIndex((o) => o === v.link);
-              return (
-                <button
-                  type="button"
-                  key={JSON.stringify(v)}
-                  className={clsx(
-                    "v-stack p-2 rounded-xl border border-secondary/50",
-                    isActive && "bg-secondary/20 border-focus"
-                  )}
-                  onClick={() => {
-                    if (!isActive) {
-                      const nullIndex = links.indexOf(null);
-                      if (nullIndex === -1) resetList([...links, v.link]);
-                      else replace(nullIndex, v.link);
-                    } else {
-                      const index = links.indexOf(v.link);
-                      replace(index, null);
-                    }
-                  }}
-                >
-                  <p className="w-full h-stack justify-between text-text text-sm font-bold">
-                    <span>
-                      {!!files[linksIndex] && (
-                        <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold mr-2">
-                          {files[linksIndex].serial}
-                        </span>
-                      )}
-                      <span>{v.fileName}</span>
-                    </span>
-
-                    <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
-                      {v.size}Mb
-                    </span>
-                  </p>
-                </button>
-              );
-            })}
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <div>
-        <button
-          type="button"
-          disabled={saving}
-          className="bg-focus text-contrastText font-[JosefinSans] font-bold text-xl w-full rounded-xl py-2 mt-4"
-          onClick={handleSet}
-        >
-          Save Files
-        </button>
-        <p className="text-xs mt-1 text-secondary">
-          * make sure to add disc for each serials
-        </p>
       </div>
     </div>
   );
 };
 
-interface RegionListProps {
-  gameFiles: GameRegionFiles[];
-  loading?: boolean;
-  handleSelect?: (region: GameRegionFiles) => void;
-  handleEdit?: () => void;
-  selected?: GameRegionFiles;
-  isComplete?: boolean;
+interface DiscProps {
+  setting: GameRegionFiles["gameFiles"][number];
+  disc: GameRegionFiles;
+  handleDownload: (serial: string) => void;
+  handlePlay: (serial: string) => void;
+  onDownload: (serial: string) => void;
 }
 
-const RegionList = ({
-  gameFiles,
-  loading,
-  handleSelect,
-  handleEdit,
-  selected,
-  isComplete,
-}: RegionListProps) => {
+const Disc = ({
+  disc,
+  setting,
+  handleDownload,
+  handlePlay: _handlePlay,
+  onDownload,
+}: DiscProps) => {
+  const [downloading, actions] = useToggle(false);
+  const [progress, setProgress] = useState(0);
+
+  const handleDownloading = useMemoizedFn((p: number, bool?: boolean) => {
+    setProgress(p);
+
+    if (progress >= 1) {
+      actions.set(!!bool);
+      if (!bool) {
+        onDownload(setting.serial);
+      }
+    }
+  });
+
+  const handlePlay = () => {
+    _handlePlay(setting.serial);
+  };
+
   return (
-    <div className="v-stack ">
-      <p className="text-text  mt-4">Select Game Region:</p>
-
-      <AnimatePresence>
-        {!loading && (
-          <motion.div
-            key="disc-list"
-            className="v-stack gap-4 overflow-auto py-2 pr-4 origin-top scroll1"
-            initial={{ opacity: 0, maxHeight: "0vh" }}
-            animate={{ opacity: 1, maxHeight: "50vh" }}
-            exit={{ opacity: 0, maxHeight: "0vh" }}
-            transition={{
-              maxHeight: {
-                delay: 0.15,
-                duration: 0.3,
-                ease: "easeInOut",
-              },
-              opacity: {
-                delay: 0.2,
-                duration: 0.5,
-                ease: "easeInOut",
-              },
-            }}
-          >
-            {gameFiles.map((v) => {
-              const discs = v.gameFiles ?? [];
-              const unsetDiscs = discs.filter((o) => !o.playable);
-              const isActive = equals(selected, v);
-              return (
-                <button
-                  type="button"
-                  key={JSON.stringify(v)}
-                  className={clsx(
-                    "v-stack p-2 rounded-xl border border-secondary/50",
-                    isActive && "bg-secondary/20 border-focus"
-                  )}
-                  onClick={() => handleSelect?.(v)}
-                >
-                  <p className="w-full h-stack justify-between text-text text-sm font-bold">
-                    <span>{v.title}</span>
-
-                    <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
-                      {v.region}
-                    </span>
-                  </p>
-                  <p className="w-full mt-2 h-stack justify-between text-text text-xs">
-                    <span>{`${discs.map((o) => o.serial).join(", ")}`}</span>
-                    <span className="mr-1">{`${
-                      discs.length - unsetDiscs.length
-                    } / ${unsetDiscs.length} Disc(s)`}</span>
-                  </p>
-                </button>
-              );
-            })}
-          </motion.div>
+    <div className="h-stack gap-3 items-center border border-secondary/50 rounded-xl py-2 pl-4 pr-4">
+      <div>
+        {!setting.playable && !downloading && (
+          <ArchiveBoxXMarkIcon
+            className="text-highlight"
+            width="1.5em"
+            height="1.5em"
+          />
         )}
-      </AnimatePresence>
+        {!setting.playable && downloading && (
+          <ArchiveBoxArrowDownIcon
+            className="text-focus"
+            width="1.5em"
+            height="1.5em"
+          />
+        )}
+        {setting.playable && (
+          <ArchiveBoxIcon
+            className="text-green-600"
+            width="1.5em"
+            height="1.5em"
+          />
+        )}
+      </div>
 
-      {!isComplete && (
-        <div>
-          <button
-            type="button"
-            className="bg-focus text-contrastText font-[JosefinSans] font-bold text-xl w-full rounded-xl py-2 mt-4"
-            onClick={handleEdit}
-          >
-            Set Links
-          </button>
-          <p className="text-xs mt-1 text-secondary">
-            * some discs are unset please set links for each disc
-          </p>
-        </div>
+      <div className="v-stack w-full">
+        <span className="text-text font-bold leading-[1em]">
+          {setting.link.fileName}
+        </span>
+        <span className="text-text text-xs">{setting.serial}</span>
+        {!setting.playable && (
+          <Download
+            serial={setting.serial}
+            handleDownloading={handleDownloading}
+          />
+        )}
+      </div>
+
+      {!setting.playable && !downloading && (
+        <button
+          type="button"
+          className="h-stack cursor-pointer items-center gap-2 text-text font-bold bg-highlight px-3 py-1 rounded-lg"
+          onClick={() => handleDownload(setting.serial)}
+        >
+          <ArrowDownTrayIcon width="1em" height="1em" />
+          <span>Download</span>
+        </button>
       )}
+
+      {!setting.playable && downloading && (
+        <button
+          type="button"
+          disabled
+          className="h-stack items-center gap-2 text-text font-bold bg-secondary/50 px-3 py-1 rounded-lg"
+        >
+          <ArrowDownTrayIcon width="1em" height="1em" />
+          <span>{progress}%</span>
+        </button>
+      )}
+
+      {setting.playable && (
+        <button
+          type="button"
+          className="h-stack cursor-pointer items-center gap-2 text-text font-bold bg-green-600 px-3 py-1 rounded-lg"
+          onClick={handlePlay}
+        >
+          <PlayIcon width="1em" height="1em" />
+          <span>Play</span>
+        </button>
+      )}
+    </div>
+  );
+};
+
+interface DownloadProps {
+  serial: string;
+  handleDownloading: (progress: number, bool?: boolean) => void;
+}
+
+const Download = ({ serial, handleDownloading }: DownloadProps) => {
+  const { data, refresh } = useGetDownloadProgress({
+    serial,
+  });
+
+  useInterval(() => {
+    refresh();
+  }, 1000);
+
+  useEffect(() => {
+    if (data?.status === DownloadStatus.Downloading) {
+      handleDownloading(data?.percentage, true);
+    }
+    if (data?.status === DownloadStatus.Completed) {
+      handleDownloading(data?.percentage, false);
+    }
+  }, [data?.status, data?.percentage, handleDownloading]);
+
+  return (
+    <div className="relative w-full h-1 bg-secondary/50 rounded-xl overflow-hidden mt-1">
+      <div
+        className="block h-full bg-highlight"
+        style={{ width: `${data?.percentage ?? 0}%` }}
+      />
     </div>
   );
 };

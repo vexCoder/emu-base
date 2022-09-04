@@ -64,6 +64,12 @@ export class Application {
 
     Handlers.register(
       "data",
+      "getGameRegionSettings",
+      async (_evt, id, cons) => await Data.getGameRegionSettings({ id, console: cons })
+    );
+
+    Handlers.register(
+      "data",
       "getImage",
       async (_evt, path, url) => await Data.getImage({ path, url })
     );
@@ -78,6 +84,24 @@ export class Application {
       "data",
       "setGameLinks",
       async (_evt, id, serials, links, cons) => await Data.setGameLinks({ id, serials, links, console: cons })
+    );
+
+    Handlers.register(
+      "data",
+      "downloadDisc",
+      async (_evt, serial, id, cons) => await Data.downloadDisc({ serial, id, console: cons })
+    );
+
+    Handlers.register(
+      "data",
+      "getDownloadProgress",
+      async (_evt, serial) => await Data.getDownloadProgress({ serial })
+    );
+
+    Handlers.register(
+      "data",
+      "play",
+      async (_evt, serial, id, cons) => await Data.play({ serial, id, console: cons })
     );
 
     return this;

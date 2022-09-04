@@ -101,6 +101,7 @@ export interface MainSettings {
   games: ConsoleGameData[];
   selected?: ConsoleGameData;
   count: number;
+  disc?: string;
 }
 
 export interface MainActions {
@@ -108,6 +109,8 @@ export interface MainActions {
   get: Getter<MainSettings>;
   cycle: (prev?: boolean) => void;
   select: (game: ConsoleGameData) => void;
+  play: (serial: string) => void;
+  eject: () => void;
 }
 
 export type MainStore = MainSettings & MainActions;
@@ -135,6 +138,12 @@ export const useMainStore = create(
     },
     select(game) {
       return set({ selected: game });
+    },
+    play(serial) {
+      return set({ disc: serial });
+    },
+    eject() {
+      return set({ disc: undefined });
     },
   }))
 );

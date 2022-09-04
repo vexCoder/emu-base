@@ -4,7 +4,8 @@
     "description": "",
     "private": true,
     "files": [
-        "./*.d.ts"
+        "./*.d.ts",
+        "enums.ts"
     ],
     "keywords": [],
     "author": "",

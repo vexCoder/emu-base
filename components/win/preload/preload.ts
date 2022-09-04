@@ -28,13 +28,29 @@ bind("data", (h, i) => {
     i(`data:getGameFiles`, id, console)
   );
 
+  h("getGameRegionSettings", (id: string, console: string) =>
+    i(`data:getGameRegionSettings`, id, console)
+  );
+
   h("getGameLinks", (keywords: string, tags: string[], console: string) =>
     i(`data:getGameLinks`, keywords, tags, console)
   );
 
   h(
     "setGameLinks",
-    (id: string, serials: string[], links: string[], console: string) =>
+    (id: string, serials: string[], links: ParsedLinks[], console: string) =>
       i(`data:setGameLinks`, id, serials, links, console)
+  );
+
+  h("downloadDisc", (serial: string, id: string, cons: string) =>
+    i(`data:downloadDisc`, serial, id, cons)
+  );
+
+  h("getDownloadProgress", (serial: string) =>
+    i(`data:getDownloadProgress`, serial)
+  );
+
+  h("play", (serial: string, id: string, console: string) =>
+    i(`data:play`, serial, id, console)
   );
 });
