@@ -8,8 +8,8 @@
   }
 
   body {
-    background: rgb(var(--color-primary));
-    transition: background 0.2s ease-in-out;
+    /*background: rgb(var(--color-primary));
+    transition: background 0.2s ease-in-out;*/
     min-height: 100%;
   }
 

@@ -61,7 +61,6 @@ const GameDiscList = ({
           <Disc
             key={setting.serial}
             setting={setting}
-            disc={settings}
             onDownload={onDownload}
             handleDownload={handleDownload}
             handlePlay={handlePlay}
@@ -74,14 +73,12 @@ const GameDiscList = ({
 
 interface DiscProps {
   setting: GameRegionFiles["gameFiles"][number];
-  disc: GameRegionFiles;
   handleDownload: (serial: string) => void;
   handlePlay: (serial: string) => void;
   onDownload: (serial: string) => void;
 }
 
 const Disc = ({
-  disc,
   setting,
   handleDownload,
   handlePlay: _handlePlay,

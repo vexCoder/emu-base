@@ -33,7 +33,14 @@ const build = async () => {
   await makeEsbuild(["src/index.ts", "preload/preload.ts"], pathToBuild, {
     watch: isDev,
     plugins,
-    external: ["electron"],
+    external: [
+      "electron",
+      "electron-overlay-window",
+      "ffi-napi",
+      "ref-napi",
+      "ref-struct-napi",
+      "ref-union-napi",
+    ],
     entryNames: `[name]`,
   });
 };

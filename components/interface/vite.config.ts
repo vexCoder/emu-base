@@ -84,6 +84,12 @@ export default ({ mode }: ConfigEnv) => {
     },
     build: {
       chunkSizeWarningLimit: 2500,
+      rollupOptions: {
+        input: {
+          main: path.resolve(__dirname, "index.html"),
+          overlay: path.resolve(__dirname, 'overlay', "index.html"),
+        }
+      }
     },
     optimizeDeps: {
       include: [],

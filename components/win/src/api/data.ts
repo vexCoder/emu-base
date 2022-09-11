@@ -7,8 +7,10 @@ import {
   getConsoleLinks,
   getDiscMappings,
   getDumpPath,
+  getEmuSettings,
   saveImage,
   scoreMatchStrings,
+  updateCfg,
 } from "@utils/helper";
 import fs, { createWriteStream } from "fs-extra";
 import got from "got";
@@ -286,9 +288,10 @@ export namespace DataApi {
       );
     }
 
-    async play({ id, console: cons, serial }: PlayParams) {
+    async play({ id, console: cons, serial, app }: PlayParams) {
       const pathToDump = getDumpPath(cons);
       const db = await getConsoleDump(cons);
+      const settings = await getEmuSettings();
 
       const game = db.find({ id }).value() as ConsoleGameData;
       const gameFilePath = join(pathToDump, game.unique, serial);
@@ -304,52 +307,85 @@ export namespace DataApi {
       const disc = head(gameFile.filter(is(String))) as string;
       if (!disc) return false;
 
-      const core = `F:\\Apps\\RetroArch-Win64\\cores\\swanstation_libretro.dll`;
+      const pathing = settings.get("pathing").value();
+      const consoleData = settings
+        .get("consoles")
+        .find((v) => v.key === cons)
+        .value();
 
-      await execa(`retroarch`, ["-L", core, "--config", config, disc]);
+      if (!consoleData || !pathing) return false;
+
+      await updateCfg(
+        {
+          ...Constants.DEFAULT_CFG,
+          libretro_directory: join(pathing.backend, "cores"),
+          system_directory: join(pathing.backend, "system"),
+          ...(consoleData.retroarch.fullscreen && {
+            video_fullscreen: "true",
+            video_windowed_fullscreen: "true",
+          }),
+          input_joypad_driver: consoleData.retroarch.input,
+        },
+        consoleData.key
+      );
+
+      const corePath = join(
+        pathing.backend,
+        "cores",
+        consoleData.retroarch.core
+      );
+
+      app?.win?.hide();
+      execa(`retroarch`, ["-L", corePath, "--config", config, disc]);
+      await app?.overlay?.attach();
+
       return true;
     }
   }
 
-  interface PlayParams {
+  interface Base {
+    app?: Application;
+  }
+
+  interface PlayParams extends Base {
     id: string;
     serial: string;
     console: string;
   }
-  interface GetDownloadProgressParams {
+  interface GetDownloadProgressParams extends Base {
     serial: string;
   }
 
-  interface DownloadDiscParams {
+  interface DownloadDiscParams extends Base {
     serial: string;
     id: string;
     console: string;
   }
 
-  interface GetGameParams {
+  interface GetGameParams extends Base {
     keyword: string;
     console: string;
     page: number;
     limit: number;
   }
 
-  interface GetImageParams {
+  interface GetImageParams extends Base {
     path: string;
     url?: string;
   }
 
-  interface GetGameFilesParams {
+  interface GetGameFilesParams extends Base {
     id: string;
     console: string;
   }
 
-  interface GetGameLinksParams {
+  interface GetGameLinksParams extends Base {
     keyword: string;
     tags: string[];
     console: string;
   }
 
-  interface SetGameLinksParams {
+  interface SetGameLinksParams extends Base {
     id: string;
     serials: string[];
     links: ParsedLinks[];

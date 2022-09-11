@@ -1,11 +1,15 @@
 /* eslint-disable import/prefer-default-export */
-import { app, BrowserWindow } from "electron";
-import { DataApi } from "./api/data";
-import { Handlers } from "@utils/handlers";
 import { createWindow } from "@utils/helper";
+import { app, BrowserWindow, Menu, Tray } from "electron";
+import { join } from "path";
+import OverlayWindow from "./overlay";
+import { MountDataHandles } from "./register";
 
 export class Application {
   win?: BrowserWindow;
+  overlay?: OverlayWindow;
+  icon = join(process.cwd(), "assets/game-controller128.ico");
+  quitting = false;
 
   init() {
     // NOTE do some initialization like seeding the database
@@ -15,14 +19,42 @@ export class Application {
   makeWindow() {
     // NOTE create a window
     const isDev = process.env.NODE_ENV === "development";
+    const tray = new Tray(this.icon);
+
+    tray.setContextMenu(
+      Menu.buildFromTemplate([
+        {
+          label: "Show",
+          click: () => {
+            this.win?.show();
+          },
+        },
+        {
+          label: "Quit",
+          click: () => {
+            this.quitting = true;
+            this.win?.destroy();
+            this.overlay?.destroy();
+            app.quit();
+          },
+        },
+      ])
+    );
+
     this.win = createWindow({
       isDev,
       browserOptions: {
+        icon: this.icon,
         webPreferences: {
+          preload: join(__dirname, "preload.js"),
+          contextIsolation: true,
+          devTools: true,
           webSecurity: false,
         },
       },
     });
+
+    this.overlay = new OverlayWindow(this.icon);
 
     return this;
   }
@@ -39,70 +71,26 @@ export class Application {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
 
+    app.on("before-quit", async () => {
+      this.quitting = true;
+      this.overlay?.destroy();
+    });
+
     this.win.on("focus", () => {});
+
+    this.win.on("close", (ev) => {
+      if (!this.quitting) {
+        ev.preventDefault();
+        this.win?.hide();
+        ev.returnValue = false;
+      }
+    });
 
     return this;
   }
 
   attachHandlers() {
-    // NOTE attach handlers for preload scripts
-    const Data = new DataApi.Resolver();
-
-    Handlers.register("win", "minimize", () => this.win?.minimize());
-
-    Handlers.register(
-      "data",
-      "getGames",
-      async (_evt, keyword, cns, page, limit) => await Data.getGames({ console: cns, keyword, page, limit })
-    );
-
-    Handlers.register(
-      "data",
-      "getGameFiles",
-      async (_evt, id, cons) => await Data.getGameFiles({ id, console: cons })
-    );
-
-    Handlers.register(
-      "data",
-      "getGameRegionSettings",
-      async (_evt, id, cons) => await Data.getGameRegionSettings({ id, console: cons })
-    );
-
-    Handlers.register(
-      "data",
-      "getImage",
-      async (_evt, path, url) => await Data.getImage({ path, url })
-    );
-
-    Handlers.register(
-      "data",
-      "getGameLinks",
-      async (_evt, keyword, tags, cons) => await Data.getGameLinks({ keyword, tags, console: cons })
-    );
-
-    Handlers.register(
-      "data",
-      "setGameLinks",
-      async (_evt, id, serials, links, cons) => await Data.setGameLinks({ id, serials, links, console: cons })
-    );
-
-    Handlers.register(
-      "data",
-      "downloadDisc",
-      async (_evt, serial, id, cons) => await Data.downloadDisc({ serial, id, console: cons })
-    );
-
-    Handlers.register(
-      "data",
-      "getDownloadProgress",
-      async (_evt, serial) => await Data.getDownloadProgress({ serial })
-    );
-
-    Handlers.register(
-      "data",
-      "play",
-      async (_evt, serial, id, cons) => await Data.play({ serial, id, console: cons })
-    );
+    MountDataHandles(this);
 
     return this;
   }
@@ -113,6 +101,10 @@ export class Application {
     await app.whenReady();
 
     // eslint-disable-next-line prettier/prettier
-    new Application().init().makeWindow().startEvents().attachHandlers();
+    new Application()
+      .init()
+      .makeWindow()
+      .startEvents()
+      .attachHandlers();
   }
 }

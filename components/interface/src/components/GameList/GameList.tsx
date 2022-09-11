@@ -68,7 +68,7 @@ const GameList = () => {
         </div>
       )} */}
 
-      {tag && tag.length && <YoutubeAudio tag={tag} />}
+      {tag && tag.length && !store.disc && <YoutubeAudio tag={tag} mute />}
     </div>
   );
 };

@@ -16,8 +16,11 @@ import {
   curry,
   mean,
   pipe,
+  sum,
+  keys,
 } from "ramda";
 import { findBestMatch } from "string-similarity";
+import execa from "execa";
 
 export interface WinSettings {
   x: number;
@@ -50,6 +53,8 @@ export const moveToMonitor = (
 };
 
 export interface CreateWindowOptions {
+  urlOrPath?: string;
+  loadNone?: boolean;
   isDev?: boolean;
   isRestarted?: boolean;
   monitor?: number;
@@ -68,17 +73,16 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     width: 800,
     height: 600,
     ...browserOptions,
-    ...(browserOptions.webPreferences && {
-      webPreferences: {
-        preload: join(__dirname, "preload.js"),
-        contextIsolation: true,
-        devTools: true,
-        ...browserOptions.webPreferences,
-      },
-    }),
   });
 
-  if (isDev) {
+  if (opts?.loadNone) {
+    console.log("loadNone");
+    win.loadURL("http://google.com");
+  } else if (opts?.urlOrPath) {
+    const isUrl = opts.urlOrPath.startsWith("http");
+    if (isUrl) win.loadURL(opts.urlOrPath);
+    if (!isUrl) win.loadFile(opts.urlOrPath);
+  } else if (isDev) {
     win.loadURL("http://localhost:3001");
     win.webContents.openDevTools();
   } else {
@@ -139,7 +143,6 @@ export const getDumpPath = (consoleName?: string) => {
 
 export const getEmuSettings = async () => {
   const pathToDump = getDumpPath();
-  fs.removeSync(pathToDump);
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<AppSettings>(join(pathToDump, `settings.json`));
   const db = await low(adapter);
@@ -243,4 +246,129 @@ export const scoreMatchStringsSc = (
   });
 
   return check;
+};
+
+export const extractString = curry(
+  (regexp: RegExp, text: string, trimText?: boolean) => {
+    const res = new RegExp(regexp).exec(text)?.[1];
+
+    return trimText ? res?.trim() : res;
+  }
+);
+
+export const extractMatches = curry(
+  (regexp: RegExp, text: string, trimText?: boolean) => {
+    const arr = text.match(new RegExp(regexp)) ?? [];
+    return arr?.map((o) => (trimText ? o.trim() : o));
+  }
+);
+
+export const substr = (text: string, start: number, end?: number) =>
+  `${text}`.substring(start, end);
+
+export const sumIndices = curry((arr: number[], start: number, end: number) =>
+  sum(arr.slice(start, end + 1))
+);
+
+export const getExeList = async () => {
+  const proc = await execa(`tasklist`, ["/v"]);
+
+  type ProcessData = {
+    task: string;
+    pid: string;
+    session: string;
+    sessionNo: string;
+    memUsage: string;
+    status: string;
+    user: string;
+    cpuTime: string;
+    title: string;
+    raw: string;
+  };
+
+  const cols = [26, 9, 17, 12, 13, 16, 51, 13, 72];
+  const processes = pipe<
+    [string],
+    string[],
+    string[],
+    ProcessData[],
+    ProcessData[]
+  >(
+    split(/(\r\n|\n)/),
+    filter((v: string) => v.length > cols[0]),
+    map<string, ProcessData>((v): ProcessData => {
+      const colsum = sumIndices(cols, 0);
+      return {
+        task: substr(v, 0, colsum(0) - 1).trim(),
+        pid: substr(v, colsum(0), colsum(1) - 1).trim(),
+        session: substr(v, colsum(1), colsum(2) - 1).trim(),
+        sessionNo: substr(v, colsum(2), colsum(3) - 1).trim(),
+        memUsage: substr(v, colsum(3), colsum(4) - 1).trim(),
+        status: substr(v, colsum(4), colsum(5) - 1).trim(),
+        user: substr(v, colsum(5), colsum(6) - 1).trim(),
+        cpuTime: substr(v, colsum(6), colsum(7) - 1).trim(),
+        title: substr(v, colsum(7)).trim(),
+        raw: v,
+      };
+    }),
+    filter(
+      (v: ProcessData) => !!v && !!extractMatches(/(.*)\.exe/)(v.task)?.length
+    )
+  )(proc.stdout);
+
+  return processes;
+};
+
+export const retry = async <T>(
+  fn: () => Promise<T>,
+  retries: number,
+  delay: number
+): Promise<T> => {
+  try {
+    return await fn();
+  } catch (e) {
+    if (retries === 0) {
+      throw e;
+    }
+
+    await new Promise((r) => {
+      setTimeout(r, delay);
+    });
+
+    return retry(fn, retries - 1, delay);
+  }
+};
+
+export const updateCfg = async (cfg: PartialCFG, cons: string) => {
+  const dumpPath = getDumpPath(cons);
+  const emu = await getEmuSettings();
+  const settings = emu.value();
+
+  if (!settings) throw new Error("No settings found");
+
+  const { pathing } = settings;
+  const defaultConfig = join(pathing.backend, "retroarch.cfg");
+  const configPath = join(dumpPath, "config.cfg");
+
+  if (!(await fs.pathExists(configPath)))
+    await fs.copyFile(defaultConfig, configPath);
+
+  const cfgFile = await fs.readFile(configPath, "utf-8");
+
+  const configReplacement = pipe<
+    [PartialCFG],
+    CFGKeys[],
+    [CFGKeys, string, RegExp][]
+  >(
+    keys<PartialCFG>,
+    map((k: CFGKeys) => [k, cfg[k] || "", new RegExp(`(${k} = ")(.*)(")`)])
+  )(cfg);
+
+  let replaced = cfgFile;
+  for (let i = 0; i < configReplacement.length; i++) {
+    const [, value, replacer] = configReplacement[i];
+    replaced = replaced.replace(replacer, `$1${value}$3`);
+  }
+
+  await fs.writeFile(configPath, replaced, "utf-8");
 };

@@ -58,9 +58,7 @@ const GameDetails = () => {
   const handlePlay = () => {
     refresh();
     if (!data) actionsModal.set(true);
-
-    const isNotPlayable = data?.gameFiles?.some((v) => !v.playable);
-    if (isNotPlayable) actionsDownloader.set(true);
+    actionsDownloader.set(true);
   };
 
   return (
@@ -156,7 +154,8 @@ const GameDetails = () => {
             )}
             <div
               className={clsx(
-                "bg-secondary/10 p-4 rounded-2xl box-border cursor-pointer mt-1",
+                "p-4 rounded-2xl box-border cursor-pointer mt-1",
+                !open && "bg-secondary/10",
                 open &&
                   "bg-primary p-4 fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
               )}

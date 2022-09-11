@@ -24,8 +24,8 @@ interface DescriptionLinks {
     link: string;
     games: {
       titles: string[];
-    }
-  }[]
+    };
+  }[];
 }
 
 interface ResultDescriptions {
@@ -66,7 +66,7 @@ interface BasicDescription {
 
 type BasicDescriptionRaw = {
   [K in keyof BasicDescription]: string;
-}
+};
 
 interface DescriptionRaw {
   basic: BasicDescriptionRaw;
@@ -91,7 +91,7 @@ interface ConsoleGameData {
   unique: string;
   regions: GameRegion[];
   description: string;
-  
+
   // Images
   ratings: string;
   screenshots: string[];
@@ -111,10 +111,21 @@ interface ConsoleSettings {
   description?: string;
   pathToData: string;
   lastUpdated: string;
+  retroarch: {
+    core: string;
+    fullscreen: boolean;
+    input: 'dinput' | 'xinput' | 'hdl2' | 'sdl2' | string
+  };
 }
 
-type ConsoleLinks = ParsedLinks[]
+type ConsoleLinks = ParsedLinks[];
+
+interface EmuPathing {
+  backend: string;
+  dump: string;
+}
 
 interface AppSettings {
-  consoles: ConsoleSettings[]
+  pathing: EmuPathing;
+  consoles: ConsoleSettings[];
 }
