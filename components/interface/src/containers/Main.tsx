@@ -1,17 +1,10 @@
 import GameList from "@components/GameList/GameList";
-import { MainStore, useMainStore } from "@utils/store.utils";
-import { AnimatePresence, motion } from "framer-motion";
-import { pick } from "ramda";
-import Play from "./Play";
-
-const selector = (v: MainStore) => pick(["disc"], v);
 
 const Main = () => {
-  const store = useMainStore(selector);
-
   return (
     <div className="flex flex-col items-start">
-      <AnimatePresence>
+      <GameList />
+      {/* <AnimatePresence>
         {!store.disc && (
           <motion.div
             key="game-list"
@@ -36,7 +29,7 @@ const Main = () => {
             <Play />
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </div>
   );
 };

@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 /* eslint-disable import/prefer-default-export */
+import Emulator from "@root/emulator";
 import Constants from "@utils/constants";
 import Globals from "@utils/globals";
 import {
@@ -10,17 +11,15 @@ import {
   getEmuSettings,
   saveImage,
   scoreMatchStrings,
-  updateCfg,
 } from "@utils/helper";
+import extract from "extract-zip";
 import fs, { createWriteStream } from "fs-extra";
 import got from "got";
 import { ObjectChain } from "lodash";
 import pMap from "p-map";
 import { extname, join } from "path";
-import { filter, head, is, toLower, intersection } from "ramda";
+import { filter, head, intersection, is, toLower } from "ramda";
 import { DownloadStatus } from "types/enums";
-import extract from "extract-zip";
-import execa from "execa";
 
 export namespace DataApi {
   export class Resolver {
@@ -289,57 +288,19 @@ export namespace DataApi {
     }
 
     async play({ id, console: cons, serial, app }: PlayParams) {
-      const pathToDump = getDumpPath(cons);
-      const db = await getConsoleDump(cons);
       const settings = await getEmuSettings();
-
-      const game = db.find({ id }).value() as ConsoleGameData;
-      const gameFilePath = join(pathToDump, game.unique, serial);
-      const exts = [".iso", ".bin"];
-      const gameFile = await pMap(await fs.readdir(gameFilePath), async (v) => {
-        const ext = extname(v);
-        if (exts.includes(ext)) return join(gameFilePath, v);
-        return false;
-      });
-
-      const config = join(pathToDump, "config.cfg");
-
-      const disc = head(gameFile.filter(is(String))) as string;
-      if (!disc) return false;
-
-      const pathing = settings.get("pathing").value();
       const consoleData = settings
         .get("consoles")
         .find((v) => v.key === cons)
         .value();
 
-      if (!consoleData || !pathing) return false;
+      if (app && settings && consoleData) {
+        const emulator = new Emulator(settings.value(), app, consoleData);
 
-      await updateCfg(
-        {
-          ...Constants.DEFAULT_CFG,
-          libretro_directory: join(pathing.backend, "cores"),
-          system_directory: join(pathing.backend, "system"),
-          ...(consoleData.retroarch.fullscreen && {
-            video_fullscreen: "true",
-            video_windowed_fullscreen: "true",
-          }),
-          input_joypad_driver: consoleData.retroarch.input,
-        },
-        consoleData.key
-      );
+        await emulator.play(id, serial);
+      }
 
-      const corePath = join(
-        pathing.backend,
-        "cores",
-        consoleData.retroarch.core
-      );
-
-      app?.win?.hide();
-      execa(`retroarch`, ["-L", corePath, "--config", config, disc]);
-      await app?.overlay?.attach();
-
-      return true;
+      return false;
     }
   }
 

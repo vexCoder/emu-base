@@ -327,6 +327,7 @@ export const retry = async <T>(
   try {
     return await fn();
   } catch (e) {
+    console.error(e);
     if (retries === 0) {
       throw e;
     }

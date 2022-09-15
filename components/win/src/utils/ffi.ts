@@ -2,6 +2,7 @@
 // @ts-nocheck
 
 import keycode from "keycode";
+import { StringDecoder } from "string_decoder";
 
 const FFI = require("ffi-napi");
 const StructType = require("ref-struct-napi");
@@ -12,8 +13,25 @@ const user32 = new FFI.Library("user32.dll", {
   SendInput: ["uint32", ["int32", "pointer", "int32"]],
   MapVirtualKeyExA: ["uint", ["uint", "uint", "int"]],
   SetActiveWindow: ["long", ["long"]],
+  ShowWindow: ["bool", ["long", "int"]],
+  SwitchToThisWindow: ["bool", ["long", "bool"]],
+  GetWindow: ["long", ["long", "uint"]],
   FindWindowA: ["long", ["string", "string"]],
+  GetWindowInfo: ["bool", ["long", "pointer"]],
+  GetWindowTextW: ["long", ["long", "pointer", "long"]],
+  EnumWindows: ["bool", ["pointer", "long"]],
+  GetWindowThreadProcessId: ["long", ["long", "pointer"]],
+  GetForegroundWindow: ["long", []],
+  GetWindowRect: ["bool", ["long", "pointer"]],
+  SetFocus: ["long", ["long"]],
+  SetWindowPos: ["bool", ["long", "long", "int", "int", "int", "int", "uint"]],
+  SetForegroundWindow: ["bool", ["long"]],
+  AttachThreadInput: ["bool", ["int", "long", "bool"]],
 });
+
+// const kernel32 = new FFI.Library("Kernel32.dll", {
+//   GetCurrentThreadId: ["int", []],
+// });
 
 // typedef struct tagMOUSEINPUT {
 //   LONG    dx;
@@ -102,7 +120,7 @@ export const sendKeyToWindow = async (
   user32.SendInput(1, keyDownInput.ref(), INPUT.size);
 
   await new Promise((resolve) => {
-    setTimeout(resolve, 250);
+    setTimeout(resolve, 50);
   });
 
   const keyUpKeyboardInput = KEYBDINPUT({
@@ -119,7 +137,79 @@ export const sendKeyToWindow = async (
   user32.SendInput(1, keyUpInput.ref(), INPUT.size);
 };
 
-export const setActiveWindow = (name: string) => {
+export const setActiveWindowByName = (name: string) => {
   const window = user32.FindWindowA(null, name);
   user32.SetActiveWindow(window);
+};
+
+export enum ShowWindowFlags {
+  SW_MAXIMIZE = 3,
+  SW_MINIMIZE = 6,
+  SW_RESTORE = 9,
+  SW_NORMAL = 1,
+  SW_SHOW = 5,
+}
+
+export const getWindowByName = (name: string) => {
+  const window = user32.FindWindowA(null, name);
+  return window;
+};
+
+export const getWindow = (handle: number | any) => {
+  const window = user32.GetWindow(handle, null);
+  return window;
+};
+
+export const setActiveWindow = (
+  handle: number | any,
+  flag: ShowWindowFlags = ShowWindowFlags.SW_MAXIMIZE
+) => {
+  user32.ShowWindow(handle, flag);
+  user32.SetForegroundWindow(handle);
+  user32.SetFocus(handle);
+  user32.SetActiveWindow(handle);
+};
+
+export const getWindowText = (handle: number | any) => {
+  const buf = Buffer.alloc(256);
+  user32.GetWindowTextW(handle, buf, 256);
+  const val = new StringDecoder("ucs2").write(buf).replace(/\0/g, "");
+  return val;
+};
+
+export const listWindows = () => {
+  const handles: number[] = [];
+  const callback = new FFI.Callback("bool", ["long", "long"], (handle) => {
+    handles.push(handle);
+    return true;
+  });
+
+  user32.EnumWindows(callback, 0);
+
+  const windows: { title: string; handle: number }[] = handles
+    .map((v) => ({
+      title: getWindowText(v),
+      handle: v,
+    }))
+    .filter((v) => !!v.title.length);
+
+  return windows;
+};
+
+const pointerToRect = (
+  rectPointer: Buffer
+): Record<"left" | "top" | "bottom" | "right", number> => {
+  const rect = {};
+  rect.left = rectPointer.readInt16LE(0);
+  rect.top = rectPointer.readInt16LE(4);
+  rect.right = rectPointer.readInt16LE(8);
+  rect.bottom = rectPointer.readInt16LE(12);
+  return rect;
+};
+
+export const getWindowRect = (handle: number) => {
+  const rectBuffer = Buffer.alloc(16);
+
+  const rect = user32.GetWindowRect(handle, rectBuffer);
+  return rect ? pointerToRect(rectBuffer) : undefined;
 };

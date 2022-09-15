@@ -26,7 +26,6 @@ export const bind = <T extends HandlesNamespace>(
     };
   };
 
-  console.log(`Context Binded: ${context}`);
   setter(makeHandler, ipcRenderer.invoke);
 
   contextBridge.exposeInMainWorld(context, handlers);

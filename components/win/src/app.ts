@@ -27,6 +27,7 @@ export class Application {
           label: "Show",
           click: () => {
             this.win?.show();
+            this.win?.webContents.send('eject-game');
           },
         },
         {
@@ -34,7 +35,7 @@ export class Application {
           click: () => {
             this.quitting = true;
             this.win?.destroy();
-            this.overlay?.destroy();
+            this.overlay?.cleanUp();
             app.quit();
           },
         },
@@ -54,7 +55,13 @@ export class Application {
       },
     });
 
-    this.overlay = new OverlayWindow(this.icon);
+    this.overlay = new OverlayWindow(this.icon, {
+      onDetach: () => {
+        console.log('Ejecting')
+        this.win?.show()
+        this.win?.webContents.send('eject-game');
+      }
+    });
 
     return this;
   }
@@ -64,6 +71,7 @@ export class Application {
     if (!this.win) return this;
 
     app.on("window-all-closed", () => {
+      console.log('window-all-closed')
       if (process.platform !== "darwin") app.quit();
     });
 
@@ -73,12 +81,13 @@ export class Application {
 
     app.on("before-quit", async () => {
       this.quitting = true;
-      this.overlay?.destroy();
+      this.overlay?.cleanUp();
     });
 
     this.win.on("focus", () => {});
 
     this.win.on("close", (ev) => {
+      console.log('close')
       if (!this.quitting) {
         ev.preventDefault();
         this.win?.hide();

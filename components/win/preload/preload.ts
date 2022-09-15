@@ -1,3 +1,4 @@
+import { ipcRenderer } from "electron";
 import { bind } from "./make";
 
 // bind("members", (h, i) => {
@@ -52,5 +53,15 @@ bind("data", (h, i) => {
 
   h("play", (serial: string, id: string, console: string) =>
     i(`data:play`, serial, id, console)
+  );
+
+  // h("onDetach", (callback: (data: any) => void) =>
+  //   ir("eject-game", (_evt, data) => callback(data))
+  // );
+
+  h("onFPS", (callback: (data: any) => void) =>
+    ipcRenderer.on("fps", (_evt, data) => {
+      callback(data);
+    })
   );
 });

@@ -40,6 +40,8 @@ const build = async () => {
       "ref-napi",
       "ref-struct-napi",
       "ref-union-napi",
+      "node-ovhook",
+      "electron-overlay",
     ],
     entryNames: `[name]`,
   });

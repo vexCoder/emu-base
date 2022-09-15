@@ -9,6 +9,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "ts-node build/build.ts",
+    "test": "ts-node src/nodeTest.ts",
     "watch": "tsc -w --project ./tsconfig.types.json",
     "dev": "ts-node build/build.ts --dev",
     "dist:dev": "concurrently -n ts,dev \"yarn watch\" \"yarn build:dev\"",
@@ -36,7 +37,9 @@
     "stream-chain": "^2.2.5",
     "stream-json": "^1.7.4",
     "string-similarity": "^4.0.4",
-    "ytdl-core": "^4.11.1"
+    "ytdl-core": "^4.11.1",
+    "electron-overlay": "*",
+    "node-ovhook": "*"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.13",

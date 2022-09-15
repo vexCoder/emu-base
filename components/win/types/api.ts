@@ -54,5 +54,8 @@ export interface Handles {
       [serial: string, id: string, console: string],
       Promise<boolean>
     >;
+
+    onDetach: Connection<[callback: (data?: any) => void]>;
+    onFPS: Connection<[callback: (data?: any) => void]>;
   };
 }
