@@ -1,6 +1,9 @@
 interface Application {
   win?: import('electron').BrowserWindow;
-  overlay?: import('./overlay').default;
+  overlay?: import('../overlay').default;
+  emulator?: import('../emulator').default;
+
+  setEmulator(emu: import('../emulator').default);
 
   init(): Application;
   makeWindow(): Application;

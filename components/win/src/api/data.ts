@@ -297,6 +297,7 @@ export namespace DataApi {
       if (app && settings && consoleData) {
         const emulator = new Emulator(settings.value(), app, consoleData);
 
+        app.setEmulator(emulator);
         await emulator.play(id, serial);
       }
 

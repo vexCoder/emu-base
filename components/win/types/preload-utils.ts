@@ -7,6 +7,13 @@ export type Handle<P extends any[], R> = (
   ...args: P
 ) => R;
 
+export type InferConnection<T> = T extends Connection<infer P, infer R>
+  ? {
+      parameters: P;
+      return: R;
+    }
+  : T;
+
 export type Connection<P extends any[] = [], R = void> = {
   invoker: Invoker<P>;
   handle: Handle<P, R>;

@@ -2,12 +2,13 @@
 // @ts-nocheck
 
 import keycode from "keycode";
-import { StringDecoder } from "string_decoder";
 
 const FFI = require("ffi-napi");
 const StructType = require("ref-struct-napi");
 const UnionType = require("ref-union-napi");
 const ref = require("ref-napi");
+
+const stringPtr = ref.refType(ref.types.CString);
 
 const user32 = new FFI.Library("user32.dll", {
   SendInput: ["uint32", ["int32", "pointer", "int32"]],
@@ -18,7 +19,7 @@ const user32 = new FFI.Library("user32.dll", {
   GetWindow: ["long", ["long", "uint"]],
   FindWindowA: ["long", ["string", "string"]],
   GetWindowInfo: ["bool", ["long", "pointer"]],
-  GetWindowTextW: ["long", ["long", "pointer", "long"]],
+  GetWindowTextA: ["long", ["long", stringPtr, "long"]],
   EnumWindows: ["bool", ["pointer", "long"]],
   GetWindowThreadProcessId: ["long", ["long", "pointer"]],
   GetForegroundWindow: ["long", []],
@@ -171,15 +172,16 @@ export const setActiveWindow = (
 };
 
 export const getWindowText = (handle: number | any) => {
-  const buf = Buffer.alloc(256);
-  user32.GetWindowTextW(handle, buf, 256);
-  const val = new StringDecoder("ucs2").write(buf).replace(/\0/g, "");
-  return val;
+  const buf = Buffer.alloc(255);
+  user32.GetWindowTextA(handle, buf, 255);
+  const name = ref.readCString(buf, 0);
+  // const val = new StringDecoder("ucs2").write(buf).replace(/\0/g, "");
+  return name;
 };
 
 export const listWindows = () => {
   const handles: number[] = [];
-  const callback = new FFI.Callback("bool", ["long", "long"], (handle) => {
+  const callback = new FFI.Callback("bool", ["long", "int32"], (handle) => {
     handles.push(handle);
     return true;
   });
@@ -212,4 +214,40 @@ export const getWindowRect = (handle: number) => {
 
   const rect = user32.GetWindowRect(handle, rectBuffer);
   return rect ? pointerToRect(rectBuffer) : undefined;
+};
+
+export const sendHoldKeyToWindow = (
+  keyCode: keyof typeof keycode.codes | keyof typeof keycode.aliases
+) => {
+  const scanCode = ConvertKeyCodeToScanCode(keycode(keyCode));
+
+  const keyDownKeyboardInput = KEYBDINPUT({
+    vk: 0,
+    extraInfo: ref.NULL_POINTER,
+    time: 0,
+    scan: scanCode,
+    flags: 0x0008,
+  });
+
+  const keyDownInput = INPUT({
+    type: 1,
+    union: INPUT_UNION({ ki: keyDownKeyboardInput }),
+  });
+
+  user32.SendInput(1, keyDownInput.ref(), INPUT.size);
+
+  return async () => {
+    const keyUpKeyboardInput = KEYBDINPUT({
+      vk: 0,
+      extraInfo: ref.NULL_POINTER,
+      time: 0,
+      scan: scanCode,
+      flags: 0x0008 | 0x0002,
+    });
+    const keyUpInput = INPUT({
+      type: 1,
+      union: INPUT_UNION({ ki: keyUpKeyboardInput }),
+    });
+    user32.SendInput(1, keyUpInput.ref(), INPUT.size);
+  };
 };

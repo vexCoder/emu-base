@@ -17,6 +17,7 @@
     "package": "ts-node build/pack.ts"
   },
   "dependencies": {
+    "electron-overlay": "*",
     "electron-overlay-window": "^2.0.1",
     "esbuild": "^0.14.39",
     "execa": "5.1.1",
@@ -29,6 +30,7 @@
     "lowdb": "1.0.0",
     "node-gamepad": "^0.1.15",
     "node-json-db": "^2.1.0",
+    "node-ovhook": "*",
     "p-map": "4.0.0",
     "ref-napi": "^3.0.3",
     "ref-struct-napi": "^1.1.1",
@@ -37,9 +39,8 @@
     "stream-chain": "^2.2.5",
     "stream-json": "^1.7.4",
     "string-similarity": "^4.0.4",
-    "ytdl-core": "^4.11.1",
-    "electron-overlay": "*",
-    "node-ovhook": "*"
+    "win-screenshot": "^1.0.4",
+    "ytdl-core": "^4.11.1"
   },
   "devDependencies": {
     "@types/fs-extra": "^9.0.13",

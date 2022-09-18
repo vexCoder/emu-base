@@ -114,7 +114,8 @@ interface ConsoleSettings {
   retroarch: {
     core: string;
     fullscreen: boolean;
-    input: 'dinput' | 'xinput' | 'hdl2' | 'sdl2' | string
+    input: 'dinput' | 'xinput' | 'hdl2' | 'sdl2' | string;
+    turboRate: number,
   };
 }
 
@@ -128,4 +129,5 @@ interface EmuPathing {
 interface AppSettings {
   pathing: EmuPathing;
   consoles: ConsoleSettings[];
+  showFps: boolean;
 }

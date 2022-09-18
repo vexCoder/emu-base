@@ -11,6 +11,11 @@ interface ModalProps {
   children: React.ReactNode;
   duration?: number;
   ease?: Easing | EasingFunction;
+  classes?: {
+    root?: string;
+    backdrop?: string;
+    content?: string;
+  };
 }
 
 type ModalPropsWChildren = BaseComponentProps<"section"> &
@@ -25,6 +30,7 @@ const ModalComponent = ({
   handleClose: _handleClose,
   duration = 0.35,
   ease = "easeInOut",
+  classes,
 }: ModalProps) => {
   const [transitioned, actions] = useToggle(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -40,14 +46,18 @@ const ModalComponent = ({
       className={clsx(
         "fixed top-0 left-0 h-full w-full",
         !open && !transitioned && "-z-10",
-        open && transitioned && "z-50"
+        open && transitioned && "z-50",
+        classes?.root
       )}
     >
       <AnimatePresence>
         {open && (
           <motion.div
             key="modal-backdrop"
-            className="fixed h-full w-full bg-black/50 z-40"
+            className={clsx(
+              "fixed h-full w-full bg-black/10 z-40",
+              classes?.backdrop
+            )}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -73,7 +83,10 @@ const ModalComponent = ({
         {open && (
           <motion.div
             key="modal-container"
-            className="fixed origin-center top-1/2 left-1/2 z-50 bg-primary rounded-xl min-w-[450px] p-4"
+            className={clsx(
+              "fixed origin-center top-1/2 left-1/2 z-50 bg-primary rounded-xl min-w-[450px] p-4",
+              classes?.content
+            )}
             style={{ y: "-50%", x: "-50%" }}
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}

@@ -106,6 +106,10 @@
   .image-cache-image {
     @apply w-full h-full animate-mount-enter-fade shadow-gentle-fade shadow-black/20 object-cover;
   }
+
+  .overlay-menu-button {
+    @apply text-text text-left cursor-pointer rounded-md border-highlight/50 border px-2 py-1
+  }
 }
 
 @layer utilities {
@@ -123,5 +127,13 @@
 
   .h-stack-reverse {
     @apply flex flex-row-reverse;
+  }
+
+  .center-flex {
+    @apply flex items-center justify-center;
+  }
+
+  .center-transform {
+    @apply fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] origin-center;
   }
 }

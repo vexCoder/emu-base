@@ -54,8 +54,25 @@ export interface Handles {
       [serial: string, id: string, console: string],
       Promise<boolean>
     >;
+  };
+
+  emulator: {
+    onFPS: Connection<
+      [callback: (data?: { fps: number; refreshRate: number }) => void]
+    >;
 
     onDetach: Connection<[callback: (data?: any) => void]>;
-    onFPS: Connection<[callback: (data?: any) => void]>;
+
+    onKey: Connection<[callback: (data?: string) => void]>;
+
+    onData: Connection<
+      [callback: (data?: Record<string, any> & { evt: string }) => void]
+    >;
+
+    saveToSlot: Connection<[slot: number]>;
+    loadFromSlot: Connection<[slot: number]>;
+    quit: Connection;
+    toggleTurbo: Connection;
+    togglePause: Connection;
   };
 }

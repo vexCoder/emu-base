@@ -66,7 +66,7 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     isRestarted = false,
     browserOptions = {},
     isDev = true,
-    monitor = 1,
+    monitor = 0,
   } = opts ?? {};
 
   const win = new BrowserWindow({
@@ -362,7 +362,11 @@ export const updateCfg = async (cfg: PartialCFG, cons: string) => {
     [CFGKeys, string, RegExp][]
   >(
     keys<PartialCFG>,
-    map((k: CFGKeys) => [k, cfg[k] || "", new RegExp(`(${k} = ")(.*)(")`)])
+    map((k: CFGKeys) => [
+      k,
+      cfg[k] || "",
+      new RegExp(`^(${k} = ")(.*)(")$`, "m"),
+    ])
   )(cfg);
 
   let replaced = cfgFile;

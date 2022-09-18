@@ -159,3 +159,32 @@ export const useDebugStore = create<
     ["zustand/persist", DebugStore]
   ]
 >(subscribeWithSelector(persist(() => ({ test: 0 }), { name: "debug" })));
+
+export interface OverlaySettings {
+  route: "menu" | "states" | undefined;
+  stateFocus: number;
+  stateFocusDecide: number;
+  fps: boolean;
+  turbo: boolean;
+  focus: number;
+}
+export interface OverlayActions {
+  set: Setter<OverlaySettings>;
+}
+
+export type OverlayStore = OverlaySettings & OverlayActions;
+
+export const useOverlayStore = create(
+  subscribeWithSelector<OverlayStore>((set, get) => ({
+    // properties
+    route: "menu",
+    stateFocus: 0,
+    stateFocusDecide: 0,
+    fps: false,
+    turbo: false,
+    focus: 0,
+    set(state) {
+      set(typeof state === "function" ? state(get()) : state);
+    },
+  }))
+);

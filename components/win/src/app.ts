@@ -2,12 +2,14 @@
 import { createWindow } from "@utils/helper";
 import { app, BrowserWindow, Menu, Tray } from "electron";
 import { join } from "path";
+import Emulator from "./emulator";
 import OverlayWindow from "./overlay";
 import { MountDataHandles } from "./register";
 
 export class Application {
   win?: BrowserWindow;
   overlay?: OverlayWindow;
+  emulator?: Emulator;
   icon = join(process.cwd(), "assets/game-controller128.ico");
   quitting = false;
 
@@ -55,15 +57,22 @@ export class Application {
       },
     });
 
-    this.overlay = new OverlayWindow(this.icon, {
+    this.overlay = new OverlayWindow();
+    
+    this.overlay.createWindow(this.icon, {
       onDetach: () => {
         console.log('Ejecting')
         this.win?.show()
-        this.win?.webContents.send('eject-game');
+        this.win?.moveTop()
+        this.win?.webContents.send('emulator:onDetach');
       }
-    });
+    })
 
     return this;
+  }
+
+  setEmulator(emu: Emulator) {
+    this.emulator = emu;
   }
 
   startEvents() {

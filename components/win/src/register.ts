@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { DataApi } from "@api/data";
 import { Handlers } from "@utils/handlers";
 
@@ -49,4 +50,21 @@ export const MountDataHandles = (app: Application) => {
   Handlers.register("data", "play", async (_evt, serial, id, cons) =>
     Data.play({ serial, id, console: cons, app })
   );
+
+  Handlers.register("emulator", "toggleTurbo", async (_evt) => {
+    app?.emulator?.toggleTurbo();
+  });
+
+  Handlers.register("emulator", "quit", async (_evt) => {
+    app?.emulator?.quit();
+  });
+
+  Handlers.register("emulator", "saveToSlot", async (_evt, slot) => {
+    console.log(`Slot ${slot}`);
+    app?.emulator?.saveToSlot(slot);
+  });
+
+  Handlers.register("emulator", "loadFromSlot", async (_evt, slot) => {
+    app?.emulator?.loadFromSlot(slot);
+  });
 };

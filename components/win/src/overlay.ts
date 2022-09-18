@@ -8,11 +8,13 @@ import {
 import { createWindow, extractMatches, retry } from "@utils/helper";
 import { BrowserWindow, screen } from "electron";
 import IOverlay from "electron-overlay";
+import keycode from "keycode";
 import OVHook from "node-ovhook";
 import { join } from "path";
 
 interface OverlayOptions {
   onDetach: () => void;
+  onAttach: () => void;
 }
 class OverlayWindow {
   win: BrowserWindow | undefined;
@@ -29,13 +31,16 @@ class OverlayWindow {
 
   onDetach?: () => void;
 
-  constructor(icon: string, options?: OverlayOptions) {
+  onAttach?: () => void;
+
+  createWindow(icon: string, options?: OverlayOptions) {
     const isDev = process.env.NODE_ENV === "development";
     const path = isDev
       ? "http://localhost:3001/overlay/"
       : `file://${__dirname}/index.html`;
 
     this.onDetach = options?.onDetach;
+    this.onAttach = options?.onAttach;
 
     this.win = createWindow({
       urlOrPath: path,
@@ -56,11 +61,14 @@ class OverlayWindow {
         },
       },
     });
+  }
 
-    console.log(join(__dirname, "preload.js"));
+  setOnAttach(onAttach: () => void) {
+    this.onAttach = onAttach;
+  }
 
-    IOverlay.start();
-    this.events();
+  sendData(value: Record<string, any> & { evt: string }) {
+    this.win?.webContents.send("emulator:onData", value);
   }
 
   events() {
@@ -74,6 +82,16 @@ class OverlayWindow {
           if (this.started) {
             if (!args.focused) {
               this.win?.hide();
+              setTimeout(() => {
+                const parent = OVHook.getTopWindows().find(
+                  (v) => v.windowId === this.parentHandle
+                );
+
+                if (!parent) {
+                  this.cleanUp();
+                  this.onDetach?.();
+                }
+              }, 1500);
             }
 
             if (args.focused) {
@@ -82,7 +100,12 @@ class OverlayWindow {
             }
           }
         } else if (evt === "graphics.fps") {
-          this.win?.webContents.send("fps", args.fps);
+          this.win?.webContents.send("emulator:onFPS", {
+            fps: args.fps,
+            refreshRate: screen.getDisplayNearestPoint(
+              screen.getCursorScreenPoint()
+            ).displayFrequency,
+          });
 
           if (!this.started) {
             this.started = true;
@@ -94,6 +117,8 @@ class OverlayWindow {
           evt === "graphics.window"
         ) {
           this.win?.setSize(args.width, args.height);
+        } else if (evt === "game.hotkey.down") {
+          this.win?.webContents.send("emulator:onKey", args.name);
         }
 
         const position = getWindowRect(this.parentHandle);
@@ -107,6 +132,20 @@ class OverlayWindow {
         }
       }
     });
+
+    IOverlay.setHotkeys([
+      { name: "key.down", keyCode: keycode.codes.down },
+      { name: "key.up", keyCode: keycode.codes.up },
+      { name: "key.left", keyCode: keycode.codes.left },
+      { name: "key.right", keyCode: keycode.codes.right },
+      { name: "key.cross", keyCode: keycode.codes.z },
+      { name: "key.circle", keyCode: keycode.codes.x },
+      { name: "key.triangle", keyCode: keycode.codes.s },
+      { name: "key.square", keyCode: keycode.codes.a },
+      { name: "key.start", keyCode: keycode.codes.enter },
+      { name: "key.select", keyCode: keycode.codes.backspace },
+      { name: "key.ps", keyCode: keycode.codes.home },
+    ]);
   }
 
   poll = () => {
@@ -117,6 +156,10 @@ class OverlayWindow {
         const display = screen.getDisplayNearestPoint(
           screen.getCursorScreenPoint()
         );
+
+        IOverlay.start();
+
+        this.events();
 
         IOverlay.addWindow(this.win.id, {
           name: "overlay",
@@ -168,7 +211,6 @@ class OverlayWindow {
   }
 
   async attach() {
-    // const exe = { title: "Untitled - Notepad" };
     const exe = await this.queryRetroarch();
     if (!exe || !this.win) throw new Error("Retroarch not found");
 

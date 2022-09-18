@@ -8180,6 +8180,11 @@ widest-line@^3.1.0:
   dependencies:
     string-width "^4.0.0"
 
+win-screenshot@^1.0.4:
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/win-screenshot/-/win-screenshot-1.0.4.tgz#51dea2dace2dc24809be9ab2310c9a3b4d442d96"
+  integrity sha512-sYYHbTFLGsXOEb3qoI5yPKwyvtISuxLPCRDR12nTQVajQUpYLDzPZfp4xR64WbDbX9jgpXc1CqWXKSKFjAepeg==
+
 word-wrap@^1.2.3, word-wrap@~1.2.3:
   version "1.2.3"
   resolved "https://registry.yarnpkg.com/word-wrap/-/word-wrap-1.2.3.tgz#610636f6b1f703891bd34771ccb17fb93b47079c"

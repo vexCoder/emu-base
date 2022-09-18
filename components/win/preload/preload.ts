@@ -1,67 +1,81 @@
-import { ipcRenderer } from "electron";
 import { bind } from "./make";
 
-// bind("members", (h, i) => {
-//   h("get", (id: string) => i(`members:get`, id));
-//   h("search", (keyword: string, limit: number, offset: number) =>
-//     i(`members:search`, keyword, limit, offset)
+bind("win", (h, invoker) => {
+  h("minimize", invoker);
+  h("maximize", invoker);
+});
+
+bind("data", (h, invoker) => {
+  h("getGames", invoker);
+  h("getImage", invoker);
+  h("getGameFiles", invoker);
+  h("getGameRegionSettings", invoker);
+  h("getGameLinks", invoker);
+  h("setGameLinks", invoker);
+  h("downloadDisc", invoker);
+  h("getDownloadProgress", invoker);
+  h("play", invoker);
+});
+
+bind("emulator", (h, invoker, listener) => {
+  h("onFPS", listener);
+  h("onDetach", listener);
+  h("onKey", listener);
+  h("onData", listener);
+  h("toggleTurbo", invoker);
+  h("quit", invoker);
+  h("saveToSlot", invoker);
+  h("loadFromSlot", invoker);
+});
+
+// bind("data", (h, invoker, listener) => {
+//   h(
+//     "getGames",
+//     (keyword: string, console: string, page?: number, limit?: number) =>
+//       ipcRenderer.invoke(`data:getGames`, keyword, console, page, limit)
 //   );
-//   h("loans", (keyword: string, limit: number, offset: number) =>
-//     i(`members:loans`, keyword, limit, offset)
+
+//   h("getImage", (path: string, url?: string) =>
+//     ipcRenderer.invoke(`data:getImage`, path, url)
+//   );
+
+//   h("getGameFiles", (id: string, console: string) =>
+//     ipcRenderer.invoke(`data:getGameFiles`, id, console)
+//   );
+
+//   h("getGameRegionSettings", (id: string, console: string) =>
+//     ipcRenderer.invoke(`data:getGameRegionSettings`, id, console)
+//   );
+
+//   h("getGameLinks", (keywords: string, tags: string[], console: string) =>
+//     ipcRenderer.invoke(`data:getGameLinks`, keywords, tags, console)
+//   );
+
+//   h(
+//     "setGameLinks",
+//     (id: string, serials: string[], links: ParsedLinks[], console: string) =>
+//       ipcRenderer.invoke(`data:setGameLinks`, id, serials, links, console)
+//   );
+
+//   h("downloadDisc", (serial: string, id: string, cons: string) =>
+//     ipcRenderer.invoke(`data:downloadDisc`, serial, id, cons)
+//   );
+
+//   h("getDownloadProgress", (serial: string) =>
+//     ipcRenderer.invoke(`data:getDownloadProgress`, serial)
+//   );
+
+//   h("play", (serial: string, id: string, console: string) =>
+//     ipcRenderer.invoke(`data:play`, serial, id, console)
+//   );
+
+//   // h("onDetach", (callback: (data: any) => void) =>
+//   //   ir("eject-game", (_evt, data) => callback(data))
+//   // );
+
+//   h("onFPS", (callback: (data: any) => void) =>
+//     ipcRenderer.on("fps", (_evt, data) => {
+//       callback(data);
+//     })
 //   );
 // });
-
-bind("win", (h, i) => {
-  h("minimize", () => i(`win:minimize`));
-  h("maximize", () => i(`win:maximize`));
-});
-
-bind("data", (h, i) => {
-  h(
-    "getGames",
-    (keyword: string, console: string, page?: number, limit?: number) =>
-      i(`data:getGames`, keyword, console, page, limit)
-  );
-
-  h("getImage", (path: string, url?: string) => i(`data:getImage`, path, url));
-
-  h("getGameFiles", (id: string, console: string) =>
-    i(`data:getGameFiles`, id, console)
-  );
-
-  h("getGameRegionSettings", (id: string, console: string) =>
-    i(`data:getGameRegionSettings`, id, console)
-  );
-
-  h("getGameLinks", (keywords: string, tags: string[], console: string) =>
-    i(`data:getGameLinks`, keywords, tags, console)
-  );
-
-  h(
-    "setGameLinks",
-    (id: string, serials: string[], links: ParsedLinks[], console: string) =>
-      i(`data:setGameLinks`, id, serials, links, console)
-  );
-
-  h("downloadDisc", (serial: string, id: string, cons: string) =>
-    i(`data:downloadDisc`, serial, id, cons)
-  );
-
-  h("getDownloadProgress", (serial: string) =>
-    i(`data:getDownloadProgress`, serial)
-  );
-
-  h("play", (serial: string, id: string, console: string) =>
-    i(`data:play`, serial, id, console)
-  );
-
-  // h("onDetach", (callback: (data: any) => void) =>
-  //   ir("eject-game", (_evt, data) => callback(data))
-  // );
-
-  h("onFPS", (callback: (data: any) => void) =>
-    ipcRenderer.on("fps", (_evt, data) => {
-      callback(data);
-    })
-  );
-});
