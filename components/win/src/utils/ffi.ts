@@ -14,6 +14,7 @@ const user32 = new FFI.Library("user32.dll", {
   SendInput: ["uint32", ["int32", "pointer", "int32"]],
   MapVirtualKeyExA: ["uint", ["uint", "uint", "int"]],
   SetActiveWindow: ["long", ["long"]],
+  GetParent: ["long", ["long"]],
   ShowWindow: ["bool", ["long", "int"]],
   SwitchToThisWindow: ["bool", ["long", "bool"]],
   GetWindow: ["long", ["long", "uint"]],
@@ -21,6 +22,7 @@ const user32 = new FFI.Library("user32.dll", {
   GetWindowInfo: ["bool", ["long", "pointer"]],
   GetWindowTextA: ["long", ["long", stringPtr, "long"]],
   EnumWindows: ["bool", ["pointer", "long"]],
+  EnumChildWindows: ["bool", ["long", "pointer", "long"]],
   GetWindowThreadProcessId: ["long", ["long", "pointer"]],
   GetForegroundWindow: ["long", []],
   GetWindowRect: ["bool", ["long", "pointer"]],
@@ -102,7 +104,8 @@ export function ConvertKeyCodeToScanCode(keyCode: number) {
 }
 
 export const sendKeyToWindow = async (
-  keyCode: keyof typeof keycode.codes | keyof typeof keycode.aliases
+  keyCode: keyof typeof keycode.codes | keyof typeof keycode.aliases,
+  delay = 100
 ) => {
   const scanCode = ConvertKeyCodeToScanCode(keycode(keyCode));
 
@@ -121,7 +124,7 @@ export const sendKeyToWindow = async (
   user32.SendInput(1, keyDownInput.ref(), INPUT.size);
 
   await new Promise((resolve) => {
-    setTimeout(resolve, 50);
+    setTimeout(resolve, delay);
   });
 
   const keyUpKeyboardInput = KEYBDINPUT({
@@ -161,14 +164,21 @@ export const getWindow = (handle: number | any) => {
   return window;
 };
 
+export const setActiveWindow2 = async (handle: number | any) => {
+  user32.ShowWindow(handle, ShowWindowFlags.SW_MINIMIZE);
+  user32.ShowWindow(handle, ShowWindowFlags.SW_RESTORE);
+  user32.SetForegroundWindow(handle);
+  user32.SetFocus(handle);
+};
+
 export const setActiveWindow = (
   handle: number | any,
   flag: ShowWindowFlags = ShowWindowFlags.SW_MAXIMIZE
 ) => {
   user32.ShowWindow(handle, flag);
   user32.SetForegroundWindow(handle);
-  user32.SetFocus(handle);
   user32.SetActiveWindow(handle);
+  user32.SetFocus(handle);
 };
 
 export const getWindowText = (handle: number | any) => {
@@ -177,6 +187,31 @@ export const getWindowText = (handle: number | any) => {
   const name = ref.readCString(buf, 0);
   // const val = new StringDecoder("ucs2").write(buf).replace(/\0/g, "");
   return name;
+};
+
+export const listChildWindows = (handle: number | any) => {
+  const handles: number[] = [];
+  const callback = new FFI.Callback("bool", ["long", "int32"], (h) => {
+    handles.push(h);
+    return true;
+  });
+
+  user32.EnumChildWindows(handle, callback, null);
+
+  const windows: { title: string; handle: number }[] = handles
+    .map((v) => ({
+      title: getWindowText(v),
+      handle: v,
+    }))
+    .filter((v) => !!v.title.length);
+
+  return windows;
+};
+
+export const getParentWindow = (handle: number | any) => {
+  const parent = user32.GetParent(handle);
+
+  return parent;
 };
 
 export const listWindows = () => {

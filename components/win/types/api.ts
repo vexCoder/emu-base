@@ -63,7 +63,9 @@ export interface Handles {
 
     onDetach: Connection<[callback: (data?: any) => void]>;
 
-    onKey: Connection<[callback: (data?: string) => void]>;
+    onKey: Connection<
+      [callback: (data?: { key: string; payload: any }) => void]
+    >;
 
     onData: Connection<
       [callback: (data?: Record<string, any> & { evt: string }) => void]

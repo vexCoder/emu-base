@@ -35,7 +35,7 @@ class Constants {
     input_state_slot_increase: "f7",
     input_save_state: "f5",
     input_load_state: "f4",
-    input_toggle_fast_forward: "space",
+    input_toggle_fast_forward: "f2",
     fastforward_ratio: "0.000000",
     menu_pause_libretro: "false",
     audio_enable: "false",

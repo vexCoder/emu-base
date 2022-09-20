@@ -3,6 +3,7 @@ import {
   getConsoleDump,
   getDumpPath,
   getEmuSettings,
+  sleep,
   updateCfg,
 } from "@utils/helper";
 import execa, { ExecaChildProcess } from "execa";
@@ -10,7 +11,13 @@ import { extname, join } from "path";
 import fs from "fs-extra";
 import pMap from "p-map";
 import { is, head, range } from "ramda";
-import { getWindowRect, sendKeyToWindow } from "@utils/ffi";
+import {
+  getWindowRect,
+  sendKeyToWindow,
+  setActiveWindow,
+  setActiveWindow2,
+  ShowWindowFlags,
+} from "@utils/ffi";
 import Constants from "@utils/constants";
 import { Screenshot, ImageFormat } from "win-screenshot";
 
@@ -79,7 +86,7 @@ class Emulator {
   }
 
   async loadFromSlot(slot: number) {
-    if (this.process && this.handle) {
+    if (this.process && this.handle && this.app.overlay) {
       const diff = Math.abs(this.state_slot - slot);
       const isDecrease = slot < this.state_slot;
       await pMap(range(0, diff), async () => {
@@ -93,9 +100,12 @@ class Emulator {
   }
 
   async toggleTurbo() {
-    if (this.process && this.handle) {
+    if (this.process && this.handle && this.app.overlay) {
+      console.log("toggle turbo");
       const db = await getEmuSettings();
-      await sendKeyToWindow("space");
+      await setActiveWindow2(this.handle);
+      await sleep(50);
+      await sendKeyToWindow("f2", 50);
       this.turbo = !this.turbo;
       await db
         .get("consoles")
@@ -112,6 +122,7 @@ class Emulator {
 
   async toggleFPS() {
     if (this.process && this.handle) {
+      await setActiveWindow(this.handle, ShowWindowFlags.SW_SHOW);
       await sendKeyToWindow("f3");
       this.showFps = !this.showFps;
       this.app?.overlay?.sendData({
@@ -177,8 +188,8 @@ class Emulator {
           this.console.retroarch.turboRate ?? this.turboRate
         }.000000`,
         ...(this.console.retroarch.fullscreen && {
-          video_fullscreen: isDev ? "false" : "true",
-          video_windowed_fullscreen: isDev ? "false" : "true",
+          video_fullscreen: isDev ? "true" : "true",
+          video_windowed_fullscreen: isDev ? "true" : "true",
         }),
       },
       this.console.key

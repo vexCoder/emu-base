@@ -130,4 +130,5 @@ interface AppSettings {
   pathing: EmuPathing;
   consoles: ConsoleSettings[];
   showFps: boolean;
+  showMenu: boolean;
 }

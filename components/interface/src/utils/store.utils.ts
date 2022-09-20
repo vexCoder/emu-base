@@ -166,6 +166,7 @@ export interface OverlaySettings {
   stateFocusDecide: number;
   fps: boolean;
   turbo: boolean;
+  disableTurbo: boolean;
   focus: number;
 }
 export interface OverlayActions {
@@ -182,6 +183,7 @@ export const useOverlayStore = create(
     stateFocusDecide: 0,
     fps: false,
     turbo: false,
+    disableTurbo: false,
     focus: 0,
     set(state) {
       set(typeof state === "function" ? state(get()) : state);

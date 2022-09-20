@@ -1,11 +1,19 @@
 import {
+  getParentWindow,
   getWindowRect,
   getWindowText,
+  listChildWindows,
   listWindows,
   setActiveWindow,
   ShowWindowFlags,
 } from "@utils/ffi";
-import { createWindow, extractMatches, retry } from "@utils/helper";
+import {
+  createWindow,
+  extractMatches,
+  getEmuSettings,
+  retry,
+  sleep,
+} from "@utils/helper";
 import { BrowserWindow, screen } from "electron";
 import IOverlay from "electron-overlay";
 import keycode from "keycode";
@@ -71,6 +79,26 @@ class OverlayWindow {
     this.win?.webContents.send("emulator:onData", value);
   }
 
+  async intercept(callback: (bool: boolean) => boolean) {
+    const db = await getEmuSettings();
+
+    const showMenu = db.get("showMenu").value();
+
+    const newBool = callback(showMenu);
+
+    IOverlay.sendCommand({
+      command: "input.intercept",
+      intercept: newBool,
+    });
+
+    db.set("showMenu", newBool).write();
+
+    return {
+      current: newBool,
+      previous: showMenu,
+    };
+  }
+
   events() {
     IOverlay.setEventCallback((evt, args: any) => {
       if (this.win) {
@@ -97,6 +125,7 @@ class OverlayWindow {
             if (args.focused) {
               this.win?.show();
               setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
+              this.intercept((bool) => bool);
             }
           }
         } else if (evt === "graphics.fps") {
@@ -118,7 +147,20 @@ class OverlayWindow {
         ) {
           this.win?.setSize(args.width, args.height);
         } else if (evt === "game.hotkey.down") {
-          this.win?.webContents.send("emulator:onKey", args.name);
+          if (args.name === "key.ps") {
+            this.intercept((bool) => {
+              this.win?.webContents.send("emulator:onKey", {
+                key: args.name,
+                payload: !bool,
+              });
+
+              return !bool;
+            });
+          } else {
+            this.win?.webContents.send("emulator:onKey", {
+              key: args.name,
+            });
+          }
         }
 
         const position = getWindowRect(this.parentHandle);
@@ -217,6 +259,19 @@ class OverlayWindow {
     this.win.setIgnoreMouseEvents(true);
 
     this.poll();
+
+    await sleep(5000);
+
+    const parent = getParentWindow(exe.handle);
+    console.log(parent);
+    listChildWindows(parent).forEach((e) => {
+      console.log(e);
+    });
+
+    console.log(exe.handle);
+    listChildWindows(exe.handle).forEach((e) => {
+      console.log(e);
+    });
 
     return this.parentName;
   }
