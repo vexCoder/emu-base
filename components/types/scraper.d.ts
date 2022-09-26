@@ -116,6 +116,10 @@ interface ConsoleSettings {
     fullscreen: boolean;
     input: 'dinput' | 'xinput' | 'hdl2' | 'sdl2' | string;
     turboRate: number,
+    showFps?: boolean;
+    volume?: number;
+    mute?: boolean;
+    turbo?: boolean;
   };
 }
 
@@ -129,6 +133,5 @@ interface EmuPathing {
 interface AppSettings {
   pathing: EmuPathing;
   consoles: ConsoleSettings[];
-  showFps: boolean;
-  showMenu: boolean;
+  savestates: Record<string, number[]>
 }

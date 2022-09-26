@@ -36,9 +36,10 @@ class Constants {
     input_save_state: "f5",
     input_load_state: "f4",
     input_toggle_fast_forward: "f2",
+    input_screenshot: "f1",
     fastforward_ratio: "0.000000",
     menu_pause_libretro: "false",
-    audio_enable: "false",
+    audio_enable: "true",
     video_refresh_rate: "144.000000",
     fps_show: "false",
     input_fps_toggle: "f3",
@@ -47,6 +48,8 @@ class Constants {
     input_exit_emulator: "f12",
     input_osk_toggle: "nul",
     settings_show_onscreen_display: "false",
+    audio_mute_enable: "false",
+    audio_volume: "-8.000000",
   };
 }
 

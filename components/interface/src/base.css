@@ -136,4 +136,7 @@
   .center-transform {
     @apply fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] origin-center;
   }
+  .center-absolute-transform {
+    @apply fixed top-[50%] left-[50%] translate-x-[-50%] translate-y-[-50%] origin-center;
+  }
 }

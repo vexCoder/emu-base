@@ -378,7 +378,8 @@ export const updateCfg = async (cfg: PartialCFG, cons: string) => {
   await fs.writeFile(configPath, replaced, "utf-8");
 };
 
-export const sleep = (ms: number) =>
-  new Promise((r) => {
+export const sleep = async (ms: number) => {
+  await new Promise((r) => {
     setTimeout(r, ms);
   });
+};

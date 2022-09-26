@@ -1,8 +1,6 @@
 import {
-  getParentWindow,
   getWindowRect,
   getWindowText,
-  listChildWindows,
   listWindows,
   setActiveWindow,
   ShowWindowFlags,
@@ -12,7 +10,6 @@ import {
   extractMatches,
   getEmuSettings,
   retry,
-  sleep,
 } from "@utils/helper";
 import { BrowserWindow, screen } from "electron";
 import IOverlay from "electron-overlay";
@@ -23,6 +20,7 @@ import { join } from "path";
 interface OverlayOptions {
   onDetach: () => void;
   onAttach: () => void;
+  onInit: () => void;
 }
 class OverlayWindow {
   win: BrowserWindow | undefined;
@@ -41,6 +39,8 @@ class OverlayWindow {
 
   onAttach?: () => void;
 
+  onInit?: () => void;
+
   createWindow(icon: string, options?: OverlayOptions) {
     const isDev = process.env.NODE_ENV === "development";
     const path = isDev
@@ -49,6 +49,7 @@ class OverlayWindow {
 
     this.onDetach = options?.onDetach;
     this.onAttach = options?.onAttach;
+    this.onInit = options?.onInit;
 
     this.win = createWindow({
       urlOrPath: path,
@@ -69,6 +70,10 @@ class OverlayWindow {
         },
       },
     });
+  }
+
+  setOnInit(onInit: () => void) {
+    this.onInit = onInit;
   }
 
   setOnAttach(onAttach: () => void) {
@@ -140,6 +145,7 @@ class OverlayWindow {
             this.started = true;
             this.win?.show();
             setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
+            this.onInit?.();
           }
         } else if (
           evt === "graphics.window.event.resize" ||
@@ -259,19 +265,6 @@ class OverlayWindow {
     this.win.setIgnoreMouseEvents(true);
 
     this.poll();
-
-    await sleep(5000);
-
-    const parent = getParentWindow(exe.handle);
-    console.log(parent);
-    listChildWindows(parent).forEach((e) => {
-      console.log(e);
-    });
-
-    console.log(exe.handle);
-    listChildWindows(exe.handle).forEach((e) => {
-      console.log(e);
-    });
 
     return this.parentName;
   }

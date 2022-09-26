@@ -28,7 +28,7 @@ const build = async () => {
     );
   }
 
-  if (isDev) plugins.push(obfuscator());
+  if (!isDev) plugins.push(obfuscator());
 
   await makeEsbuild(["src/index.ts", "preload/preload.ts"], pathToBuild, {
     watch: isDev,
@@ -42,6 +42,8 @@ const build = async () => {
       "ref-union-napi",
       "node-ovhook",
       "electron-overlay",
+      "sharp",
+      "screenshot-desktop",
     ],
     entryNames: `[name]`,
   });

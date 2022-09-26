@@ -32,6 +32,14 @@ const OverlayPerformance = () => {
   if (!store.fps) return null;
   return (
     <div className="w-[250px] h-[75px] font-bold text-text rounded-xl z-[100]">
+      {/* {store.route}
+      <br />
+      {store.focus}
+      <br />
+      {store.stateFocus}
+      <br />
+      {store.stateFocusDecide}
+      <br /> */}
       <p className="text-xs">
         <span className="text-yellow-400">FPS</span>&nbsp;
         <span

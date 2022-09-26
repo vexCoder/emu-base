@@ -55,7 +55,7 @@ const ModalComponent = ({
           <motion.div
             key="modal-backdrop"
             className={clsx(
-              "fixed h-full w-full bg-black/10 z-40",
+              "fixed h-full w-full bg-black/50 z-40",
               classes?.backdrop
             )}
             initial={{ opacity: 0 }}

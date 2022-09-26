@@ -1,5 +1,4 @@
 import YoutubeAudio from "@elements/YoutubeAudio";
-import useGamePad from "@hooks/useGamePad";
 import useGetGames from "@hooks/useGetGames";
 import { MainStore, useMainStore } from "@utils/store.utils";
 import {
@@ -7,9 +6,11 @@ import {
   useCreation,
   useDeepCompareEffect,
   useInViewport,
+  useKeyPress,
   useToggle,
   useWhyDidYouUpdate,
 } from "ahooks";
+import keycode from "keycode";
 import { nanoid } from "nanoid";
 import { pick, range } from "ramda";
 import { useEffect, useRef } from "react";
@@ -28,19 +29,12 @@ const GameList = () => {
 
   const store = useMainStore(selector);
 
-  useGamePad({
-    events: {
-      D_PAD_LEFT: (p) => {
-        if (p) {
-          actions.dec();
-        }
-      },
-      D_PAD_RIGHT: (p) => {
-        if (p) {
-          actions.inc();
-        }
-      },
-    },
+  useKeyPress(keycode.codes.left, () => {
+    actions.dec();
+  });
+
+  useKeyPress(keycode.codes.right, () => {
+    actions.inc();
   });
 
   const tag = store.selected?.opening.split("https://youtu.be/")[1];

@@ -26,6 +26,10 @@ bind("emulator", (h, invoker, listener) => {
   h("quit", invoker);
   h("saveToSlot", invoker);
   h("loadFromSlot", invoker);
+  h("init", invoker);
+  h("volume", invoker);
+  h("mute", invoker);
+  h("toggleFPS", invoker);
 });
 
 // bind("data", (h, invoker, listener) => {

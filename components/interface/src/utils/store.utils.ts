@@ -161,6 +161,7 @@ export const useDebugStore = create<
 >(subscribeWithSelector(persist(() => ({ test: 0 }), { name: "debug" })));
 
 export interface OverlaySettings {
+  open: boolean;
   route: "menu" | "states" | undefined;
   stateFocus: number;
   stateFocusDecide: number;
@@ -168,6 +169,12 @@ export interface OverlaySettings {
   turbo: boolean;
   disableTurbo: boolean;
   focus: number;
+  volume: number;
+  mute: boolean;
+  game?: string;
+  console?: string;
+  slot: number;
+  states: number[];
 }
 export interface OverlayActions {
   set: Setter<OverlaySettings>;
@@ -178,13 +185,18 @@ export type OverlayStore = OverlaySettings & OverlayActions;
 export const useOverlayStore = create(
   subscribeWithSelector<OverlayStore>((set, get) => ({
     // properties
+    slot: 0,
+    open: false,
     route: "menu",
     stateFocus: 0,
     stateFocusDecide: 0,
+    volume: 3,
+    mute: false,
     fps: false,
     turbo: false,
     disableTurbo: false,
     focus: 0,
+    states: [],
     set(state) {
       set(typeof state === "function" ? state(get()) : state);
     },

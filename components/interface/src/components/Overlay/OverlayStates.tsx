@@ -1,159 +1,142 @@
 import Modal from "@elements/Modal";
+import SlotImage from "@elements/SlotImage";
 import {
   ArrowPathIcon,
   BookmarkSquareIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
 import { useOverlayStore } from "@utils/store.utils";
-import { useMount } from "ahooks";
 import clsx from "clsx";
+import dayjs from "dayjs";
 import _ from "lodash";
+import { nanoid } from "nanoid";
+
+const slots = _.range(0, 4).map((i) => ({
+  index: i,
+  id: nanoid(5),
+}));
+
+const OverlayStatesContent = () => {
+  const store = useOverlayStore();
+
+  return (
+    <div className="v-stack gap-2">
+      <div className="h-stack gap-3">
+        <div className="relative rounded-xl overflow-hidden flex-grow-0 flex-shrink-0 flex-[182px] max-w-24">
+          {store.game && store.console && (
+            <SlotImage
+              className="w-full h-full"
+              console={store.console}
+              game={store.game}
+              slot={store.stateFocus}
+              imageProps={{
+                className: "w-full h-full object-contain",
+              }}
+            />
+          )}
+        </div>
+        <div className="v-stack flex-[3] gap-2">
+          {slots.map(({ index: v, id }) => {
+            const lastSaved = dayjs.unix(store.states[v]);
+            return (
+              <div
+                className={clsx(
+                  "overlay-menu-button relative overflow-hidden h-9",
+                  store.stateFocus === v && "bg-highlight/20",
+                  store.stateFocus !== v && "bg-transparent"
+                )}
+                key={`${id}_slot`}
+              >
+                {store.stateFocus === v && (
+                  <>
+                    <div
+                      className={clsx(
+                        "absolute top-0 w-[70%] rounded-md  h-full bg-focus text-text font-bold z-20",
+                        "rounded-md px-2 py-1",
+                        "transition-all duration-75 ease-in-out",
+                        store.stateFocusDecide === 1 && "right-[0%]",
+                        store.stateFocusDecide !== 1 && "right-[-70%]"
+                      )}
+                    >
+                      <div className="h-stack items-center gap-2 w-full">
+                        <ArrowPathIcon
+                          className="text-text"
+                          width="1em"
+                          height="1em"
+                        />
+                        <p>Load</p>
+                      </div>
+                    </div>
+                    <div
+                      className={clsx(
+                        "absolute top-0 w-[70%] h-full bg-green-500 text-text font-bold z-20",
+                        "rounded-md px-2 py-1",
+                        "transition-all duration-75 ease-in-out",
+                        store.stateFocusDecide === -1 && "left-[0%]",
+                        store.stateFocusDecide !== -1 && "left-[-70%]"
+                      )}
+                    >
+                      <div className="h-stack items-center gap-2 w-full">
+                        <BookmarkSquareIcon
+                          className="text-text"
+                          width="1em"
+                          height="1em"
+                        />
+                        <p>Save</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                <div
+                  className={clsx(
+                    "absolute h-stack items-center justify-between gap-2",
+                    "h-full w-[calc(100%-1rem)] px-2 box-content",
+                    "transition-all duration-75 ease-in-out left-0 top-0 z-10",
+                    store.stateFocus === v &&
+                      store.stateFocusDecide === -1 &&
+                      "left-[72%]"
+                  )}
+                >
+                  <p>Slot {v}</p>
+                  <p>
+                    {lastSaved.isValid()
+                      ? lastSaved.format("MM-DD-YY HH:MM:ss")
+                      : ""}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      <div
+        className={clsx(
+          "overlay-menu-button",
+          store.stateFocus === 4 && "bg-highlight/20"
+        )}
+      >
+        <div className="h-stack items-center gap-2 w-full">
+          <XCircleIcon className="text-text" width="1em" height="1em" />
+          <p>Return</p>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const OverlayStates = () => {
   const store = useOverlayStore();
 
-  const slots = _.range(0, 4);
-
-  useMount(() => {
-    if (window.emulator) {
-      window.emulator.onKey((opts) => {
-        const { key } = opts ?? {};
-        if (key === "key.down")
-          store.set((prev) => ({
-            ...prev,
-            stateFocus: _.clamp(prev.stateFocus + 1, 0, 4),
-            stateFocusDecide: 0,
-          }));
-
-        if (key === "key.up")
-          store.set((prev) => ({
-            ...prev,
-            stateFocus: _.clamp(prev.stateFocus - 1, 0, 4),
-            stateFocusDecide: 0,
-          }));
-
-        if (key === "key.left")
-          store.set((prev) => ({
-            ...prev,
-            stateFocusDecide: prev.stateFocusDecide === 1 ? 0 : 1,
-          }));
-
-        if (key === "key.right")
-          store.set((prev) => ({
-            ...prev,
-            stateFocusDecide: prev.stateFocusDecide === -1 ? 0 : -1,
-          }));
-
-        if (key === "key.cross") {
-          store.set((prev) => {
-            if (prev.route !== "states") return prev;
-            if (prev.focus === 4) {
-              return { ...prev, route: "menu" };
-            }
-
-            if (prev.stateFocusDecide === 1) {
-              window.emulator.saveToSlot(prev.stateFocus);
-            }
-
-            if (prev.stateFocusDecide === -1) {
-              window.emulator.loadFromSlot(prev.stateFocus);
-            }
-
-            return {
-              ...prev,
-              stateFocusDecide: 0,
-              stateFocus: 0,
-              route: undefined,
-            };
-          });
-        }
-      });
-    }
-  });
-
-  if (store.route !== "states") return null;
   return (
     <Modal
       classes={{
         backdrop: "bg-transparent",
       }}
-      open={store.route === "states"}
-      handleClose={() => store.set({ route: undefined })}
+      open={store.route === "states" && store.open}
+      handleClose={() => store.set({ open: false })}
     >
-      <div className="v-stack gap-2">
-        {slots.map((v) => (
-          <div
-            className={clsx(
-              "overlay-menu-button relative overflow-hidden",
-              store.focus === v && "bg-highlight/20"
-            )}
-            key={`${v}_slot`}
-          >
-            {store.stateFocus === v && (
-              <>
-                <div
-                  className={clsx(
-                    "absolute top-0 w-[50%] rounded-md  h-full bg-focus text-text font-bold",
-                    "rounded-md px-2 py-1",
-                    "transition-all duration-75 ease-in-out",
-                    store.stateFocusDecide === -1 && "right-[0%]",
-                    store.stateFocusDecide !== -1 && "right-[-50%]"
-                  )}
-                >
-                  <div className="h-stack items-center gap-2 w-full">
-                    <ArrowPathIcon
-                      className="text-text"
-                      width="1em"
-                      height="1em"
-                    />
-                    <p>Load</p>
-                  </div>
-                </div>
-                <div
-                  className={clsx(
-                    "absolute top-0 w-[50%] h-full bg-green-500 text-text font-bold",
-                    "rounded-md px-2 py-1",
-                    "transition-all duration-75 ease-in-out",
-                    store.stateFocusDecide === 1 && "left-[0%]",
-                    store.stateFocusDecide !== 1 && "left-[-50%]"
-                  )}
-                >
-                  <div className="h-stack items-center gap-2 w-full">
-                    <BookmarkSquareIcon
-                      className="text-text"
-                      width="1em"
-                      height="1em"
-                    />
-                    <p>Save</p>
-                  </div>
-                </div>
-              </>
-            )}
-            <div
-              className={clsx(
-                "h-stack items-center gap-2 w-full",
-                "transition-all duration-75 ease-in-out",
-                store.stateFocus === v &&
-                  store.stateFocusDecide === 1 &&
-                  "pl-[52%]"
-              )}
-            >
-              <p>Slot {v}</p>
-            </div>
-          </div>
-        ))}
-        <div
-          className={clsx(
-            "overlay-menu-button",
-            store.stateFocus === 4 && "bg-highlight/20"
-          )}
-        >
-          <div className="h-stack items-center gap-2 w-full">
-            <XCircleIcon className="text-text" width="1em" height="1em" />
-            <p>Return</p>
-          </div>
-        </div>
-      </div>
+      <OverlayStatesContent />
     </Modal>
   );
 };

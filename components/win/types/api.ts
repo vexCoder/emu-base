@@ -75,6 +75,10 @@ export interface Handles {
     loadFromSlot: Connection<[slot: number]>;
     quit: Connection;
     toggleTurbo: Connection;
+    toggleFPS: Connection;
     togglePause: Connection;
+    init: Connection;
+    volume: Connection<[offset: number]>;
+    mute: Connection<[mute: boolean]>;
   };
 }

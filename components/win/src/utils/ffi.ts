@@ -29,12 +29,13 @@ const user32 = new FFI.Library("user32.dll", {
   SetFocus: ["long", ["long"]],
   SetWindowPos: ["bool", ["long", "long", "int", "int", "int", "int", "uint"]],
   SetForegroundWindow: ["bool", ["long"]],
+  BringWindowToTop: ["bool", ["int"]],
   AttachThreadInput: ["bool", ["int", "long", "bool"]],
 });
 
-// const kernel32 = new FFI.Library("Kernel32.dll", {
-//   GetCurrentThreadId: ["int", []],
-// });
+const kernel32 = new FFI.Library("Kernel32.dll", {
+  GetCurrentThreadId: ["int", []],
+});
 
 // typedef struct tagMOUSEINPUT {
 //   LONG    dx;
@@ -162,6 +163,24 @@ export const getWindowByName = (name: string) => {
 export const getWindow = (handle: number | any) => {
   const window = user32.GetWindow(handle, null);
   return window;
+};
+
+// DWORD windowThreadProcessId = GetWindowThreadProcessId(GetForegroundWindow(),LPDWORD(0));
+//     DWORD currentThreadId = GetCurrentThreadId();
+//     DWORD CONST_SW_SHOW = 5;
+//     AttachThreadInput(windowThreadProcessId, currentThreadId, true);
+//     BringWindowToTop(hwnd);
+//     ShowWindow(hwnd, CONST_SW_SHOW);
+//     AttachThreadInput(windowThreadProcessId,currentThreadId, false);
+
+export const setActiveWindow3 = (handle: number | any) => {
+  const foreground = user32.GetForegroundWindow();
+  const windowThreadId = user32.GetWindowThreadProcessId(foreground, null);
+  const currentThreadId = kernel32.GetCurrentThreadId();
+  user32.AttachThreadInput(windowThreadId, currentThreadId, true);
+  user32.BringWindowToTop(handle);
+  user32.ShowWindow(handle, ShowWindowFlags.SW_SHOW);
+  user32.AttachThreadInput(windowThreadId, currentThreadId, false);
 };
 
 export const setActiveWindow2 = async (handle: number | any) => {

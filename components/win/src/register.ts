@@ -55,6 +55,10 @@ export const MountDataHandles = (app: Application) => {
     app?.emulator?.toggleTurbo();
   });
 
+  Handlers.register("emulator", "toggleFPS", async (_evt) => {
+    app?.emulator?.toggleFPS();
+  });
+
   Handlers.register("emulator", "quit", async (_evt) => {
     app?.emulator?.quit();
   });
@@ -66,5 +70,17 @@ export const MountDataHandles = (app: Application) => {
 
   Handlers.register("emulator", "loadFromSlot", async (_evt, slot) => {
     app?.emulator?.loadFromSlot(slot);
+  });
+
+  Handlers.register("emulator", "volume", async (_evt, volume) => {
+    app?.emulator?.setVolume(volume);
+  });
+
+  Handlers.register("emulator", "init", async (_evt) => {
+    app?.emulator?.init();
+  });
+
+  Handlers.register("emulator", "mute", async (_evt, bool) => {
+    app?.emulator?.muteGame(bool);
   });
 };

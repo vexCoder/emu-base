@@ -1,4 +1,7 @@
 import MountSubscriber from "@providers/MountSubscriber";
+import { OverlaySettings, useOverlayStore } from "@utils/store.utils";
+import { useMount } from "ahooks";
+import _ from "lodash";
 import OverlayMenu from "./OverlayMenu";
 import OverlayPerformance from "./OverlayPerformance";
 import OverlayStates from "./OverlayStates";
@@ -6,12 +9,220 @@ import OverlayStates from "./OverlayStates";
 const Overlay = () => {
   return (
     <MountSubscriber>
-      <div className="w-[100vw] h-[100vh] p-4">
-        <OverlayPerformance />
-        <OverlayMenu />
-        <OverlayStates />
-      </div>
+      <OverlayContent />
     </MountSubscriber>
+  );
+};
+
+const cycleNum = (num: number, min: number, max: number) => {
+  // eslint-disable-next-line no-nested-ternary
+  return num > max ? min : num < min ? max : num;
+};
+
+const handleMenu = (
+  prev: OverlaySettings,
+  opts?: { key: string; payload: any }
+): Partial<OverlaySettings> => {
+  const { key, payload } = opts ?? {};
+  if (key === "key.down")
+    return {
+      ...prev,
+      focus: cycleNum(prev.focus + 1, 0, 4),
+    };
+
+  if (key === "key.up")
+    return {
+      ...prev,
+      focus: cycleNum(prev.focus - 1, 0, 4),
+    };
+
+  if (key === "key.ps") {
+    return {
+      ...prev,
+      focus: 0,
+      open: payload,
+    };
+  }
+
+  if (key === "key.circle" && prev.open) {
+    return { ...prev, focus: 0, open: false };
+  }
+
+  if (key === "key.left") {
+    if (prev.focus === 2 && !prev.mute) {
+      window.emulator.volume(-1);
+      return {
+        ...prev,
+        volume: _.clamp(prev.volume - 1, 0, 4),
+      };
+    }
+  }
+
+  if (key === "key.right") {
+    if (prev.focus === 2 && !prev.mute) {
+      window.emulator.volume(1);
+      return {
+        ...prev,
+        volume: _.clamp(prev.volume + 1, 0, 4),
+      };
+    }
+  }
+
+  if (key === "key.cross") {
+    if (prev.focus === 4) {
+      window.emulator.quit();
+    }
+
+    if (prev.focus === 3) {
+      window.emulator.toggleTurbo();
+      return prev;
+    }
+
+    if (prev.focus === 2) {
+      const newMute = !prev.mute;
+      window.emulator.mute(newMute);
+      return { ...prev, mute: newMute };
+    }
+
+    if (prev.focus === 1) {
+      window.emulator.toggleFPS();
+      return prev;
+    }
+
+    if (prev.focus === 0) {
+      return { ...prev, route: "states" };
+    }
+  }
+
+  return prev;
+};
+
+const handleStates = (
+  prev: OverlaySettings,
+  opts?: { key: string; payload: any }
+): Partial<OverlaySettings> => {
+  const { key, payload } = opts ?? {};
+  if (key === "key.down")
+    return {
+      ...prev,
+      stateFocus: cycleNum(prev.stateFocus + 1, 0, 4),
+      stateFocusDecide: 0,
+    };
+
+  if (key === "key.up")
+    return {
+      ...prev,
+      stateFocus: cycleNum(prev.stateFocus - 1, 0, 4),
+      stateFocusDecide: 0,
+    };
+
+  if (key === "key.left")
+    return {
+      ...prev,
+      stateFocusDecide: prev.stateFocusDecide === 1 ? 0 : 1,
+    };
+
+  if (key === "key.right")
+    return {
+      ...prev,
+      stateFocusDecide: prev.stateFocusDecide === -1 ? 0 : -1,
+    };
+
+  if (key === "key.ps") {
+    return {
+      ...prev,
+      focus: 0,
+      open: payload,
+      ...(!payload && {
+        route: "menu",
+      }),
+    };
+  }
+
+  if (key === "key.circle") {
+    return { ...prev, stateFocus: 0, route: "menu" };
+  }
+
+  if (key === "key.cross") {
+    if (prev.stateFocus === 4) {
+      return { ...prev, stateFocus: 0, route: "menu" };
+    }
+
+    if (prev.stateFocusDecide === -1) {
+      window.emulator.saveToSlot(prev.stateFocus);
+
+      return {
+        ...prev,
+        stateFocusDecide: 0,
+        stateFocus: 0,
+        focus: 0,
+        route: "menu",
+        open: false,
+      };
+    }
+
+    if (prev.stateFocusDecide === 1) {
+      window.emulator.loadFromSlot(prev.stateFocus);
+
+      return {
+        ...prev,
+        stateFocusDecide: 0,
+        stateFocus: 0,
+        focus: 0,
+        route: "menu",
+        open: false,
+      };
+    }
+
+    return prev;
+  }
+
+  return prev;
+};
+
+const OverlayContent = () => {
+  const store = useOverlayStore();
+
+  useMount(() => {
+    if (window.emulator) {
+      window.emulator.onKey((opts) => {
+        store.set((prev) => {
+          if (prev.route === "menu") {
+            return handleMenu(prev, opts);
+          }
+          if (prev.route === "states") {
+            return handleStates(prev, opts);
+          }
+
+          return prev;
+        });
+      });
+
+      window.emulator.onData((val) => {
+        if (val?.evt === "event.toggleTurbo") {
+          store.set({ turbo: val?.value });
+        }
+
+        if (val?.evt === "event.toggleFPS") {
+          store.set({ fps: val?.value });
+        }
+
+        if (val?.evt === "event.play") {
+          store.set(val?.value ?? {});
+        }
+
+        if (val?.evt === "event.update") {
+          store.set(val?.value ?? {});
+        }
+      });
+    }
+  });
+  return (
+    <div className="w-[100vw] h-[100vh] p-4">
+      <OverlayPerformance />
+      <OverlayMenu />
+      <OverlayStates />
+    </div>
   );
 };
 

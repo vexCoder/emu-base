@@ -1,4 +1,6 @@
 /* eslint-disable @typescript-eslint/naming-convention */
+import Constants from "@utils/constants";
+import { getWindowRect } from "@utils/ffi";
 import {
   getConsoleDump,
   getDumpPath,
@@ -7,22 +9,20 @@ import {
   updateCfg,
 } from "@utils/helper";
 import execa, { ExecaChildProcess } from "execa";
-import { extname, join } from "path";
 import fs from "fs-extra";
+import dgram from "dgram";
 import pMap from "p-map";
-import { is, head, range } from "ramda";
-import {
-  getWindowRect,
-  sendKeyToWindow,
-  setActiveWindow,
-  setActiveWindow2,
-  ShowWindowFlags,
-} from "@utils/ffi";
-import Constants from "@utils/constants";
-import { Screenshot, ImageFormat } from "win-screenshot";
+import { extname, join } from "path";
+import { head, is, range } from "ramda";
+import screenshot from "screenshot-desktop";
+import sharp from "sharp";
+import _ from "lodash";
+import fastq from "fastq";
 
 class Emulator {
   console: ConsoleSettings;
+
+  client?: dgram.Socket;
 
   settings: AppSettings;
 
@@ -40,7 +40,15 @@ class Emulator {
 
   showFps: boolean = false;
 
+  showMenu: boolean = false;
+
   game: string | undefined;
+
+  rawVolume: number = -3.6;
+
+  volume: number = 3;
+
+  mute: boolean = false;
 
   constructor(settings: AppSettings, app: Application, cons: ConsoleSettings) {
     this.settings = settings;
@@ -50,52 +58,135 @@ class Emulator {
 
   async saveToSlot(slot: number) {
     if (this.process && this.handle) {
+      console.log("save");
+      const emu = await getEmuSettings();
       const diff = Math.abs(this.state_slot - slot);
       const isDecrease = slot < this.state_slot;
-      await pMap(range(0, diff), async () => {
-        if (isDecrease) await sendKeyToWindow("f6");
-        else await sendKeyToWindow("f7");
+      await this.sendMessage("PAUSE_TOGGLE");
+      if (slot !== this.state_slot)
+        await pMap(
+          range(0, diff),
+          async () => {
+            await sleep(150);
+            if (isDecrease) await this.sendMessage("STATE_SLOT_MINUS");
+            else await this.sendMessage("STATE_SLOT_PLUS");
+          },
+          { concurrency: 1 }
+        );
+
+      const pos = getWindowRect(this.handle);
+      emu
+        .set(
+          `savestates.${this.game}.${slot}`,
+          parseInt((Date.now() / 1000).toFixed(0), 10)
+        )
+        .write();
+
+      const savestates = emu?.get(`savestates.${this.game}`).value();
+      this.app?.overlay?.sendData({
+        evt: "event.update",
+        value: {
+          states: savestates,
+        },
       });
 
-      await sendKeyToWindow("f5");
-      const pos = getWindowRect(this.handle);
-      console.log(pos);
+      await sleep(250);
       if (pos && this.game) {
-        Screenshot.captureByCoordinates({
-          coords: {
-            x1: pos.left,
-            y1: pos.top,
-            x2: pos.right,
-            y2: pos.bottom,
-          },
-          imageFormat: ImageFormat.PNG,
-        }).then(async (res) => {
+        await sleep(500);
+        screenshot({ format: "png" }).then(async (buf) => {
           const db = await getConsoleDump(this.console.key);
           const pathToDump = getDumpPath(this.console.key);
           const game = db.find({ id: this.game }).value() as ConsoleGameData;
           const pathToGame = join(pathToDump, game.unique);
           const savestate_directory = join(pathToGame, "savestate");
-          await fs.writeFile(
-            join(savestate_directory, `slot_${slot}.png`),
-            Buffer.from(res.imageBuffer, "base64")
-          );
+
+          return sharp(buf)
+            .extract({
+              left: pos.left,
+              top: pos.top,
+              width: pos.right - pos.left,
+              height: pos.bottom - pos.top,
+            })
+            .toFile(join(savestate_directory, `slot_${slot}.png`));
         });
       }
+
+      await this.sendMessage("PAUSE_TOGGLE");
+      await this.sendMessage("SAVE_STATE");
       this.state_slot = slot;
     }
   }
 
   async loadFromSlot(slot: number) {
     if (this.process && this.handle && this.app.overlay) {
+      console.log("load");
       const diff = Math.abs(this.state_slot - slot);
       const isDecrease = slot < this.state_slot;
-      await pMap(range(0, diff), async () => {
-        if (isDecrease) await sendKeyToWindow("f6");
-        else await sendKeyToWindow("f7");
-      });
 
-      await sendKeyToWindow("f4");
+      await this.sendMessage("PAUSE_TOGGLE");
+      if (slot !== this.state_slot)
+        await pMap(
+          range(0, diff),
+          async () => {
+            await sleep(150);
+            if (isDecrease) await this.sendMessage("STATE_SLOT_MINUS");
+            else await this.sendMessage("STATE_SLOT_PLUS");
+          },
+          { concurrency: 1 }
+        );
+
+      await sleep(250);
+      await this.sendMessage("PAUSE_TOGGLE");
+      await this.sendMessage("LOAD_STATE");
       this.state_slot = slot;
+    }
+  }
+
+  volumeQueue = fastq.promise<number>(async (vol: number) => {
+    if (this.process && this.handle && this.app.overlay) {
+      const db = await getEmuSettings();
+      const newVolume = _.clamp(this.volume + vol, 0, 4);
+      const isDecrease = this.volume + vol < this.volume;
+      const count = Math.abs((this.volume - newVolume) * 8);
+      if (this.volume !== newVolume && count > 0) {
+        await pMap(
+          range(0, count + 1),
+          async () => {
+            await sleep(50);
+            if (isDecrease) await this.sendMessage("VOLUME_DOWN");
+            else await this.sendMessage("VOLUME_UP");
+          },
+          { concurrency: 1 }
+        );
+
+        this.volume = _.clamp(this.volume + vol, 0, 4);
+      }
+
+      await db
+        .get("consoles")
+        .find((v) => v.id === this.console.id)
+        .set("retroarch.volume", this.volume)
+        .write();
+    }
+  }, 1);
+
+  async setVolume(volume: number) {
+    await this.volumeQueue.push(volume);
+  }
+
+  async muteGame(bool: boolean) {
+    if (this.process && this.handle && this.app.overlay) {
+      const db = await getEmuSettings();
+
+      await this.sendMessage("MUTE");
+
+      await db
+        .get("consoles")
+        .find((v) => v.id === this.console.id)
+        .set("retroarch.mute", bool)
+        .write();
+
+      this.mute = bool;
     }
   }
 
@@ -103,14 +194,12 @@ class Emulator {
     if (this.process && this.handle && this.app.overlay) {
       console.log("toggle turbo");
       const db = await getEmuSettings();
-      await setActiveWindow2(this.handle);
-      await sleep(50);
-      await sendKeyToWindow("f2", 50);
       this.turbo = !this.turbo;
+      await this.sendMessage("FAST_FORWARD");
       await db
         .get("consoles")
         .find((v) => v.id === this.console.id)
-        .assign({ turbo: this.turbo })
+        .set("retroarch.turbo", this.turbo)
         .write();
 
       this.app?.overlay?.sendData({
@@ -122,9 +211,16 @@ class Emulator {
 
   async toggleFPS() {
     if (this.process && this.handle) {
-      await setActiveWindow(this.handle, ShowWindowFlags.SW_SHOW);
-      await sendKeyToWindow("f3");
+      const db = await getEmuSettings();
       this.showFps = !this.showFps;
+      console.log(this.showFps);
+
+      await db
+        .get("consoles")
+        .find((v) => v.id === this.console.id)
+        .set("retroarch.showFps", this.showFps)
+        .write();
+
       this.app?.overlay?.sendData({
         evt: "event.toggleFPS",
         value: this.showFps,
@@ -134,8 +230,85 @@ class Emulator {
 
   async quit() {
     if (this.process && this.handle) {
-      await sendKeyToWindow("f12");
+      console.log("quit");
+
+      await this.sendMessage("QUIT", () => {
+        this.client?.close();
+      });
     }
+  }
+
+  async sendMessage(
+    message: NetMessage,
+    callback?: (msg: NetMessage) => void,
+    hideMessage?: boolean
+  ) {
+    const buf = Buffer.from(message);
+    await new Promise<void>((resolve) => {
+      this.client?.send(buf, 55355, "localhost", () => {
+        if (!hideMessage) console.log(`Sent ${message} to emulator`);
+        callback?.(message);
+        resolve();
+      });
+    });
+  }
+
+  async init() {
+    const games = await getConsoleDump(this.console.key);
+    const emu = await getEmuSettings();
+
+    const game = games.find({ id: this.game }).value() as ConsoleGameData;
+    const settings = emu
+      .get("consoles")
+      .find({ id: this.console.id })
+      .get("retroarch")
+      .value();
+    const savestates = emu.get(`savestates.${game.id}`).value();
+
+    this.turbo = !!settings.turbo;
+    if (settings.turbo) {
+      await this.sendMessage("FAST_FORWARD");
+    }
+
+    this.showFps = !!settings.showFps;
+
+    console.log(settings);
+    const newVolume = settings.volume ?? 3;
+    const isDecrease = newVolume < this.volume;
+    const count = Math.abs((newVolume - this.volume) * 8);
+    if (this.volume !== newVolume && count > 0) {
+      await pMap(
+        range(0, count + 1),
+        async () => {
+          await sleep(50);
+          if (isDecrease) await this.sendMessage("VOLUME_DOWN");
+          else await this.sendMessage("VOLUME_UP");
+        },
+        { concurrency: 1 }
+      );
+
+      this.volume = newVolume;
+    }
+
+    this.mute = !!settings.mute;
+    if (this.mute) {
+      await this.sendMessage("MUTE");
+    }
+
+    this.showFps = !!this.console.retroarch?.showFps;
+    this.app?.overlay?.sendData({
+      evt: "event.play",
+      value: {
+        fps: this.showFps,
+        turbo: this.turbo,
+        console: this.console.key,
+        game: game.unique,
+        slot: this.state_slot,
+        states: savestates,
+        volume: this.volume,
+        mute: this.mute,
+      },
+    });
   }
 
   async play(id: string, serial: string) {
@@ -178,6 +351,7 @@ class Emulator {
     await updateCfg(
       {
         ...Constants.DEFAULT_CFG,
+        network_cmd_enable: "true",
         libretro_directory,
         system_directory,
         savestate_directory,
@@ -188,8 +362,8 @@ class Emulator {
           this.console.retroarch.turboRate ?? this.turboRate
         }.000000`,
         ...(this.console.retroarch.fullscreen && {
-          video_fullscreen: isDev ? "true" : "true",
-          video_windowed_fullscreen: isDev ? "true" : "true",
+          video_fullscreen: isDev ? "false" : "true",
+          video_windowed_fullscreen: isDev ? "false" : "true",
         }),
       },
       this.console.key
@@ -204,17 +378,12 @@ class Emulator {
       disc,
     ]);
 
+    this.client = dgram.createSocket("udp4");
     await this.app?.overlay?.attach();
-    this.handle = this.app?.overlay?.parentHandle;
-    this.app?.overlay?.setOnAttach(() => {
-      this.app?.overlay?.sendData({
-        evt: "event.play",
-        value: {
-          fps: this.showFps,
-          turbo: this.turbo,
-        },
-      });
+    await this.app?.overlay?.setOnInit(async () => {
+      await this.init();
     });
+    this.handle = this.app?.overlay?.parentHandle;
   }
 }
 
