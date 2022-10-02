@@ -3,6 +3,7 @@ import { bind } from "./make";
 bind("win", (h, invoker) => {
   h("minimize", invoker);
   h("maximize", invoker);
+  h("close", invoker);
 });
 
 bind("data", (h, invoker) => {
@@ -15,12 +16,12 @@ bind("data", (h, invoker) => {
   h("downloadDisc", invoker);
   h("getDownloadProgress", invoker);
   h("play", invoker);
+  h("setConsoleSettings", invoker);
 });
 
 bind("emulator", (h, invoker, listener) => {
   h("onFPS", listener);
   h("onDetach", listener);
-  h("onKey", listener);
   h("onData", listener);
   h("toggleTurbo", invoker);
   h("quit", invoker);
@@ -30,6 +31,7 @@ bind("emulator", (h, invoker, listener) => {
   h("volume", invoker);
   h("mute", invoker);
   h("toggleFPS", invoker);
+  h("intercept", invoker);
 });
 
 // bind("data", (h, invoker, listener) => {

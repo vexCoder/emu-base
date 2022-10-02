@@ -11,7 +11,8 @@
     "main": "turbo run dev --filter=win --force",
     "build": "turbo run build",
     "lint": "turbo run lint",
-    "test": "turbo run test"
+    "test": "turbo run test",
+    "postinstall": "node scripts/copy.js"
   },
   "keywords": [],
   "author": "<%= author %> <<%= email %>>",

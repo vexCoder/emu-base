@@ -83,4 +83,9 @@ export const MountDataHandles = (app: Application) => {
   Handlers.register("emulator", "mute", async (_evt, bool) => {
     app?.emulator?.muteGame(bool);
   });
+
+  Handlers.register("emulator", "intercept", async (_evt, bool) => {
+    app?.overlay?.intercept(bool);
+    app?.emulator?.sendMessage("PAUSE_TOGGLE");
+  });
 };

@@ -44,6 +44,7 @@ const build = async () => {
       "electron-overlay",
       "sharp",
       "screenshot-desktop",
+      "@sensslen/node-gamepad",
     ],
     entryNames: `[name]`,
   });

@@ -62,7 +62,6 @@ class Emulator {
       const emu = await getEmuSettings();
       const diff = Math.abs(this.state_slot - slot);
       const isDecrease = slot < this.state_slot;
-      await this.sendMessage("PAUSE_TOGGLE");
       if (slot !== this.state_slot)
         await pMap(
           range(0, diff),
@@ -123,7 +122,6 @@ class Emulator {
       const diff = Math.abs(this.state_slot - slot);
       const isDecrease = slot < this.state_slot;
 
-      await this.sendMessage("PAUSE_TOGGLE");
       if (slot !== this.state_slot)
         await pMap(
           range(0, diff),
@@ -195,7 +193,11 @@ class Emulator {
       console.log("toggle turbo");
       const db = await getEmuSettings();
       this.turbo = !this.turbo;
+      await this.sendMessage("PAUSE_TOGGLE");
+      await sleep(50);
       await this.sendMessage("FAST_FORWARD");
+      await sleep(50);
+      await this.sendMessage("PAUSE_TOGGLE");
       await db
         .get("consoles")
         .find((v) => v.id === this.console.id)
@@ -379,6 +381,7 @@ class Emulator {
     ]);
 
     this.client = dgram.createSocket("udp4");
+
     await this.app?.overlay?.attach();
     await this.app?.overlay?.setOnInit(async () => {
       await this.init();

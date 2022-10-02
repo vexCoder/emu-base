@@ -5,10 +5,16 @@ import {
   CustomEventFactory,
 } from "@utils/helper";
 import { useGamepadStore } from "@utils/store.utils";
-import { useEventListener, useMemoizedFn, useMount, useUnmount } from "ahooks";
+import {
+  useEventListener,
+  useLatest,
+  useMemoizedFn,
+  useMount,
+  useUnmount,
+} from "ahooks";
 import { nanoid } from "nanoid";
 import { filter, find, isNil, keys, pipe, propEq, propOr } from "ramda";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface UseGamePadProps {
   pressOnly?: boolean;
@@ -18,14 +24,23 @@ interface UseGamePadProps {
   events?:
     | Partial<Record<ButtonKeys, (isPressed?: boolean) => void>>
     | Record<string, (isPressed?: boolean) => void>;
+
+  onConnect?: (gp: Gamepad) => void;
+  onDisconnect?: (gp: Gamepad) => void;
 }
 
 interface EventData {
   data: [ButtonKeys, boolean];
 }
 
-const useGamePad = (props?: UseGamePadProps) => {
-  const { events: evs = {}, delay = 100, pressOnly } = props || {};
+const useGamePad = (props?: UseGamePadProps, deps: any[] = []) => {
+  const {
+    events,
+    delay = 100,
+    pressOnly,
+    onConnect,
+    onDisconnect,
+  } = props || {};
   const [id] = useState(() => nanoid(21));
   const gpRef = useRef<Gamepad>();
   const buttonStateRef = useRef<Partial<Record<ButtonKeys, boolean>>>({});
@@ -33,33 +48,38 @@ const useGamePad = (props?: UseGamePadProps) => {
   const eventRef = useRef<CustomEventFactory<EventData>>();
   const store = useGamepadStore();
 
-  const [events] = useState(() => evs);
-
   const getIndex = propOr(-1, "index") as (gp: Maybe<Gamepad>) => number;
   const gamepadIndex = getIndex(store.gamepad);
-
-  const getGamepad = pipe(
-    filter((gp: Maybe<Gamepad>) => !!gp),
-    find<Gamepad>(propEq("index", gamepadIndex))
-  );
-
   const event = eventRef.current;
 
+  const latestData = useLatest({
+    gamepadIndex,
+    events,
+    event: eventRef.current,
+  });
+
   const startTimer = () => {
+    if (timerRef.current) timerRef.current();
     timerRef.current = createTimer(() => {
+      const getGamepad = pipe(
+        filter((gp: Maybe<Gamepad>) => !!gp),
+        find<Gamepad>(propEq("index", latestData.current.gamepadIndex))
+      );
+
       const current = getGamepad(navigator.getGamepads());
-      if (!isNil(current) && event) {
+
+      if (!isNil(current) && latestData.current.event) {
         current.buttons.forEach((button, index) => {
           const name = getButtonName(index);
           if (name) {
             const last = buttonStateRef.current[name];
             if (last !== button.pressed) {
               if (button.pressed && name && pressOnly) {
-                event.dispatch({
+                latestData.current.event?.dispatch({
                   data: [name, button.pressed],
                 });
               } else if (name) {
-                event.dispatch({
+                latestData.current.event?.dispatch({
                   data: [name, button.pressed],
                 });
               }
@@ -73,15 +93,15 @@ const useGamePad = (props?: UseGamePadProps) => {
   };
 
   const listener = (_e: CustomEvent<EventData>, { data }: EventData) => {
-    const eventKeys = keys(events);
+    const eventKeys = keys(latestData.current.events);
 
     for (let i = 0; i < eventKeys.length; i++) {
       const key = eventKeys[i];
       if (data[0] === key) {
         if (pressOnly && data[1]) {
-          events[key](true);
+          latestData.current.events?.[key]?.(true);
         } else if (!pressOnly) {
-          events[key](data[1]);
+          latestData.current.events?.[key]?.(data[1]);
         }
       }
     }
@@ -90,6 +110,7 @@ const useGamePad = (props?: UseGamePadProps) => {
   useMount(() => {
     eventRef.current = createCustomEvent("onpressgamepad", id);
     eventRef.current.subscribe(listener);
+    startTimer();
   });
 
   useUnmount(() => {
@@ -97,8 +118,14 @@ const useGamePad = (props?: UseGamePadProps) => {
     event?.unsubscribe(listener);
   });
 
+  useEffect(() => {
+    startTimer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store.gamepad?.id, ...deps]);
+
   const setGamepad = useMemoizedFn((ev: GamepadEvent) => {
     const gamepads = navigator.getGamepads().filter((v): v is Gamepad => !!v);
+
     store.set((prev) => ({
       gamepads,
       gamepad: !prev.gamepad ? ev.gamepad : prev.gamepad,
@@ -108,17 +135,19 @@ const useGamePad = (props?: UseGamePadProps) => {
     gpRef.current = ev.gamepad;
 
     const connectedGamepads = gamepads.filter((v) => v.connected).length;
-    if (!timerRef.current) startTimer();
+    // if (!timerRef.current) startTimer();
     if (timerRef.current && !connectedGamepads) timerRef.current = undefined;
   });
 
   useEventListener("gamepadconnected", (ev) => {
     // console.log(`${ev.gamepad.id} connected`);
+    onConnect?.(ev.gamepad);
     setGamepad(ev);
   });
 
   useEventListener("gamepaddisconnected", (ev) => {
     // console.log(`${ev.gamepad.id} disconnected`);
+    onDisconnect?.(ev.gamepad);
     setGamepad(ev);
   });
 

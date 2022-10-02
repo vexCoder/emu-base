@@ -1,16 +1,15 @@
 import YoutubeAudio from "@elements/YoutubeAudio";
 import useGetGames from "@hooks/useGetGames";
+import useNavigate from "@hooks/useNavigate";
 import { MainStore, useMainStore } from "@utils/store.utils";
 import {
   useCounter,
   useCreation,
   useDeepCompareEffect,
   useInViewport,
-  useKeyPress,
   useToggle,
   useWhyDidYouUpdate,
 } from "ahooks";
-import keycode from "keycode";
 import { nanoid } from "nanoid";
 import { pick, range } from "ramda";
 import { useEffect, useRef } from "react";
@@ -28,21 +27,30 @@ const GameList = () => {
   });
 
   const store = useMainStore(selector);
-
-  useKeyPress(keycode.codes.left, () => {
-    actions.dec();
-  });
-
-  useKeyPress(keycode.codes.right, () => {
-    actions.inc();
+  const focused = useNavigate("game-list", {
+    actions: {
+      left() {
+        actions.dec();
+      },
+      right() {
+        actions.inc();
+      },
+      bottom(setFocus) {
+        setFocus("game-details");
+      },
+      up(setFocus) {
+        setFocus("game-header");
+      },
+    },
   });
 
   const tag = store.selected?.opening.split("https://youtu.be/")[1];
   useWhyDidYouUpdate("GameList", { selected, max });
   return (
-    <div className="relative mt-[15vh] w-full h-[75vh]">
+    <div className="relative mt-[5vh] w-full h-[75vh]">
       <div className="h-[22rem]">
         <Segment
+          focused={focused}
           keyword="parasite eve"
           selected={selected}
           increaseMax={(n: number) => maxCounter.inc(n)}
@@ -68,6 +76,7 @@ const GameList = () => {
 };
 
 interface SegmentProps {
+  focused: boolean;
   page?: number;
   selected?: number;
   keyword: string;
@@ -75,6 +84,7 @@ interface SegmentProps {
 }
 
 const Segment = ({
+  focused,
   page = 0,
   keyword,
   selected = 0,
@@ -127,6 +137,7 @@ const Segment = ({
         const game = data?.res?.[i];
         return (
           <GameImage
+            focused={focused}
             key={game?.id ?? v}
             game={game}
             segmentLength={items.length}
@@ -140,6 +151,7 @@ const Segment = ({
 
       {(inViewport || shown) && !loading && !!data?.hasNext && (
         <Segment
+          focused={focused}
           page={page + 1}
           keyword={keyword}
           selected={selected}

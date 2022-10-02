@@ -1,3 +1,4 @@
+import useGamePad from "@hooks/useGamePad";
 import MountSubscriber from "@providers/MountSubscriber";
 import { OverlaySettings, useOverlayStore } from "@utils/store.utils";
 import { useMount } from "ahooks";
@@ -23,7 +24,8 @@ const handleMenu = (
   prev: OverlaySettings,
   opts?: { key: string; payload: any }
 ): Partial<OverlaySettings> => {
-  const { key, payload } = opts ?? {};
+  if (!prev.open) return prev;
+  const { key } = opts ?? {};
   if (key === "key.down")
     return {
       ...prev,
@@ -35,14 +37,6 @@ const handleMenu = (
       ...prev,
       focus: cycleNum(prev.focus - 1, 0, 4),
     };
-
-  if (key === "key.ps") {
-    return {
-      ...prev,
-      focus: 0,
-      open: payload,
-    };
-  }
 
   if (key === "key.circle" && prev.open) {
     return { ...prev, focus: 0, open: false };
@@ -101,6 +95,7 @@ const handleStates = (
   prev: OverlaySettings,
   opts?: { key: string; payload: any }
 ): Partial<OverlaySettings> => {
+  if (!prev.open) return prev;
   const { key, payload } = opts ?? {};
   if (key === "key.down")
     return {
@@ -183,21 +178,72 @@ const handleStates = (
 const OverlayContent = () => {
   const store = useOverlayStore();
 
+  const handlePress = (opts: { key: string; payload: any }) => {
+    store.set((prev) => {
+      if (prev.route === "menu") {
+        return handleMenu(prev, opts);
+      }
+      if (prev.route === "states") {
+        return handleStates(prev, opts);
+      }
+
+      return prev;
+    });
+  };
+
+  useGamePad({
+    onConnect: (gp) => {
+      store.set({ id: gp.id });
+    },
+    events: {
+      D_PAD_UP: (p) => {
+        if (p) {
+          handlePress({ key: "key.up", payload: null });
+        }
+      },
+      D_PAD_BOTTOM: (p) => {
+        if (p) {
+          handlePress({ key: "key.down", payload: null });
+        }
+      },
+      D_PAD_LEFT: (p) => {
+        if (p) {
+          handlePress({ key: "key.left", payload: null });
+        }
+      },
+      D_PAD_RIGHT: (p) => {
+        if (p) {
+          handlePress({ key: "key.right", payload: null });
+        }
+      },
+      BUTTON_BOTTOM: (p) => {
+        if (p) {
+          handlePress({ key: "key.cross", payload: null });
+        }
+      },
+      BUTTON_RIGHT: (p) => {
+        if (p) {
+          handlePress({ key: "key.circle", payload: null });
+        }
+      },
+      BUTTON_CONTROL_MIDDLE: (p) => {
+        if (p) {
+          store.set((prev) => {
+            const open = !prev.open;
+            window.emulator.intercept(open);
+            return {
+              ...prev,
+              focus: 0,
+              open,
+            };
+          });
+        }
+      },
+    },
+  });
+
   useMount(() => {
     if (window.emulator) {
-      window.emulator.onKey((opts) => {
-        store.set((prev) => {
-          if (prev.route === "menu") {
-            return handleMenu(prev, opts);
-          }
-          if (prev.route === "states") {
-            return handleStates(prev, opts);
-          }
-
-          return prev;
-        });
-      });
-
       window.emulator.onData((val) => {
         if (val?.evt === "event.toggleTurbo") {
           store.set({ turbo: val?.value });

@@ -102,6 +102,8 @@ export interface MainSettings {
   selected?: ConsoleGameData;
   count: number;
   disc?: string;
+  focused: string;
+  gamepad?: Gamepad;
 }
 
 export interface MainActions {
@@ -118,6 +120,7 @@ export type MainStore = MainSettings & MainActions;
 export const useMainStore = create(
   subscribeWithSelector<MainStore>((set, get) => ({
     // properties
+    focused: "game-list",
     console: "ps1",
     games: [],
     count: 5,
@@ -175,6 +178,7 @@ export interface OverlaySettings {
   console?: string;
   slot: number;
   states: number[];
+  id?: string;
 }
 export interface OverlayActions {
   set: Setter<OverlaySettings>;

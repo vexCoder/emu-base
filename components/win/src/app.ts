@@ -29,7 +29,7 @@ export class Application {
           label: "Show",
           click: () => {
             this.win?.show();
-            this.win?.webContents.send('eject-game');
+            this.win?.webContents.send("eject-game");
           },
         },
         {
@@ -57,16 +57,16 @@ export class Application {
       },
     });
 
-    this.overlay = new OverlayWindow();
-    
+    this.overlay = new OverlayWindow(this);
+
     this.overlay.createWindow(this.icon, {
       onDetach: () => {
-        console.log('Ejecting')
-        this.win?.show()
-        this.win?.moveTop()
-        this.win?.webContents.send('emulator:onDetach');
-      }
-    })
+        console.log("Ejecting");
+        this.win?.show();
+        this.win?.moveTop();
+        this.win?.webContents.send("emulator:onDetach");
+      },
+    });
 
     return this;
   }
@@ -80,7 +80,7 @@ export class Application {
     if (!this.win) return this;
 
     app.on("window-all-closed", () => {
-      console.log('window-all-closed')
+      console.log("window-all-closed");
       if (process.platform !== "darwin") app.quit();
     });
 
@@ -96,7 +96,7 @@ export class Application {
     this.win.on("focus", () => {});
 
     this.win.on("close", (ev) => {
-      console.log('close')
+      console.log("close");
       if (!this.quitting) {
         ev.preventDefault();
         this.win?.hide();
@@ -119,10 +119,6 @@ export class Application {
     await app.whenReady();
 
     // eslint-disable-next-line prettier/prettier
-    new Application()
-      .init()
-      .makeWindow()
-      .startEvents()
-      .attachHandlers();
+    new Application().init().makeWindow().startEvents().attachHandlers();
   }
 }

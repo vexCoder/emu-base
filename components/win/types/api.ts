@@ -4,6 +4,7 @@ export interface Handles {
   win: {
     minimize: Connection;
     maximize: Connection;
+    close: Connection;
   };
 
   data: {
@@ -18,6 +19,11 @@ export interface Handles {
     getImage: Connection<
       [path: string, url?: string],
       Promise<string | undefined>
+    >;
+
+    setConsoleSettings: Connection<
+      [console: string, settings: ConsoleSettings],
+      Promise<void>
     >;
 
     getGameFiles: Connection<
@@ -63,10 +69,6 @@ export interface Handles {
 
     onDetach: Connection<[callback: (data?: any) => void]>;
 
-    onKey: Connection<
-      [callback: (data?: { key: string; payload: any }) => void]
-    >;
-
     onData: Connection<
       [callback: (data?: Record<string, any> & { evt: string }) => void]
     >;
@@ -80,5 +82,6 @@ export interface Handles {
     init: Connection;
     volume: Connection<[offset: number]>;
     mute: Connection<[mute: boolean]>;
+    intercept: Connection<[payload: boolean]>;
   };
 }

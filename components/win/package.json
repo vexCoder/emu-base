@@ -29,7 +29,6 @@
     "keycode": "^2.2.1",
     "lodash": "^4.17.21",
     "lowdb": "1.0.0",
-    "node-gamepad": "^0.1.15",
     "node-json-db": "^2.1.0",
     "node-ovhook": "*",
     "p-map": "4.0.0",

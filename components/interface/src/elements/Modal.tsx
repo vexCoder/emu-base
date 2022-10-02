@@ -11,6 +11,7 @@ interface ModalProps {
   children: React.ReactNode;
   duration?: number;
   ease?: Easing | EasingFunction;
+  className?: string;
   classes?: {
     root?: string;
     backdrop?: string;
@@ -30,6 +31,7 @@ const ModalComponent = ({
   handleClose: _handleClose,
   duration = 0.35,
   ease = "easeInOut",
+  className,
   classes,
 }: ModalProps) => {
   const [transitioned, actions] = useToggle(false);
@@ -85,7 +87,8 @@ const ModalComponent = ({
             key="modal-container"
             className={clsx(
               "fixed origin-center top-1/2 left-1/2 z-50 bg-primary rounded-xl min-w-[450px] p-4",
-              classes?.content
+              classes?.content,
+              className
             )}
             style={{ y: "-50%", x: "-50%" }}
             initial={{ opacity: 0, scale: 0.9 }}

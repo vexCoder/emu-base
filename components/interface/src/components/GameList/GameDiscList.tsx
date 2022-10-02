@@ -1,36 +1,41 @@
 import ConsoleIcon from "@elements/ConsoleIcon";
-import {
-  ArchiveBoxIcon,
-  ArchiveBoxArrowDownIcon,
-  ArchiveBoxXMarkIcon,
-  ArrowDownTrayIcon,
-  PlayIcon,
-} from "@heroicons/react/24/outline";
+import Spinner from "@elements/Spinner";
+import { ArrowDownTrayIcon, PlayIcon } from "@heroicons/react/24/outline";
 import useDownloadDisc from "@hooks/useDownloadDisc";
 import useGetDownloadProgress from "@hooks/useGetDownloadProgress";
+import useNavigate from "@hooks/useNavigate";
 import usePlay from "@hooks/usePlay";
-import { useInterval, useMemoizedFn, useToggle } from "ahooks";
+import { useCounter, useInterval, useMemoizedFn, useToggle } from "ahooks";
+import clsx from "clsx";
 import { useEffect, useState } from "react";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { DownloadStatus } from "types/enums";
 
 type GameDiscListProps = BaseProps & {
+  open: boolean;
   game: ConsoleGameData;
   settings: GameRegionFiles;
   console: string;
   onPlay: (serial: string) => void;
   onDownload: (serial: string) => void;
+  onClose: () => void;
 };
 
 const GameDiscList = ({
+  open,
   game,
   settings,
   console: cons,
   onPlay,
   onDownload,
+  onClose,
 }: GameDiscListProps) => {
   const [, download] = useDownloadDisc();
   const [, play] = usePlay();
+  const [discSelected, navActions] = useCounter(0, {
+    min: 0,
+    max: settings.gameFiles?.length ?? 0,
+  });
 
   const handleDownload = (serial: string) => {
     download(serial, game.id, cons);
@@ -40,6 +45,36 @@ const GameDiscList = ({
     play(serial, game.id, cons);
     onPlay(serial);
   };
+
+  const focused = useNavigate(
+    "game-play",
+    {
+      onFocus: () => {
+        navActions.reset();
+      },
+      actions: {
+        up() {
+          navActions.dec();
+        },
+        bottom() {
+          navActions.inc();
+        },
+        btnBottom() {
+          const selected = settings.gameFiles?.[discSelected];
+          if (selected && selected.playable) {
+            handlePlay(selected.serial);
+          } else {
+            handleDownload(selected.serial);
+          }
+        },
+        btnRight(setFocus) {
+          setFocus("game-details");
+          onClose();
+        },
+      },
+    },
+    [open]
+  );
 
   // const downloadAll = () => {
   //   settings.gameFiles.forEach((v) => {
@@ -57,8 +92,9 @@ const GameDiscList = ({
       </div>
 
       <div className="v-stack gap-2">
-        {settings.gameFiles.map((setting) => (
+        {settings.gameFiles.map((setting, i) => (
           <Disc
+            focused={focused && discSelected === i}
             key={setting.serial}
             setting={setting}
             onDownload={onDownload}
@@ -72,6 +108,7 @@ const GameDiscList = ({
 };
 
 interface DiscProps {
+  focused: boolean;
   setting: GameRegionFiles["gameFiles"][number];
   handleDownload: (serial: string) => void;
   handlePlay: (serial: string) => void;
@@ -83,6 +120,7 @@ const Disc = ({
   handleDownload,
   handlePlay: _handlePlay,
   onDownload,
+  focused,
 }: DiscProps) => {
   const [downloading, actions] = useToggle(false);
   const [progress, setProgress] = useState(0);
@@ -102,38 +140,46 @@ const Disc = ({
     _handlePlay(setting.serial);
   };
 
+  const handleClick = () => {
+    if (setting.playable) {
+      handlePlay();
+    } else {
+      handleDownload(setting.serial);
+    }
+  };
+
   return (
-    <div className="h-stack gap-3 items-center border border-secondary/50 rounded-xl py-2 pl-4 pr-4">
+    <button
+      type="button"
+      onClick={handleClick}
+      className={clsx(
+        "relative h-stack gap-3 items-center border rounded-xl py-2 pl-4 pr-4",
+        focused && "border-focus",
+        !focused && "border-secondary/50"
+      )}
+    >
       <div>
-        {!setting.playable && !downloading && (
-          <ArchiveBoxXMarkIcon
-            className="text-highlight"
-            width="1.5em"
-            height="1.5em"
-          />
-        )}
         {!setting.playable && downloading && (
-          <ArchiveBoxArrowDownIcon
-            className="text-focus"
+          <Spinner className="w-[1.5em] h-[1.5em] animate-spin text-gray-600 fill-green-400" />
+        )}
+        {!setting.playable && !downloading && (
+          <ArrowDownTrayIcon
+            className="text-green-400"
             width="1.5em"
             height="1.5em"
           />
         )}
         {setting.playable && (
-          <ArchiveBoxIcon
-            className="text-green-600"
-            width="1.5em"
-            height="1.5em"
-          />
+          <PlayIcon className="text-cyan-400" width="1.5em" height="1.5em" />
         )}
       </div>
 
-      <div className="v-stack w-full">
+      <div className="v-stack items-start w-full">
         <span className="text-text font-bold leading-[1em]">
           {setting.link.fileName}
         </span>
         <span className="text-text text-xs">{setting.serial}</span>
-        {!setting.playable && (
+        {!setting.playable && downloading && (
           <Download
             serial={setting.serial}
             handleDownloading={handleDownloading}
@@ -141,39 +187,19 @@ const Disc = ({
         )}
       </div>
 
-      {!setting.playable && !downloading && (
-        <button
-          type="button"
-          className="h-stack cursor-pointer items-center gap-2 text-text font-bold bg-highlight px-3 py-1 rounded-lg"
-          onClick={() => handleDownload(setting.serial)}
-        >
-          <ArrowDownTrayIcon width="1em" height="1em" />
-          <span>Download</span>
-        </button>
-      )}
-
       {!setting.playable && downloading && (
         <button
           type="button"
           disabled
-          className="h-stack items-center gap-2 text-text font-bold bg-secondary/50 px-3 py-1 rounded-lg"
+          className={clsx(
+            "h-stack flex-grow-0  items-center gap-2 text-text",
+            "font-bold px-3 py-1 rounded-lg box-border"
+          )}
         >
-          <ArrowDownTrayIcon width="1em" height="1em" />
           <span>{progress}%</span>
         </button>
       )}
-
-      {setting.playable && (
-        <button
-          type="button"
-          className="h-stack cursor-pointer items-center gap-2 text-text font-bold bg-green-600 px-3 py-1 rounded-lg"
-          onClick={handlePlay}
-        >
-          <PlayIcon width="1em" height="1em" />
-          <span>Play</span>
-        </button>
-      )}
-    </div>
+    </button>
   );
 };
 

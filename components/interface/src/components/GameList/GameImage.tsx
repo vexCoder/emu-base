@@ -6,6 +6,7 @@ import { join, pick } from "ramda";
 import { forwardRef } from "react";
 
 type GameImageProps = BaseComponentProps<"div"> & {
+  focused: boolean;
   baseIndex: number;
   segmentLength: number;
   game?: ConsoleGameData;
@@ -17,6 +18,7 @@ type GameImageProps = BaseComponentProps<"div"> & {
 const GameImage = forwardRef<HTMLDivElement, GameImageProps>(
   (
     {
+      focused,
       game,
       selected,
       index: i,
@@ -58,7 +60,8 @@ const GameImage = forwardRef<HTMLDivElement, GameImageProps>(
                 isActive
                   ? "game-item-image-selected"
                   : "game-item-image-unselected",
-                "transition-[width,height] ease-in-out duration-500"
+                "transition-[width,height] ease-in-out duration-500",
+                focused && isActive && "border-2 border-focus"
               )}
               path={pathToGame("cover.png")}
               url={game.cover}

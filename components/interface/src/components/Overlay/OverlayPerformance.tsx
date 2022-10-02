@@ -31,7 +31,7 @@ const OverlayPerformance = () => {
 
   if (!store.fps) return null;
   return (
-    <div className="w-[250px] h-[75px] font-bold text-text rounded-xl z-[100]">
+    <div className="fixed bottom-0 left-0 w-full px-2 font-bold text-text rounded-xl z-[100]">
       {/* {store.route}
       <br />
       {store.focus}
@@ -40,20 +40,26 @@ const OverlayPerformance = () => {
       <br />
       {store.stateFocusDecide}
       <br /> */}
-      <p className="text-xs">
-        <span className="text-yellow-400">FPS</span>&nbsp;
-        <span
-          className={clsx(
-            percent > 80 && "text-green-400",
-            percent > 60 && "text-yellow-400",
-            percent < 60 && "text-red-400"
-          )}
-        >
-          {`${fps} (${percent.toFixed(0)}%)`}
-        </span>
-        <br />
-        <span className="text-yellow-400">AVE</span>&nbsp;
-        {`${ave.toFixed(0)}`}
+      <p className="h-stack gap-2 justify-between text-xs">
+        <p className="text-text/20 font-normal">{store.id}</p>
+        <p className="h-stack gap-2">
+          <p>
+            <span className="text-yellow-400/40">FPS</span>&nbsp;
+            <span
+              className={clsx(
+                percent > 80 && "text-green-400/40",
+                percent > 60 && "text-yellow-400/40",
+                percent < 60 && "text-red-400/40"
+              )}
+            >
+              {`${fps} (${percent.toFixed(0)}%)`}
+            </span>
+          </p>
+          <p>
+            <span className="text-yellow-400/40">AVE</span>&nbsp;
+            <span className="text-text/40">{`${ave.toFixed(0)}`}</span>
+          </p>
+        </p>
       </p>
     </div>
   );

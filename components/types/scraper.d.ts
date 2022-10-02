@@ -112,6 +112,7 @@ interface ConsoleSettings {
   pathToData: string;
   lastUpdated: string;
   retroarch: {
+    basePath: string;
     core: string;
     fullscreen: boolean;
     input: 'dinput' | 'xinput' | 'hdl2' | 'sdl2' | string;

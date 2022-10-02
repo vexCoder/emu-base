@@ -4,10 +4,11 @@ import Transition from "@elements/Transition";
 import useGetGameFiles from "@hooks/useGetGameFiles";
 import { extractString } from "@utils/helper";
 import { MainStore, useMainStore } from "@utils/store.utils";
-import { useToggle } from "ahooks";
+import { useCounter, useToggle } from "ahooks";
 import clsx from "clsx";
-import { pick } from "ramda";
-import { useEffect } from "react";
+import { clamp, pick } from "ramda";
+import { useEffect, useRef } from "react";
+import useNavigate from "@hooks/useNavigate";
 import GameRegionSettings from "./GameRegionSettings";
 import GameDiscList from "./GameDiscList";
 
@@ -37,6 +38,11 @@ const renderer = (c: ChildNode) => {
 };
 
 const GameDetails = () => {
+  const [btnSlected, navActions] = useCounter(0, {
+    min: 0,
+    max: 2,
+  });
+
   const [open, actions] = useToggle(false);
   const [modalOpen, actionsModal] = useToggle(false);
   const [downloaderOpen, actionsDownloader] = useToggle(false);
@@ -44,14 +50,82 @@ const GameDetails = () => {
   const { selected } = store;
   const cons = store.console;
 
+  const descriptRef = useRef<HTMLDivElement>(null);
+
   const { data, loading, refresh } = useGetGameFiles({
     id: selected?.id ?? "",
     console: cons,
   });
 
+  if (!open) {
+    descriptRef?.current?.scrollTo({
+      top: 0,
+    });
+  }
+
   useEffect(() => {
     refresh();
   }, [modalOpen, refresh]);
+
+  const focused = useNavigate("game-details", {
+    onFocus: () => {
+      navActions.set(0);
+    },
+    actions: {
+      up(setFocus) {
+        if (btnSlected === 0) setFocus("game-list");
+        else navActions.dec();
+      },
+      bottom() {
+        navActions.inc();
+      },
+      right(setFocus) {
+        setFocus("game-descript");
+      },
+      btnBottom(setFocus) {
+        if (btnSlected === 0) {
+          handlePlay();
+          if (!data) {
+            setFocus?.("game-disc");
+          } else {
+            setFocus?.("game-play");
+          }
+        }
+      },
+    },
+  });
+
+  const focusedDescription = useNavigate("game-descript", {
+    actions: {
+      left(setFocus) {
+        if (!open) setFocus("game-details");
+      },
+      up(setFocus) {
+        if (!open) setFocus("game-list");
+        if (open) {
+          const scrollHeight = descriptRef.current?.scrollHeight ?? 0;
+          const scrollTop = descriptRef.current?.scrollTop ?? 0;
+          descriptRef.current?.scrollTo({
+            behavior: "smooth",
+            top: clamp(0, scrollHeight, scrollTop - scrollHeight * 0.1),
+          });
+        }
+      },
+      bottom() {
+        if (open) {
+          const scrollHeight = descriptRef.current?.scrollHeight ?? 0;
+          const scrollTop = descriptRef.current?.scrollTop ?? 0;
+          descriptRef.current?.scrollTo({
+            behavior: "smooth",
+            top: clamp(0, scrollHeight, scrollTop + scrollHeight * 0.1),
+          });
+        }
+      },
+      btnBottom() {
+        actions.toggle();
+      },
+    },
+  });
 
   if (!store.selected) return null;
 
@@ -78,11 +152,13 @@ const GameDetails = () => {
       )}
       {store.selected && data && (
         <Modal
+          className="max-w-[150px]"
           duration={0.3}
           open={downloaderOpen}
           handleClose={() => actionsDownloader.set(false)}
         >
           <GameDiscList
+            open={downloaderOpen}
             game={store.selected}
             settings={data}
             console={store.console}
@@ -92,6 +168,7 @@ const GameDetails = () => {
             onPlay={(serial) => {
               store.play(serial);
             }}
+            onClose={() => actionsDownloader.set(false)}
           />
         </Modal>
       )}
@@ -105,7 +182,11 @@ const GameDetails = () => {
           <aside className="v-stack gap-4 mt-[4rem] [&>*:first-child]:mt-5">
             <button
               type="button"
-              className="game-item-button bg-highlight mt-5 text-text "
+              className={clsx(
+                "game-item-button mt-5 text-text",
+                focused && btnSlected === 0 && "bg-focus",
+                (!focused || btnSlected !== 0) && "bg-highlight"
+              )}
               onClick={handlePlay}
               disabled={loading}
             >
@@ -113,13 +194,21 @@ const GameDetails = () => {
             </button>
             <button
               type="button"
-              className="game-item-button bg-secondary text-contrastText "
+              className={clsx(
+                "game-item-button text-contrastText",
+                focused && btnSlected === 1 && "bg-focus",
+                (!focused || btnSlected !== 1) && "bg-secondary"
+              )}
             >
               Favorite
             </button>
             <button
               type="button"
-              className="game-item-button bg-secondary text-contrastText "
+              className={clsx(
+                "game-item-button text-contrastText",
+                focused && btnSlected === 2 && "bg-focus",
+                (!focused || btnSlected !== 2) && "bg-secondary"
+              )}
             >
               Troubleshoot
             </button>
@@ -157,11 +246,13 @@ const GameDetails = () => {
                 "p-4 rounded-2xl box-border cursor-pointer mt-1",
                 !open && "bg-secondary/10",
                 open &&
-                  "bg-primary p-4 fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"
+                  "bg-primary p-4 fixed z-50 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2",
+                focusedDescription && "border-2 border-focus"
               )}
               style={{ transition: "all 0.15s ease-in-out" }}
             >
               <RenderString
+                ref={descriptRef}
                 html={store.selected.description}
                 container="div"
                 nodeRender={renderer}

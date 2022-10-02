@@ -5,22 +5,16 @@ import {
   setActiveWindow,
   ShowWindowFlags,
 } from "@utils/ffi";
-import {
-  createWindow,
-  extractMatches,
-  getEmuSettings,
-  retry,
-} from "@utils/helper";
+import { createWindow, extractMatches, retry } from "@utils/helper";
 import { BrowserWindow, screen } from "electron";
 import IOverlay from "electron-overlay";
-import keycode from "keycode";
 import OVHook from "node-ovhook";
 import { join } from "path";
 
 interface OverlayOptions {
-  onDetach: () => void;
-  onAttach: () => void;
-  onInit: () => void;
+  onDetach?: () => void;
+  onAttach?: () => void;
+  onInit?: () => void;
 }
 class OverlayWindow {
   win: BrowserWindow | undefined;
@@ -35,11 +29,17 @@ class OverlayWindow {
 
   started: boolean = false;
 
+  app: Application;
+
   onDetach?: () => void;
 
   onAttach?: () => void;
 
   onInit?: () => void;
+
+  constructor(app: Application) {
+    this.app = app;
+  }
 
   createWindow(icon: string, options?: OverlayOptions) {
     const isDev = process.env.NODE_ENV === "development";
@@ -84,24 +84,11 @@ class OverlayWindow {
     this.win?.webContents.send("emulator:onData", value);
   }
 
-  async intercept(callback: (bool: boolean) => boolean) {
-    const db = await getEmuSettings();
-
-    const showMenu = db.get("showMenu").value();
-
-    const newBool = callback(showMenu);
-
+  async intercept(bool: boolean) {
     IOverlay.sendCommand({
       command: "input.intercept",
-      intercept: newBool,
+      intercept: !bool,
     });
-
-    db.set("showMenu", newBool).write();
-
-    return {
-      current: newBool,
-      previous: showMenu,
-    };
   }
 
   events() {
@@ -130,7 +117,6 @@ class OverlayWindow {
             if (args.focused) {
               this.win?.show();
               setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
-              this.intercept((bool) => bool);
             }
           }
         } else if (evt === "graphics.fps") {
@@ -152,21 +138,6 @@ class OverlayWindow {
           evt === "graphics.window"
         ) {
           this.win?.setSize(args.width, args.height);
-        } else if (evt === "game.hotkey.down") {
-          if (args.name === "key.ps") {
-            this.intercept((bool) => {
-              this.win?.webContents.send("emulator:onKey", {
-                key: args.name,
-                payload: !bool,
-              });
-
-              return !bool;
-            });
-          } else {
-            this.win?.webContents.send("emulator:onKey", {
-              key: args.name,
-            });
-          }
         }
 
         const position = getWindowRect(this.parentHandle);
@@ -180,20 +151,6 @@ class OverlayWindow {
         }
       }
     });
-
-    IOverlay.setHotkeys([
-      { name: "key.down", keyCode: keycode.codes.down },
-      { name: "key.up", keyCode: keycode.codes.up },
-      { name: "key.left", keyCode: keycode.codes.left },
-      { name: "key.right", keyCode: keycode.codes.right },
-      { name: "key.cross", keyCode: keycode.codes.z },
-      { name: "key.circle", keyCode: keycode.codes.x },
-      { name: "key.triangle", keyCode: keycode.codes.s },
-      { name: "key.square", keyCode: keycode.codes.a },
-      { name: "key.start", keyCode: keycode.codes.enter },
-      { name: "key.select", keyCode: keycode.codes.backspace },
-      { name: "key.ps", keyCode: keycode.codes.home },
-    ]);
   }
 
   poll = () => {
