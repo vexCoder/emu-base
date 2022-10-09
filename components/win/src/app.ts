@@ -12,6 +12,7 @@ export class Application {
   emulator?: Emulator;
   icon = join(process.cwd(), "assets/game-controller128.ico");
   quitting = false;
+  tray?: Tray;
 
   init() {
     // NOTE do some initialization like seeding the database
@@ -21,9 +22,9 @@ export class Application {
   makeWindow() {
     // NOTE create a window
     const isDev = process.env.NODE_ENV === "development";
-    const tray = new Tray(this.icon);
+    this.tray = new Tray(this.icon);
 
-    tray.setContextMenu(
+    this.tray.setContextMenu(
       Menu.buildFromTemplate([
         {
           label: "Show",
@@ -101,6 +102,9 @@ export class Application {
         ev.preventDefault();
         this.win?.hide();
         ev.returnValue = false;
+      }else {
+        this.win?.destroy();
+        this.tray?.destroy()
       }
     });
 

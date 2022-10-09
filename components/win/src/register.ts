@@ -1,11 +1,21 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { DataApi } from "@api/data";
+import { WinApi } from "@api/win";
 import { Handlers } from "@utils/handlers";
 
 // eslint-disable-next-line import/prefer-default-export
 export const MountDataHandles = (app: Application) => {
   // NOTE attach handlers for preload scripts
   const Data = new DataApi.Resolver();
+  const Win = new WinApi.Resolver();
+
+  Handlers.register("win", "close", () => {
+    if (app) {
+      // eslint-disable-next-line no-param-reassign
+      app.quitting = true;
+      app.win?.close();
+    }
+  });
 
   Handlers.register("win", "minimize", () => app?.win?.minimize());
 
@@ -14,6 +24,10 @@ export const MountDataHandles = (app: Application) => {
     "getGames",
     async (_evt, keyword, cns, page, limit) =>
       Data.getGames({ console: cns, keyword, page, limit })
+  );
+
+  Handlers.register("win", "openPath", (_evt, options) =>
+    Win.getPathFilesAndFolder(options)
   );
 
   Handlers.register("data", "getGameFiles", async (_evt, id, cons) =>
@@ -41,6 +55,26 @@ export const MountDataHandles = (app: Application) => {
 
   Handlers.register("data", "downloadDisc", async (_evt, serial, id, cons) =>
     Data.downloadDisc({ serial, id, console: cons })
+  );
+
+  Handlers.register("data", "getConsoles", async (_evt) =>
+    (await Data.getConsoles()).map((c) => c.id)
+  );
+
+  Handlers.register("data", "getConsole", async (_evt, id) =>
+    Data.getConsole({ id })
+  );
+
+  Handlers.register("data", "getConsoleByKey", async (_evt, key) =>
+    Data.getConsoleByKey({ key })
+  );
+
+  Handlers.register("data", "countConsoleGames", async (_evt, key) =>
+    Data.countConsoleGames({ key })
+  );
+
+  Handlers.register("data", "setConsoleSettings", async (_evt, id, settings) =>
+    Data.setConsoleSettings({ id, settings })
   );
 
   Handlers.register("data", "getDownloadProgress", async (_evt, serial) =>

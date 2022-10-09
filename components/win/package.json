@@ -9,7 +9,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "ts-node build/build.ts",
-    "test": "ts-node src/nodeTest.ts",
+    "test": "ts-node --files --project ./tsconfig.json src/nodeTest.ts",
     "watch": "tsc -w --project ./tsconfig.types.json",
     "dev": "ts-node build/build.ts --dev",
     "dist:dev": "concurrently -n ts,dev \"yarn watch\" \"yarn build:dev\"",
@@ -70,6 +70,7 @@
     "javascript-obfuscator": "^4.0.0",
     "ts-config": "*",
     "ts-node": "^10.7.0",
+    "tsconfig-paths": "^4.1.0",
     "types": "*",
     "uglify-js": "^3.15.5"
   }

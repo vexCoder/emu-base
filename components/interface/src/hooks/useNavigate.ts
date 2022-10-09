@@ -1,5 +1,5 @@
 import { useMainStore } from "@utils/store.utils";
-import { useLatest, useMemoizedFn } from "ahooks";
+import { useLatest, useMemoizedFn, useMount } from "ahooks";
 import { useEffect, useState } from "react";
 import useGamePad from "./useGamePad";
 
@@ -20,19 +20,20 @@ type Actions = Record<ActionType, (setFocus: (focus: string) => void) => void>;
 
 interface UseNavigateOptions {
   onFocus?: (key: string) => void;
+  autoFocus?: boolean;
   actions?: Partial<Actions>;
   globalActions?: Partial<Actions>;
 }
 
 const useNavigate = (
   key: string,
-  options: UseNavigateOptions,
+  options?: UseNavigateOptions,
   deps: any[] = []
 ) => {
   const store = useMainStore();
   const [active, setActive] = useState(false);
   const isFocused = store.focused === key;
-  const onFocus = useMemoizedFn(options.onFocus ?? (() => {}));
+  const onFocus = useMemoizedFn(options?.onFocus ?? (() => {}));
 
   const latestData = useLatest({
     key,
@@ -40,8 +41,14 @@ const useNavigate = (
     active,
     isFocused,
 
-    actions: options.actions,
-    globalActions: options.globalActions,
+    actions: options?.actions,
+    globalActions: options?.globalActions,
+  });
+
+  useMount(() => {
+    if (options?.autoFocus) {
+      setFocus(key);
+    }
   });
 
   useEffect(() => {
@@ -94,7 +101,7 @@ const useNavigate = (
     [key, isFocused, ...deps]
   );
 
-  return isFocused;
+  return { focused: isFocused, setFocus, focus: () => setFocus(key) };
 };
 
 export default useNavigate;

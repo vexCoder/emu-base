@@ -67,7 +67,7 @@ const GameDetails = () => {
     refresh();
   }, [modalOpen, refresh]);
 
-  const focused = useNavigate("game-details", {
+  const { focused } = useNavigate("game-details", {
     onFocus: () => {
       navActions.set(0);
     },
@@ -95,7 +95,7 @@ const GameDetails = () => {
     },
   });
 
-  const focusedDescription = useNavigate("game-descript", {
+  const { focused: focusedDescription } = useNavigate("game-descript", {
     actions: {
       left(setFocus) {
         if (!open) setFocus("game-details");

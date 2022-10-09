@@ -27,7 +27,7 @@ const GameList = () => {
   });
 
   const store = useMainStore(selector);
-  const focused = useNavigate("game-list", {
+  const { focused  }= useNavigate("game-list", {
     actions: {
       left() {
         actions.dec();

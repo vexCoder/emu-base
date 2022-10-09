@@ -46,7 +46,7 @@ const GameDiscList = ({
     onPlay(serial);
   };
 
-  const focused = useNavigate(
+  const { focused } = useNavigate(
     "game-play",
     {
       onFocus: () => {

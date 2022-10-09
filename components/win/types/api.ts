@@ -5,6 +5,7 @@ export interface Handles {
     minimize: Connection;
     maximize: Connection;
     close: Connection;
+    openPath: Connection<[options?: OpenPathOptions], Promise<FileItem[]>>;
   };
 
   data: {
@@ -22,9 +23,19 @@ export interface Handles {
     >;
 
     setConsoleSettings: Connection<
-      [console: string, settings: ConsoleSettings],
+      [console: string, settings: Partial<ConsoleSettings>],
       Promise<void>
     >;
+
+    setGlobalSettings: Connection<
+      [pathing?: Partial<EmuPathing>],
+      Promise<ConsoleSettings>
+    >;
+    getGlobalSettings: Connection<[], Promise<ConsoleSettings>>;
+    getConsole: Connection<[id: string], Promise<ConsoleSettings>>;
+    getConsoleByKey: Connection<[key: string], Promise<ConsoleSettings>>;
+
+    getConsoles: Connection<[], Promise<string[]>>;
 
     getGameFiles: Connection<
       [id: string, console: string],
@@ -60,6 +71,8 @@ export interface Handles {
       [serial: string, id: string, console: string],
       Promise<boolean>
     >;
+
+    countConsoleGames: Connection<[console: string], Promise<number>>;
   };
 
   emulator: {

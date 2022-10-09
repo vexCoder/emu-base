@@ -1,4 +1,5 @@
 interface Application {
+  quitting: boolean;
   win?: import('electron').BrowserWindow;
   overlay?: import('../overlay').default;
   emulator?: import('../emulator').default;

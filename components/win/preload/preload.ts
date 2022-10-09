@@ -4,6 +4,7 @@ bind("win", (h, invoker) => {
   h("minimize", invoker);
   h("maximize", invoker);
   h("close", invoker);
+  h("openPath", invoker);
 });
 
 bind("data", (h, invoker) => {
@@ -17,6 +18,12 @@ bind("data", (h, invoker) => {
   h("getDownloadProgress", invoker);
   h("play", invoker);
   h("setConsoleSettings", invoker);
+  h("getConsole", invoker);
+  h("getConsoles", invoker);
+  h("getConsoleByKey", invoker);
+  h("countConsoleGames", invoker);
+  h("getGlobalSettings", invoker);
+  h("setGlobalSettings", invoker);
 });
 
 bind("emulator", (h, invoker, listener) => {

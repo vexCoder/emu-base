@@ -303,6 +303,67 @@ export namespace DataApi {
 
       return false;
     }
+
+    async getConsoles() {
+      const db = await getEmuSettings();
+      return db.get("consoles").value();
+    }
+
+    async getConsole({ id }: GetConsoleParams) {
+      const db = await getEmuSettings();
+      return db
+        .get("consoles")
+        .find((v) => v.id === id)
+        .value();
+    }
+
+    async getConsoleByKey({ key }: GetConsoleByKeyParams) {
+      const db = await getEmuSettings();
+      return db
+        .get("consoles")
+        .find((v) => v.key === key)
+        .value();
+    }
+
+    async setConsoleSettings({ id, settings }: SetConsoleSettingsParams) {
+      const db = await getEmuSettings();
+      const console = db
+        .get("consoles")
+        .find((v) => v.id === id)
+        .value();
+
+      if (!console) return;
+
+      db.get("consoles")
+        .find((v) => v.id === id)
+        .assign(settings)
+        .write();
+    }
+
+    async countConsoleGames({ key }: CountConsoleGamesParams) {
+      const db = await getConsoleDump(key);
+      return db.size().value();
+    }
+
+    async getGlobalSettings() {
+      const db = await getEmuSettings();
+
+      const pathing = db.get("pathing").value();
+
+      return {
+        ...pathing,
+      };
+    }
+
+    async setGlobalSettings({ pathing: p }: SetGlobalSettingsParams) {
+      const db = await getEmuSettings();
+
+      const pathing = await db.get("pathing").assign(p).write();
+
+      return {
+        ...pathing,
+      };
+    }
   }
 
   interface Base {
@@ -352,5 +413,31 @@ export namespace DataApi {
     serials: string[];
     links: ParsedLinks[];
     console: string;
+  }
+
+  interface GetConsoleParams extends Base {
+    id: string;
+  }
+
+  interface GetConsoleByKeyParams extends Base {
+    key: string;
+  }
+
+  interface SetConsoleSettingsParams extends Base {
+    id: string;
+    settings: Partial<ConsoleSettings>;
+  }
+
+  interface CountConsoleGamesParams extends Base {
+    key: string;
+  }
+
+  interface SetConsoleSettingsParams extends Base {
+    id: string;
+    settings: Partial<ConsoleSettings>;
+  }
+
+  interface SetGlobalSettingsParams extends Base {
+    pathing?: Partial<EmuPathing>;
   }
 }

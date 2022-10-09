@@ -2,7 +2,6 @@ import { app, BrowserWindow, Rectangle, screen } from "electron";
 import { dirname, join } from "path";
 import FileAsync from "lowdb/adapters/FileAsync";
 import low from "lowdb";
-
 import fs, { ensureDirSync } from "fs-extra";
 import got from "got";
 import {
@@ -18,9 +17,11 @@ import {
   pipe,
   sum,
   keys,
+  reduce,
 } from "ramda";
 import { findBestMatch } from "string-similarity";
 import execa from "execa";
+import _ from "lodash";
 
 export interface WinSettings {
   x: number;
@@ -382,4 +383,85 @@ export const sleep = async (ms: number) => {
   await new Promise((r) => {
     setTimeout(r, ms);
   });
+};
+
+type MapObjectValue<
+  K extends string,
+  R = any,
+  O extends object | None = undefined
+> = O extends None
+  ? <O2 extends object>(obj: O2) => MapObjectValue<K, R, O2>
+  : Record<K, R>;
+
+const mapObject = <K extends string, V, R, O extends object | None = undefined>(
+  fn: (value: V, key: K, obj: Record<K, V>) => R,
+  obj?: O
+): MapObjectValue<K, R, typeof obj> => {
+  if (!obj) {
+    const $fn = (o: O) => {
+      const z = mapObject(fn, o) as Record<K, R>;
+      return z;
+    };
+
+    return $fn as any;
+  }
+
+  const objKeys = Object.keys(obj) as (keyof O)[];
+  return objKeys.reduce(
+    (acc, key) => ({
+      ...acc,
+      [key]: fn((obj as any)[key], key as any, obj as any),
+    }),
+    {} as MapObjectValue<K, R, typeof obj>
+  );
+};
+
+export const getDriveList = async () => {
+  type Column = keyof DiskData;
+
+  const res = await new Promise<DiskData[]>((resolve) => {
+    const proc = execa(`wmic`, ["logicaldisk"]);
+    let stdout = "";
+
+    proc.stdout?.on("data", (buf: Buffer) => {
+      const line = buf.toString();
+      stdout += line;
+    });
+
+    proc.stdout?.on("end", () => {
+      const rows = stdout.split("\r\r\n");
+      const header = rows[0];
+      const fields = extractMatches(/\w+\s*/g, header, false);
+
+      const data = rows.slice(1).map((row) => {
+        const parse = pipe<[string[]], DiskData, DiskData, DiskData>(
+          reduce((acc, field) => {
+            const start = header.indexOf(field);
+            const end = start + field.length;
+            const value = row.substring(start, end).trim();
+            const key = _.camelCase(field.trim()) as Column;
+
+            return {
+              ...acc,
+              [key]: value,
+            };
+          }, {} as DiskData),
+          mapObject((v, k, o) => {
+            let newValue = (v ?? "") as string;
+
+            if (k === "volumeName" && !newValue.length)
+              newValue = `Local Disk ${o.deviceId}`;
+
+            return newValue;
+          }),
+          (d) => d
+        )(fields);
+
+        return parse;
+      });
+      resolve(data);
+    });
+  });
+
+  return res;
 };
