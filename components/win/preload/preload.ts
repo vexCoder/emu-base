@@ -5,6 +5,15 @@ bind("win", (h, invoker) => {
   h("maximize", invoker);
   h("close", invoker);
   h("openPath", invoker);
+  h("isDirectory", invoker);
+  h("isFile", invoker);
+});
+
+bind("path", (h, invoker) => {
+  h("join", invoker);
+  h("resolve", invoker);
+  h("basename", invoker);
+  h("dirname", invoker);
 });
 
 bind("data", (h, invoker) => {

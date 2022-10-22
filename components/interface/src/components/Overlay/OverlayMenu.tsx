@@ -73,7 +73,7 @@ const OverlayMenuContent = () => {
               <div
                 className={clsx(
                   "w-2 bg-green-500",
-                  store.volume < v && "bg-red-400",
+                  store.volume <= v && "bg-red-400",
                   store.mute && "bg-gray-400"
                 )}
                 style={{ height: `${v * 20 + 20}%` }}

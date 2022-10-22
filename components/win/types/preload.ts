@@ -30,7 +30,7 @@ export type WindowFunction<T extends InferConnection<any>> = T extends {
 type InferConnection<T> = T extends Connection<infer P, infer R>
   ? {
       parameters: P;
-      return: R;
+      return: R extends Promise<any> ? R : Promise<R>;
     }
   : T;
 

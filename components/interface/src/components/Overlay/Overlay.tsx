@@ -47,7 +47,7 @@ const handleMenu = (
       window.emulator.volume(-1);
       return {
         ...prev,
-        volume: _.clamp(prev.volume - 1, 0, 4),
+        volume: _.clamp(prev.volume - 1, 0, 5),
       };
     }
   }
@@ -57,7 +57,7 @@ const handleMenu = (
       window.emulator.volume(1);
       return {
         ...prev,
-        volume: _.clamp(prev.volume + 1, 0, 4),
+        volume: _.clamp(prev.volume + 1, 0, 5),
       };
     }
   }
@@ -65,6 +65,10 @@ const handleMenu = (
   if (key === "key.cross") {
     if (prev.focus === 4) {
       window.emulator.quit();
+      return {
+        ...prev,
+        open: false,
+      };
     }
 
     if (prev.focus === 3) {

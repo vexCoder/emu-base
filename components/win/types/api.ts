@@ -6,6 +6,15 @@ export interface Handles {
     maximize: Connection;
     close: Connection;
     openPath: Connection<[options?: OpenPathOptions], Promise<FileItem[]>>;
+    isDirectory: Connection<[path?: string], Promise<boolean>>;
+    isFile: Connection<[path?: string], Promise<boolean>>;
+  };
+
+  path: {
+    join: Connection<[...args: string[]], string>;
+    resolve: Connection<[...args: string[]], string>;
+    basename: Connection<[p: string], string>;
+    dirname: Connection<[p: string], string>;
   };
 
   data: {
@@ -23,15 +32,15 @@ export interface Handles {
     >;
 
     setConsoleSettings: Connection<
-      [console: string, settings: Partial<ConsoleSettings>],
+      [console: string, settings: Partial<EditableConsoleSettings>],
       Promise<void>
     >;
 
     setGlobalSettings: Connection<
       [pathing?: Partial<EmuPathing>],
-      Promise<ConsoleSettings>
+      Promise<Pick<AppSettings, "pathing">>
     >;
-    getGlobalSettings: Connection<[], Promise<ConsoleSettings>>;
+    getGlobalSettings: Connection<[], Promise<Pick<AppSettings, "pathing">>>;
     getConsole: Connection<[id: string], Promise<ConsoleSettings>>;
     getConsoleByKey: Connection<[key: string], Promise<ConsoleSettings>>;
 

@@ -16,5 +16,5 @@ export type InferConnection<T> = T extends Connection<infer P, infer R>
 
 export type Connection<P extends any[] = [], R = void> = {
   invoker: Invoker<P>;
-  handle: Handle<P, R>;
+  handle: Handle<P, R extends Promise<any> ? R : Promise<R>>;
 };

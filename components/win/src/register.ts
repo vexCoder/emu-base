@@ -2,6 +2,8 @@
 import { DataApi } from "@api/data";
 import { WinApi } from "@api/win";
 import { Handlers } from "@utils/handlers";
+import fs from "fs-extra";
+import nodePath from "path";
 
 // eslint-disable-next-line import/prefer-default-export
 export const MountDataHandles = (app: Application) => {
@@ -9,7 +11,7 @@ export const MountDataHandles = (app: Application) => {
   const Data = new DataApi.Resolver();
   const Win = new WinApi.Resolver();
 
-  Handlers.register("win", "close", () => {
+  Handlers.register("win", "close", async () => {
     if (app) {
       // eslint-disable-next-line no-param-reassign
       app.quitting = true;
@@ -17,17 +19,49 @@ export const MountDataHandles = (app: Application) => {
     }
   });
 
-  Handlers.register("win", "minimize", () => app?.win?.minimize());
+  Handlers.register("win", "minimize", async () => app?.win?.minimize());
+
+  Handlers.register("win", "isDirectory", async (_evt, path) => {
+    if (path) {
+      return fs.statSync(path).isDirectory();
+    }
+
+    return true;
+  });
+
+  Handlers.register("win", "isFile", async (_evt, path) => {
+    if (path) {
+      return fs.statSync(path).isFile();
+    }
+
+    return false;
+  });
+
+  Handlers.register("path", "join", async (_evt, ...args: string[]) =>
+    nodePath.join(...args)
+  );
+
+  Handlers.register("path", "resolve", async (_evt, ...args: string[]) =>
+    nodePath.resolve(...args)
+  );
+
+  Handlers.register("path", "basename", async (_evt, arg: string) =>
+    nodePath.basename(arg)
+  );
+
+  Handlers.register("path", "dirname", async (_evt, arg: string) =>
+    nodePath.dirname(arg)
+  );
+
+  Handlers.register("win", "openPath", (_evt, options) =>
+    Win.getPathFilesAndFolder(options)
+  );
 
   Handlers.register(
     "data",
     "getGames",
     async (_evt, keyword, cns, page, limit) =>
       Data.getGames({ console: cns, keyword, page, limit })
-  );
-
-  Handlers.register("win", "openPath", (_evt, options) =>
-    Win.getPathFilesAndFolder(options)
   );
 
   Handlers.register("data", "getGameFiles", async (_evt, id, cons) =>
@@ -75,6 +109,17 @@ export const MountDataHandles = (app: Application) => {
 
   Handlers.register("data", "setConsoleSettings", async (_evt, id, settings) =>
     Data.setConsoleSettings({ id, settings })
+  );
+
+  Handlers.register("data", "getGlobalSettings", async (_evt) =>
+    Data.getGlobalSettings()
+  );
+
+  Handlers.register("data", "setGlobalSettings", async (_evt, pathing) =>
+    Data.setGlobalSettings({
+      app,
+      pathing,
+    })
   );
 
   Handlers.register("data", "getDownloadProgress", async (_evt, serial) =>

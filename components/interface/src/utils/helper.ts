@@ -85,3 +85,9 @@ export const extractMatches = curry(
     return arr?.map((o) => (trim ? o.trim() : o));
   }
 );
+
+export const cycleCounter = (value: number, min: number, max: number) => {
+  if (value < min) return max;
+  if (value > max) return min;
+  return value;
+};

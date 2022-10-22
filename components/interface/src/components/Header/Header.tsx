@@ -31,7 +31,7 @@ const Header = () => {
     }
   });
 
-  const { focused  }= useNavigate("game-header", {
+  const { focused } = useNavigate("game-header", {
     actions: {
       left() {
         navActions.dec();
@@ -48,7 +48,7 @@ const Header = () => {
         }
         if (btnSelected === 1) {
           toggleSettings.set(true);
-          setFocus("game-console-settings");
+          setFocus("game-settings");
         }
         if (btnSelected === 0) {
           toggleConsoles.set(true);
@@ -65,7 +65,7 @@ const Header = () => {
         open={settingsOpen}
         handleClose={() => toggleSettings.set(false)}
       >
-        <Settings id={selected} />
+        <Settings id={selected} onClose={() => toggleSettings.set(false)} />
       </Modal>
       <Modal
         duration={0.3}

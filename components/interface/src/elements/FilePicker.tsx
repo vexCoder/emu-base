@@ -6,15 +6,10 @@ import {
   FolderIcon,
 } from "@heroicons/react/24/outline";
 import useNavigate from "@hooks/useNavigate";
-import {
-  useCounter,
-  useDeepCompareEffect,
-  useInViewport,
-  useMount,
-} from "ahooks";
+import { useCounter, useInViewport, useMount } from "ahooks";
 import clsx from "clsx";
 import _ from "lodash";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 type FilePickerProps = BaseProps &
   OpenPathOptions & {
@@ -41,38 +36,62 @@ const FilePicker = ({
 
   const [selected, setSelected] = useState<FileItem>();
 
-  useMount(() => {
-    if (path) {
-      setSelected({
-        path,
-        name: path,
-        isDirectory: true,
-      });
-    }
-  });
-
   const [recentIndex, setRecentIndex] = useState(0);
   const [recent, setRecent] = useState<(FileItem | undefined)[]>([]);
 
   const [files, setFiles] = useState<FileItem[]>([]);
 
-  useDeepCompareEffect(() => {
-    window.win.openPath({ path: selected?.path, options }).then((f) => {
+  const { folderOnly } = options ?? {};
+
+  const { set: pathSet } = pathActions;
+
+  const handleChangeFiles = useCallback(
+    async (p?: string | FileItem, indexed: boolean = true) => {
+      let ppath: string | undefined;
+      if (typeof p === "string") ppath = p;
+      if (typeof p === "object") ppath = p.path;
+      if (p === undefined) ppath = p;
+
+      const f = await window.win.openPath({
+        path: ppath,
+        options: { folderOnly },
+      });
+
+      const sel = ppath
+        ? {
+            path: await window.path.resolve(ppath),
+            name: ppath ? await window.path.basename(ppath) : "/",
+            isDirectory: await window.win.isDirectory(ppath),
+          }
+        : undefined;
+
       setFiles(f.map((v, i) => ({ ...v, selected: i === 0 })));
-      pathActions.set(0);
-      if (!selected?.path) {
-        setRecent((r) => [...r, undefined]);
-        setRecentIndex(recent.length);
+
+      const { length } = f;
+      pathSet(pathSelected > length ? length : pathSelected);
+      if (indexed) {
+        setRecent((r) =>
+          recentIndex < r.length
+            ? [...r.slice(0, recentIndex), sel]
+            : [...r, sel]
+        );
+        setRecentIndex((prev) => prev + 1);
       }
-    });
-  }, [selected, options]);
+
+      setSelected(sel);
+    },
+    [setFiles, setSelected, folderOnly, pathSet, pathSelected, recentIndex]
+  );
+
+  useMount(() => {
+    handleChangeFiles(path, !!path);
+  });
 
   const { focused } = useNavigate(focusKey ?? "file-picker", {
     onFocus: () => {
       pathActions.set(0);
       menuActions.set(0);
     },
-    autoFocus: true,
     actions: {
       up() {
         pathActions.set((v) => _.clamp(v - 1, 0, files.length));
@@ -93,21 +112,33 @@ const FilePicker = ({
       btnBottom() {
         if (pathSelected === 0) {
           if (menuSelected === 0) {
-            const newIndex = _.clamp(recentIndex - 1, 0, recent.length - 1);
-            const last = recent[newIndex];
-            if (last) onChange?.(last);
-            setSelected(last);
-            setRecentIndex(newIndex);
+            const newIndex = _.clamp(recentIndex - 1, 1, recent.length);
+            if (recent.length) {
+              const last = recent[newIndex - 1];
+              if (last) {
+                onChange?.(last);
+                handleChangeFiles(last, false);
+                setRecentIndex(newIndex);
+              }
+            }
           }
           if (menuSelected === 1) {
-            const newIndex = _.clamp(recentIndex + 1, 0, recent.length - 1);
-            const next = recent[newIndex];
-            if (next) onChange?.(next);
-            setSelected(next);
-            setRecentIndex(newIndex);
+            const newIndex = _.clamp(recentIndex + 1, 1, recent.length);
+            if (recent.length) {
+              const next = recent[newIndex - 1];
+              if (next) {
+                onChange?.(next);
+                handleChangeFiles(next, false);
+                setRecentIndex(newIndex);
+              }
+            }
           }
           if (menuSelected === 2) {
-            const newPath = selected?.path.split("/").slice(0, -1).join("/");
+            const newPath = selected?.path
+              .split(/\/\/|\\|\\\\/g)
+              .slice(0, -1)
+              .join("/");
+
             const fileItem: FileItem | undefined = newPath
               ? {
                   isDirectory: true,
@@ -118,18 +149,14 @@ const FilePicker = ({
 
             if (fileItem) onChange?.(fileItem);
             if (newPath !== selected?.path) {
-              setRecent((r) => [...r, fileItem]);
-              setRecentIndex(recent.length);
-              setSelected(fileItem);
+              handleChangeFiles(fileItem);
             }
           }
         } else if (pathSelected >= 1) {
           const sel = files[pathSelected - 1];
           if (sel) {
             onChange?.(sel);
-            setRecent((r) => [...r, sel]);
-            setRecentIndex(recent.length);
-            setSelected(sel);
+            handleChangeFiles(sel);
           }
         }
       },
@@ -137,18 +164,14 @@ const FilePicker = ({
         if (options?.folderOnly) {
           if (selected) {
             onChange?.(selected);
-            setRecent((r) => [...r, selected]);
-            setRecentIndex(recent.length);
-            setSelected(selected);
+            handleChangeFiles(selected);
             onClose?.();
           }
         } else if (pathSelected >= 1) {
           const sel = files[pathSelected - 1];
           if (sel) {
             onChange?.(sel);
-            setRecent((r) => [...r, sel]);
-            setRecentIndex(recent.length);
-            setSelected(sel);
+            handleChangeFiles(sel);
             onClose?.();
           }
         }

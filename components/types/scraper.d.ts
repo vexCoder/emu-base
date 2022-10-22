@@ -124,6 +124,14 @@ interface ConsoleSettings {
   };
 }
 
+interface EditableConsoleSettings {
+  turboRate?: number;
+  volume?: number;
+  showFps?: boolean;
+  fullscreen?: boolean;
+  mute?: boolean;
+}
+
 type ConsoleLinks = ParsedLinks[];
 
 interface EmuPathing {

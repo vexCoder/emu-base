@@ -130,10 +130,17 @@ export const saveImage = async (path: string, url: string) => {
   await fs.writeFile(path, base64, "base64");
 };
 
-export const getDumpPath = (consoleName?: string) => {
+export const getSettingsPath = () => {
   const isDev = process.env.NODE_ENV === "development";
 
-  const base = isDev ? __dirname : app.getPath("appData");
+  const path = isDev ? __dirname : app.getPath("appData");
+
+  ensureDirSync(path);
+  return path;
+};
+
+export const getDumpPath = (consoleName?: string) => {
+  const base = getSettingsPath();
   const path = consoleName
     ? join(base, "dump", consoleName)
     : join(base, "dump");
@@ -143,9 +150,11 @@ export const getDumpPath = (consoleName?: string) => {
 };
 
 export const getEmuSettings = async () => {
-  const pathToDump = getDumpPath();
-  fs.ensureDirSync(pathToDump);
-  const adapter = new FileAsync<AppSettings>(join(pathToDump, `settings.json`));
+  const pathToSettings = getSettingsPath();
+  fs.ensureDirSync(pathToSettings);
+  const adapter = new FileAsync<AppSettings>(
+    join(pathToSettings, `settings.json`)
+  );
   const db = await low(adapter);
   await db.read();
   return db;

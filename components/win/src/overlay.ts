@@ -106,14 +106,12 @@ class OverlayWindow {
                 const parent = OVHook.getTopWindows().find(
                   (v) => v.windowId === this.parentHandle
                 );
-
                 if (!parent) {
                   this.cleanUp();
                   this.onDetach?.();
                 }
               }, 1500);
             }
-
             if (args.focused) {
               this.win?.show();
               setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);

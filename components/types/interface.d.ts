@@ -17,9 +17,5 @@ type ReactElementProps<T extends HTMLElement> = import("react").DetailedHTMLProp
   T
 >;
 
-type ReactElementProps<T extends HTMLElement> = import("react").DetailedHTMLProps<
-  React.HTMLAttributes<T>,
-  T
->;
-
 type Easing = [number, number, number, number] | "linear" | "easeIn" | "easeOut" | "easeInOut" | "circIn" | "circOut" | "circInOut" | "backIn" | "backOut" | "backInOut" | "anticipate"
+

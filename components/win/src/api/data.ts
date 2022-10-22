@@ -336,7 +336,17 @@ export namespace DataApi {
 
       db.get("consoles")
         .find((v) => v.id === id)
-        .assign(settings)
+        .assign({
+          ...console,
+          retroarch: {
+            ...console.retroarch,
+            fullscreen: settings.fullscreen ?? console.retroarch.fullscreen,
+            mute: settings.mute ?? console.retroarch.mute,
+            volume: settings.volume ?? console.retroarch.volume,
+            showFps: settings.showFps ?? console.retroarch.showFps,
+            turboRate: settings.turboRate ?? console.retroarch.turboRate,
+          },
+        })
         .write();
     }
 
@@ -348,10 +358,12 @@ export namespace DataApi {
     async getGlobalSettings() {
       const db = await getEmuSettings();
 
+      console.log(db.value());
+
       const pathing = db.get("pathing").value();
 
       return {
-        ...pathing,
+        pathing,
       };
     }
 
@@ -361,7 +373,7 @@ export namespace DataApi {
       const pathing = await db.get("pathing").assign(p).write();
 
       return {
-        ...pathing,
+        pathing,
       };
     }
   }
@@ -425,16 +437,11 @@ export namespace DataApi {
 
   interface SetConsoleSettingsParams extends Base {
     id: string;
-    settings: Partial<ConsoleSettings>;
+    settings: Partial<EditableConsoleSettings>;
   }
 
   interface CountConsoleGamesParams extends Base {
     key: string;
-  }
-
-  interface SetConsoleSettingsParams extends Base {
-    id: string;
-    settings: Partial<ConsoleSettings>;
   }
 
   interface SetGlobalSettingsParams extends Base {
