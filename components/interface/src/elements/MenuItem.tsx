@@ -4,6 +4,7 @@ import React, { cloneElement, isValidElement, SVGProps } from "react";
 type MenuItemProps = BaseComponentProps<"div"> & {
   focused?: boolean;
   selected?: boolean;
+  highlighted?: boolean;
   label: string;
   icon?: React.ReactSVGElement | React.FC<SVGProps<SVGSVGElement>>;
   classes?: {
@@ -18,6 +19,7 @@ const MenuItem = (props: MenuItemProps) => {
     className,
     selected,
     focused,
+    highlighted,
     label,
     icon,
     classes,
@@ -34,7 +36,7 @@ const MenuItem = (props: MenuItemProps) => {
         "h-stack items-center gap-6 py-2 px-3 border rounded-xl justify-between",
         focused && selected && "border-focus",
         !focused && !selected && "border-secondary/50",
-        selected && !focused && "border-highlight"
+        highlighted && "border-highlight"
       )}
     >
       <div className="h-stack items-center gap-3 flex-2">

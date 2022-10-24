@@ -23,7 +23,7 @@ const ConsoleList = ({ selected, setSelected, onClose }: ConsoleListProps) => {
     window.data.getConsoles().then(setConsoles);
   });
 
-  const { focused  }= useNavigate("game-console-list", {
+  const { focused } = useNavigate("game-console-list", {
     onFocus: () => {
       consoleActions.set(0);
     },

@@ -4,13 +4,16 @@ import Transition from "@elements/Transition";
 import useGetGameFiles from "@hooks/useGetGameFiles";
 import { extractString } from "@utils/helper";
 import { MainStore, useMainStore } from "@utils/store.utils";
-import { useCounter, useToggle } from "ahooks";
+import { useCounter, useDebounceEffect, useToggle } from "ahooks";
 import clsx from "clsx";
 import { clamp, pick } from "ramda";
 import { useEffect, useRef } from "react";
 import useNavigate from "@hooks/useNavigate";
+import useGetGame from "@hooks/useGetGame";
+import { HeartIcon, PlayIcon, WrenchIcon } from "@heroicons/react/24/outline";
 import GameRegionSettings from "./GameRegionSettings";
 import GameDiscList from "./GameDiscList";
+import GameTroubleshoot from "./GameTroubleshoot";
 
 const selector = (v: MainStore) => pick(["selected", "console", "play"], v);
 
@@ -43,12 +46,20 @@ const GameDetails = () => {
     max: 2,
   });
 
+  const [kbdOpen, kbdActions] = useToggle(false);
   const [open, actions] = useToggle(false);
   const [modalOpen, actionsModal] = useToggle(false);
+  const [isFavorite, favoriteActions] = useToggle(false);
+  const [tsOpen, tsActions] = useToggle(false);
   const [downloaderOpen, actionsDownloader] = useToggle(false);
   const store = useMainStore(selector);
   const { selected } = store;
   const cons = store.console;
+
+  const { data: gameData, refresh: gameRefreshData } = useGetGame({
+    console: cons,
+    id: selected?.id,
+  });
 
   const descriptRef = useRef<HTMLDivElement>(null);
 
@@ -67,10 +78,21 @@ const GameDetails = () => {
     refresh();
   }, [modalOpen, refresh]);
 
-  const { focused } = useNavigate("game-details", {
-    onFocus: () => {
-      navActions.set(0);
+  useDebounceEffect(
+    () => {
+      if (selected?.id) {
+        window.data
+          .toggleFavorite(selected.id, cons, isFavorite)
+          .then(() => gameRefreshData());
+      }
     },
+    [isFavorite],
+    {
+      wait: 500,
+    }
+  );
+
+  const { focused } = useNavigate("game-details", {
     actions: {
       up(setFocus) {
         if (btnSlected === 0) setFocus("game-list");
@@ -90,6 +112,15 @@ const GameDetails = () => {
           } else {
             setFocus?.("game-play");
           }
+        }
+
+        if (btnSlected === 1 && selected) {
+          favoriteActions.toggle();
+        }
+
+        if (btnSlected === 2 && selected) {
+          tsActions.set(true);
+          setFocus("game-troubleshoot");
         }
       },
     },
@@ -127,7 +158,7 @@ const GameDetails = () => {
     },
   });
 
-  if (!store.selected) return null;
+  if (!gameData) return null;
 
   const handlePlay = () => {
     refresh();
@@ -137,20 +168,33 @@ const GameDetails = () => {
 
   return (
     <>
-      {store.selected && (
+      {gameData && (
+        <Modal
+          duration={0.3}
+          open={tsOpen}
+          handleClose={() => tsActions.set(false)}
+          className={clsx("transition-[top]", kbdOpen && "top-1/4")}
+        >
+          <GameTroubleshoot
+            onKeyboardOpen={(bool) => kbdActions.set(!!bool)}
+            onClose={() => tsActions.set(false)}
+          />
+        </Modal>
+      )}
+      {gameData && (
         <Modal
           duration={0.3}
           open={modalOpen}
           handleClose={() => actionsModal.set(false)}
         >
           <GameRegionSettings
-            id={store.selected.id}
+            id={gameData.id}
             console={store.console}
             onLinksSave={() => actionsModal.set(false)}
           />
         </Modal>
       )}
-      {store.selected && data && (
+      {gameData && data && (
         <Modal
           className="max-w-[150px]"
           duration={0.3}
@@ -159,7 +203,7 @@ const GameDetails = () => {
         >
           <GameDiscList
             open={downloaderOpen}
-            game={store.selected}
+            game={gameData}
             settings={data}
             console={store.console}
             onDownload={() => {
@@ -174,7 +218,7 @@ const GameDetails = () => {
       )}
       <section className="h-stack ml-[20rem]">
         <Transition
-          in={!!store.selected}
+          in={!!gameData}
           ease="easeInOut"
           duration={[0.5, 2.25]}
           preset="SlideY"
@@ -183,47 +227,65 @@ const GameDetails = () => {
             <button
               type="button"
               className={clsx(
-                "game-item-button mt-5 text-text",
-                focused && btnSlected === 0 && "bg-focus",
-                (!focused || btnSlected !== 0) && "bg-highlight"
+                "game-item-button mt-5 text-text bg-green-500/20",
+                focused && btnSlected === 0 && "border-focus",
+                (!focused || btnSlected !== 0) && "border-green-700"
               )}
               onClick={handlePlay}
               disabled={loading}
             >
-              Play
+              <div className="inline-flex flex-row items-center justify-between w-full px-5">
+                <p className="flex-auto flex-grow-0 leading-[1em]">Play</p>
+                <PlayIcon width="1.5em" height="1.5em" />
+              </div>
             </button>
             <button
               type="button"
               className={clsx(
-                "game-item-button text-contrastText",
-                focused && btnSlected === 1 && "bg-focus",
-                (!focused || btnSlected !== 1) && "bg-secondary"
+                "game-item-button text-text bg-secondary/20",
+                focused && btnSlected === 1 && "border-focus",
+                (!focused || btnSlected !== 1) && "border-secondary"
               )}
             >
-              Favorite
+              <div className="inline-flex flex-row items-center justify-between w-full px-5">
+                <p className="flex-auto flex-grow-0 leading-[1em]">Favorite</p>
+                <HeartIcon
+                  width="1.5em"
+                  height="1.5em"
+                  className={clsx(
+                    "transition-colors",
+                    isFavorite && "fill-red-500 text-red-700"
+                  )}
+                />
+              </div>
             </button>
             <button
               type="button"
               className={clsx(
-                "game-item-button text-contrastText",
-                focused && btnSlected === 2 && "bg-focus",
-                (!focused || btnSlected !== 2) && "bg-secondary"
+                "game-item-button text-text bg-secondary/20",
+                focused && btnSlected === 2 && "border-focus",
+                (!focused || btnSlected !== 2) && "border-secondary"
               )}
             >
-              Troubleshoot
+              <div className="inline-flex flex-row items-center justify-between w-full px-5">
+                <p className="flex-auto flex-grow-0 leading-[1em]">
+                  Troubleshoot
+                </p>
+                <WrenchIcon width="1.5em" height="1.5em" />
+              </div>
             </button>
           </aside>
         </Transition>
 
         <section className="v-stack gap-2 ml-[4rem] max-w-md">
           <p className="font-[LibreBaskerville] tracking-wider capitalize text-text text-3xl">
-            {store.selected.official}
+            {gameData.official}
           </p>
           <p className="font-[JosefinSans] text-text text-lg">
-            {`${store.selected.developer} / ${store.selected.publisher}`}
+            {`${gameData.developer} / ${gameData.publisher}`}
           </p>
           <p className="h-stack gap-3 font-[JosefinSans] text-text text-sm">
-            {store.selected.genre.map((v) => (
+            {gameData.genre.map((v) => (
               <span key={v} className="bg-secondary/10 rounded-2xl px-3 py-1">
                 {v}
               </span>
@@ -253,7 +315,7 @@ const GameDetails = () => {
             >
               <RenderString
                 ref={descriptRef}
-                html={store.selected.description}
+                html={gameData.description}
                 container="div"
                 nodeRender={renderer}
                 className={clsx(

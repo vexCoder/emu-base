@@ -5,7 +5,7 @@ export interface Handles {
     minimize: Connection;
     maximize: Connection;
     close: Connection;
-    openPath: Connection<[options?: OpenPathOptions], Promise<FileItem[]>>;
+    openPath: Connection<[options?: OpenPathOptions], FileItem[]>;
     isDirectory: Connection<[path?: string], Promise<boolean>>;
     isFile: Connection<[path?: string], Promise<boolean>>;
   };
@@ -21,10 +21,14 @@ export interface Handles {
     // Paginate
     getGames: Connection<
       [keyword: string, console: string, limit: number, page: number],
-      Promise<{ res: ConsoleGameData[]; hasNext: boolean }>
+      { res: ConsoleGameData[]; hasNext: boolean }
     >;
 
-    getGame: Connection<[unique: number], Promise<ConsoleGameData>>;
+    getGame: Connection<[id: string, console: string], ConsoleGameData>;
+    setGame: Connection<
+      [id: string, console: string, data: Partial<ConsoleGameData>],
+      ConsoleGameData
+    >;
 
     getImage: Connection<
       [path: string, url?: string],
@@ -33,18 +37,18 @@ export interface Handles {
 
     setConsoleSettings: Connection<
       [console: string, settings: Partial<EditableConsoleSettings>],
-      Promise<void>
+      void
     >;
 
     setGlobalSettings: Connection<
       [pathing?: Partial<EmuPathing>],
-      Promise<Pick<AppSettings, "pathing">>
+      Pick<AppSettings, "pathing">
     >;
-    getGlobalSettings: Connection<[], Promise<Pick<AppSettings, "pathing">>>;
-    getConsole: Connection<[id: string], Promise<ConsoleSettings>>;
-    getConsoleByKey: Connection<[key: string], Promise<ConsoleSettings>>;
+    getGlobalSettings: Connection<[], Pick<AppSettings, "pathing">>;
+    getConsole: Connection<[id: string], ConsoleSettings>;
+    getConsoleByKey: Connection<[key: string], ConsoleSettings>;
 
-    getConsoles: Connection<[], Promise<string[]>>;
+    getConsoles: Connection<[], string[]>;
 
     getGameFiles: Connection<
       [id: string, console: string],
@@ -53,17 +57,17 @@ export interface Handles {
 
     getGameRegionSettings: Connection<
       [id: string, console: string],
-      Promise<GameRegionFiles[]>
+      GameRegionFiles[]
     >;
 
     getGameLinks: Connection<
       [keywords: string, tags: string[], console: string],
-      Promise<ConsoleLinks>
+      ConsoleLinks
     >;
 
     setGameLinks: Connection<
       [id: string, serials: string[], links: ParsedLinks[], console: string],
-      Promise<{ [key: string]: string }>
+      { [key: string]: string }
     >;
 
     downloadDisc: Connection<
@@ -81,7 +85,12 @@ export interface Handles {
       Promise<boolean>
     >;
 
-    countConsoleGames: Connection<[console: string], Promise<number>>;
+    countConsoleGames: Connection<[console: string], number>;
+
+    toggleFavorite: Connection<
+      [id: string, console: string, bool?: boolean],
+      Promise<boolean>
+    >;
   };
 
   emulator: {

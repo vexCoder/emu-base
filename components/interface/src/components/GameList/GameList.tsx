@@ -27,7 +27,7 @@ const GameList = () => {
   });
 
   const store = useMainStore(selector);
-  const { focused  }= useNavigate("game-list", {
+  const { focused } = useNavigate("game-list", {
     actions: {
       left() {
         actions.dec();
@@ -44,7 +44,7 @@ const GameList = () => {
     },
   });
 
-  const tag = store.selected?.opening.split("https://youtu.be/")[1];
+  const tag = store.selected?.opening?.split("https://youtu.be/")[1];
   useWhyDidYouUpdate("GameList", { selected, max });
   return (
     <div className="relative mt-[5vh] w-full h-[75vh]">

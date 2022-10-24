@@ -100,7 +100,7 @@
   }
 
   .game-item-button {
-    @apply w-96 py-2 rounded-xl font-bold uppercase;
+    @apply w-96 py-2 rounded-full font-bold uppercase border;
   }
 
   .image-cache-container {
@@ -113,6 +113,10 @@
 
   .overlay-menu-button {
     @apply text-text text-left cursor-pointer rounded-md border-highlight/50 border px-2 py-1;
+  }
+
+  .keyboard-button {
+    @apply bg-secondary/20 text-text h-full w-full center-flex font-bold rounded-sm;
   }
 }
 

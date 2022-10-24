@@ -18,6 +18,8 @@ bind("path", (h, invoker) => {
 
 bind("data", (h, invoker) => {
   h("getGames", invoker);
+  h("getGame", invoker);
+  h("setGame", invoker);
   h("getImage", invoker);
   h("getGameFiles", invoker);
   h("getGameRegionSettings", invoker);
@@ -33,6 +35,7 @@ bind("data", (h, invoker) => {
   h("countConsoleGames", invoker);
   h("getGlobalSettings", invoker);
   h("setGlobalSettings", invoker);
+  h("toggleFavorite", invoker);
 });
 
 bind("emulator", (h, invoker, listener) => {

@@ -25,6 +25,7 @@ interface UseGamePadProps {
     | Partial<Record<ButtonKeys, (isPressed?: boolean) => void>>
     | Record<string, (isPressed?: boolean) => void>;
 
+  focused?: boolean;
   onConnect?: (gp: Gamepad) => void;
   onDisconnect?: (gp: Gamepad) => void;
 }
@@ -40,6 +41,7 @@ const useGamePad = (props?: UseGamePadProps, deps: any[] = []) => {
     pressOnly,
     onConnect,
     onDisconnect,
+    focused,
   } = props || {};
   const [id] = useState(() => nanoid(21));
   const gpRef = useRef<Gamepad>();
@@ -61,6 +63,7 @@ const useGamePad = (props?: UseGamePadProps, deps: any[] = []) => {
   const startTimer = () => {
     if (timerRef.current) timerRef.current();
     timerRef.current = createTimer(() => {
+      if (typeof focused === "boolean" && !focused) return;
       const getGamepad = pipe(
         filter((gp: Maybe<Gamepad>) => !!gp),
         find<Gamepad>(propEq("index", latestData.current.gamepadIndex))

@@ -91,6 +91,7 @@ interface ConsoleGameData {
   unique: string;
   regions: GameRegion[];
   description: string;
+  isFavorite?: boolean;
 
   // Images
   ratings: string;
@@ -142,5 +143,6 @@ interface EmuPathing {
 interface AppSettings {
   pathing: EmuPathing;
   consoles: ConsoleSettings[];
-  savestates: Record<string, number[]>
+  savestates: Record<string, number[]>;
+  favorites?: string[];
 }

@@ -23,7 +23,8 @@ import { DownloadStatus } from "types/enums";
 
 export namespace DataApi {
   export class Resolver {
-    async getGames({ console: cns, keyword, page, limit }: GetGameParams) {
+    async getGames({ console: cns, keyword, page, limit }: GetGamesParams) {
+      const settings = await getEmuSettings();
       const db = await getConsoleDump(cns);
 
       const filtered = db.filter(
@@ -31,6 +32,8 @@ export namespace DataApi {
           scoreMatchStrings(official, keyword) > 0.5
       );
       const counter = page * limit;
+
+      const favorites = settings.get("favorites").value() ?? [];
       const sorted = filtered
         .sort(
           (a, b) =>
@@ -44,9 +47,37 @@ export namespace DataApi {
       const next = filtered.slice(nextCounter, nextCounter + limit).value();
 
       return {
-        res: sorted,
+        res: sorted.map((game) => ({
+          ...game,
+          isFavorite: favorites.indexOf(game.id) > -1,
+        })),
         hasNext: next.length > 0,
       };
+    }
+
+    async getGame({ id, console: cns }: GetGameParams) {
+      const settings = await getEmuSettings();
+      const db = await getConsoleDump(cns);
+
+      const favorites = settings.get("favorites").value() ?? [];
+
+      const game = db.find({ id }).value() as ConsoleGameData;
+
+      return {
+        ...game,
+        isFavorite: favorites.indexOf(game.id) > -1,
+      };
+    }
+
+    async setGame({ id, console: cns, data }: SetGameParams) {
+      const db = await getConsoleDump(cns);
+
+      const game = db
+        .find({ id })
+        .set("opening", data.opening)
+        .write() as ConsoleGameData;
+
+      return game;
     }
 
     async getImage({ path, url }: GetImageParams) {
@@ -304,6 +335,30 @@ export namespace DataApi {
       return false;
     }
 
+    async toggleFavorite({ id, console: cns, bool }: ToggleFavoriteParams) {
+      const settings = await getEmuSettings();
+      const db = await getConsoleDump(cns);
+      const game = db.find({ id }).value() as ConsoleGameData;
+
+      if (!game) return false;
+
+      const favorites = settings.get("favorites").value() ?? [];
+      const isFavorite =
+        typeof bool === "boolean" ? !bool : favorites.includes(game.id);
+
+      const isInside = favorites.includes(game.id);
+      let newFavorites = isFavorite
+        ? favorites.filter((v) => v !== game.id)
+        : [...favorites, game.id];
+
+      if (isInside && !isFavorite) newFavorites = favorites;
+
+      console.log(isFavorite, newFavorites);
+      settings.set("favorites", newFavorites).write();
+
+      return !isFavorite;
+    }
+
     async getConsoles() {
       const db = await getEmuSettings();
       return db.get("consoles").value();
@@ -397,11 +452,22 @@ export namespace DataApi {
     console: string;
   }
 
-  interface GetGameParams extends Base {
+  interface GetGamesParams extends Base {
     keyword: string;
     console: string;
     page: number;
     limit: number;
+  }
+
+  interface GetGameParams extends Base {
+    id: string;
+    console: string;
+  }
+
+  interface SetGameParams extends Base {
+    id: string;
+    console: string;
+    data: Partial<ConsoleGameData>;
   }
 
   interface GetImageParams extends Base {
@@ -425,6 +491,12 @@ export namespace DataApi {
     serials: string[];
     links: ParsedLinks[];
     console: string;
+  }
+
+  interface ToggleFavoriteParams extends Base {
+    id: string;
+    console: string;
+    bool?: boolean;
   }
 
   interface GetConsoleParams extends Base {

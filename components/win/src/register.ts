@@ -22,11 +22,10 @@ export const MountDataHandles = (app: Application) => {
   Handlers.register("win", "minimize", async () => app?.win?.minimize());
 
   Handlers.register("win", "isDirectory", async (_evt, path) => {
-    if (path) {
-      return fs.statSync(path).isDirectory();
-    }
+    let check: boolean = true;
+    if (path) check = fs.statSync(path).isDirectory();
 
-    return true;
+    return check;
   });
 
   Handlers.register("win", "isFile", async (_evt, path) => {
@@ -62,6 +61,14 @@ export const MountDataHandles = (app: Application) => {
     "getGames",
     async (_evt, keyword, cns, page, limit) =>
       Data.getGames({ console: cns, keyword, page, limit })
+  );
+
+  Handlers.register("data", "getGame", async (_evt, id, cns) =>
+    Data.getGame({ id, console: cns })
+  );
+
+  Handlers.register("data", "setGame", async (_evt, id, cns, data) =>
+    Data.setGame({ id, console: cns, data })
   );
 
   Handlers.register("data", "getGameFiles", async (_evt, id, cons) =>
@@ -128,6 +135,10 @@ export const MountDataHandles = (app: Application) => {
 
   Handlers.register("data", "play", async (_evt, serial, id, cons) =>
     Data.play({ serial, id, console: cons, app })
+  );
+
+  Handlers.register("data", "toggleFavorite", async (_evt, id, console, bool) =>
+    Data.toggleFavorite({ id, console, bool })
   );
 
   Handlers.register("emulator", "toggleTurbo", async (_evt) => {
