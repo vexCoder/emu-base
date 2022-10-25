@@ -43,7 +43,11 @@ const ConsoleList = ({ selected, setSelected, onClose }: ConsoleListProps) => {
         }
       },
       btnRight(setFocus) {
-        setFocus("game-header");
+        if (store.lastFocused) {
+          setFocus(store.lastFocused);
+        } else {
+          setFocus("game-header");
+        }
         onClose();
       },
     },

@@ -14,7 +14,9 @@ type KeyboardProps = BaseProps & {
   value?: string;
   onClose?: () => void;
   onChange?: (val: string) => void;
+  onInputChange?: (val: string) => void;
   placeholder?: string;
+  hideInput?: boolean;
 };
 
 const useCoordinate = () => {
@@ -43,6 +45,8 @@ const Keyboard = ({
   onChange,
   placeholder,
   value: initialValue,
+  hideInput,
+  onInputChange,
 }: KeyboardProps) => {
   const { x, y, set } = useCoordinate();
 
@@ -52,6 +56,12 @@ const Keyboard = ({
   useEffect(() => {
     if (initialValue) setValue(initialValue);
   }, [initialValue]);
+
+  useEffect(() => {
+    if (onInputChange) {
+      onInputChange(value);
+    }
+  }, [value, onInputChange]);
 
   const { focused } = useNavigate(focusKey ?? "game-keyboard", {
     actions: {
@@ -112,19 +122,21 @@ const Keyboard = ({
 
   return (
     <div>
-      <div className="p-1">
-        {value && value.length && (
-          <div className="p-4 text-lg rounded-sm bg-secondary/20 font-[JosefinSans] font-bold text-text">
-            {value}
-          </div>
-        )}
+      {!hideInput && (
+        <div className="p-1">
+          {value && value.length && (
+            <div className="p-4 text-lg rounded-sm bg-secondary/20 font-[JosefinSans] font-bold text-text">
+              {value}
+            </div>
+          )}
 
-        {(!value || !value?.length) && placeholder && (
-          <div className="p-4 text-lg rounded-sm bg-secondary/20 font-[JosefinSans] font-bold text-text/20">
-            {placeholder}
-          </div>
-        )}
-      </div>
+          {(!value || !value?.length) && placeholder && (
+            <div className="p-4 text-lg rounded-sm bg-secondary/20 font-[JosefinSans] font-bold text-text/20">
+              {placeholder}
+            </div>
+          )}
+        </div>
+      )}
       <div className="flex flex-row">
         {keyMap[0].map((v, i) => (
           <button

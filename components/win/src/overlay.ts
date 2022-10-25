@@ -225,6 +225,7 @@ class OverlayWindow {
   }
 
   cleanUp() {
+    console.log("clean up");
     this.win?.hide();
     if (this.win) IOverlay.closeWindow(this.win.id);
     this.attached = false;

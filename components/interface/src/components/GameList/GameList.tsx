@@ -17,7 +17,10 @@ import GameDetails from "./GameDetails";
 import GameImage from "./GameImage";
 
 const selector = (v: MainStore) =>
-  pick(["selected", "select", "count", "cycle", "set", "games", "disc"], v);
+  pick(
+    ["selected", "select", "count", "cycle", "set", "games", "disc", "search"],
+    v
+  );
 
 const GameList = () => {
   const [max, maxCounter] = useCounter(0);
@@ -28,6 +31,7 @@ const GameList = () => {
 
   const store = useMainStore(selector);
   const { focused } = useNavigate("game-list", {
+    autoFocus: true,
     actions: {
       left() {
         actions.dec();
@@ -51,7 +55,7 @@ const GameList = () => {
       <div className="h-[22rem]">
         <Segment
           focused={focused}
-          keyword="parasite eve"
+          keyword={store.search}
           selected={selected}
           increaseMax={(n: number) => maxCounter.inc(n)}
         />

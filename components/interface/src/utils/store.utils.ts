@@ -97,12 +97,14 @@ export const useGamepadStore = create(
 );
 
 export interface MainSettings {
+  search: string;
   console: string;
   games: ConsoleGameData[];
   selected?: ConsoleGameData;
   count: number;
   disc?: string;
   focused: string;
+  lastFocused?: string;
   gamepad?: Gamepad;
 }
 
@@ -120,6 +122,7 @@ export type MainStore = MainSettings & MainActions;
 export const useMainStore = create(
   subscribeWithSelector<MainStore>((set, get) => ({
     // properties
+    search: "",
     focused: "game-list",
     console: "ps1",
     games: [],

@@ -175,7 +175,9 @@ export const MountDataHandles = (app: Application) => {
   });
 
   Handlers.register("emulator", "intercept", async (_evt, bool) => {
-    app?.overlay?.intercept(bool);
-    app?.emulator?.sendMessage("PAUSE_TOGGLE");
+    if (app.overlay && app.overlay.attached) {
+      app?.overlay?.intercept(bool);
+      app?.emulator?.sendMessage("PAUSE_TOGGLE");
+    }
   });
 };

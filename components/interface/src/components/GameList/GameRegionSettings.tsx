@@ -1,25 +1,34 @@
-import ConsoleIcon from "@elements/ConsoleIcon";
+import Modal from "@elements/Modal";
 import useGetGameLinks from "@hooks/useGetGameLinks";
 import useGetGameRegionSettings from "@hooks/useGetGameRegionSettings";
+import useNavigate from "@hooks/useNavigate";
 import useSetGameLinks from "@hooks/useSetGameLinks";
-import { useDynamicList } from "ahooks";
+import { useCounter, useDynamicList, useInViewport } from "ahooks";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
 import { equals } from "ramda";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 interface GameDiscListProps {
   id: string;
   console: string;
+  focusKey?: string;
+  focusLinkKey?: string;
   onLinksSave?: (v: GameRegionFiles) => void;
   onRegionSet?: (v: GameRegionFiles) => void;
+  open: boolean;
+  onClose?: () => void;
 }
 
 const GameRegionSettings = ({
+  focusKey,
+  focusLinkKey,
   id,
   console: cons,
   onLinksSave,
   onRegionSet,
+  open,
+  onClose,
 }: GameDiscListProps) => {
   const { data, loading } = useGetGameRegionSettings({
     id,
@@ -28,6 +37,11 @@ const GameRegionSettings = ({
 
   const gameFiles = data ?? [];
 
+  const [regionSelected, regionActions] = useCounter(0, {
+    min: 0,
+    max: gameFiles.length - 1,
+  });
+
   const [edit, setEdit] = useState<GameRegionFiles>();
   const [selected, select] = useState<GameRegionFiles>();
 
@@ -35,45 +49,92 @@ const GameRegionSettings = ({
   const isComplete =
     selectedDiscs.filter((o) => !!o.playable)?.length >= selectedDiscs?.length;
 
-  return (
-    <div className="v-stack max-h-[75vh]">
-      <div className="h-stack items-center gap-3">
-        <ConsoleIcon console={cons} size="2em" />
-        <h6 className="font-bold text-text leading-[1em]">Disc List</h6>
-      </div>
+  const { focused, setFocus } = useNavigate(
+    focusKey ?? "game-disc",
+    {
+      onFocus() {
+        regionActions.set(0);
+      },
+      actions: {
+        up() {
+          regionActions.dec();
+        },
+        bottom() {
+          regionActions.inc();
+        },
+        btnBottom() {
+          const sel = gameFiles[regionSelected];
+          if (sel) {
+            setEdit(sel);
+            setFocus(focusLinkKey ?? "game-links");
+          }
+        },
+        btnRight() {
+          handleClose();
+        },
+      },
+    },
+    [id]
+  );
 
-      {!!edit && selected && (
-        <LinksList
-          id={id}
-          selected={selected}
-          console={cons}
-          onLinksSave={() => onLinksSave?.(selected)}
-        />
-      )}
-      {!edit && (
+  const handleClose = () => {
+    setEdit(undefined);
+    onClose?.();
+  };
+
+  const handleSelect = (v: GameRegionFiles) => {
+    select(v);
+    onRegionSet?.(v);
+  };
+
+  return (
+    <>
+      <Modal open={!edit && open}>
         <RegionList
+          focused={focused}
           gameFiles={gameFiles}
-          handleSelect={(v) => {
-            select(v);
-            onRegionSet?.(v);
-          }}
+          handleSelect={handleSelect}
           selected={selected}
           loading={loading}
           handleEdit={() => {
             setEdit(selected);
           }}
+          regionSelected={regionSelected}
           isComplete={isComplete}
         />
-      )}
-    </div>
+      </Modal>
+      <Modal open={!!edit && open}>
+        <LinksList
+          id={id}
+          selected={edit}
+          console={cons}
+          onClose={() => {
+            setFocus(focusKey ?? "game-disc");
+            setEdit(undefined);
+          }}
+          focusLinkKey={focusLinkKey}
+          onLinksSave={() => {
+            if (edit) onLinksSave?.(edit);
+          }}
+        />
+      </Modal>
+      {/* <div className="v-stack max-h-[75vh]">
+        <div className="h-stack items-center gap-3">
+          <ConsoleIcon console={cons} size="2em" />
+          <h6 className="font-bold text-text leading-[1em]">Disc List</h6>
+        </div>
+      </div> */}
+    </>
   );
 };
 
 interface LinksListProps {
-  selected: GameRegionFiles;
+  selected?: GameRegionFiles;
   console: string;
   id: string;
   onLinksSave?: () => void;
+  focusLinkKey?: string;
+  onClose: () => void;
 }
 
 const LinksList = ({
@@ -81,21 +142,33 @@ const LinksList = ({
   console: cons,
   id,
   onLinksSave,
+  focusLinkKey,
+  onClose,
 }: LinksListProps) => {
+  const ref = useRef<HTMLDivElement>(null);
   const {
     list: links,
     resetList,
     replace,
+    remove,
   } = useDynamicList<ParsedLinks | null>([]);
-  const files = selected.gameFiles;
+  const files = selected?.gameFiles ?? [];
+  const regions = selected?.region ? [selected?.region] : [];
 
   const { data, loading } = useGetGameLinks({
-    keyword: selected.title,
+    keyword: selected?.title || "",
     console: cons,
-    tags: [selected.region],
+    tags: regions,
   });
 
-  const [, execute, saving] = useSetGameLinks();
+  const gameLinks = data ?? [];
+
+  const [linkSelected, linksActions] = useCounter(0, {
+    min: 0,
+    max: gameLinks.length - 1,
+  });
+
+  const [, execute] = useSetGameLinks();
 
   const handleSet = () => {
     const serials = files.map((o) => o.serial);
@@ -112,7 +185,49 @@ const LinksList = ({
     onLinksSave?.();
   };
 
-  const gameLinks = data ?? [];
+  const handleSelect = (link: ParsedLinks, isActive: boolean) => {
+    if (!isActive) {
+      if (links.length >= files.length) return;
+      const nullIndex = links.indexOf(null);
+      if (nullIndex === -1) resetList([...links, link]);
+      else replace(nullIndex, link);
+    } else {
+      const index = links.indexOf(link);
+      remove(index);
+    }
+  };
+
+  const { focused } = useNavigate(
+    focusLinkKey ?? "game-links",
+    {
+      onFocus() {
+        linksActions.set(0);
+      },
+      actions: {
+        up() {
+          linksActions.dec();
+        },
+        bottom() {
+          linksActions.inc();
+        },
+        btnBottom() {
+          const sel = gameLinks[linkSelected];
+          if (sel) {
+            const isActive = !!links.find((o) => o?.link === sel.link);
+            handleSelect(sel, isActive);
+          }
+        },
+        ctrlRight() {
+          handleSet();
+        },
+        btnRight() {
+          onClose();
+        },
+      },
+    },
+    [id]
+  );
+
   return (
     <div className="v-stack">
       <p className="text-text  mt-4">Select Links In Order:</p>
@@ -135,6 +250,7 @@ const LinksList = ({
       <AnimatePresence>
         {!loading && (
           <motion.div
+            ref={ref}
             key="disc-list"
             className="v-stack gap-4 overflow-auto py-2 pr-4 origin-top scroll1"
             initial={{ opacity: 0, maxHeight: "0vh" }}
@@ -153,49 +269,28 @@ const LinksList = ({
               },
             }}
           >
-            {gameLinks.map((v) => {
+            {gameLinks.map((v, i) => {
               const isActive = links.find((o) => o?.link === v.link);
               const linksIndex = links.findIndex((o) => o?.link === v.link);
               return (
-                <button
-                  type="button"
+                <LinkItem
                   key={JSON.stringify(v)}
-                  className={clsx(
-                    "v-stack p-2 rounded-xl border border-secondary/50",
-                    isActive && "bg-secondary/20 border-focus"
-                  )}
-                  onClick={() => {
-                    if (!isActive) {
-                      const nullIndex = links.indexOf(null);
-                      if (nullIndex === -1) resetList([...links, v]);
-                      else replace(nullIndex, v);
-                    } else {
-                      const index = links.indexOf(v);
-                      replace(index, null);
-                    }
-                  }}
-                >
-                  <p className="w-full h-stack justify-between text-text text-sm font-bold">
-                    <span>
-                      {!!files[linksIndex] && (
-                        <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold mr-2">
-                          {files[linksIndex].serial}
-                        </span>
-                      )}
-                      <span>{v.fileName}</span>
-                    </span>
-
-                    <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
-                      {v.size}Mb
-                    </span>
-                  </p>
-                </button>
+                  files={files}
+                  focused={focused}
+                  handleSelect={handleSelect}
+                  index={i}
+                  isActive={!!isActive}
+                  item={v}
+                  linkSelected={linkSelected}
+                  linksIndex={linksIndex}
+                  parent={ref.current}
+                />
               );
             })}
           </motion.div>
         )}
       </AnimatePresence>
-      <div>
+      {/* <div>
         <button
           type="button"
           disabled={saving}
@@ -207,8 +302,81 @@ const LinksList = ({
         <p className="text-xs mt-1 text-secondary">
           * make sure to add disc for each serials
         </p>
-      </div>
+      </div> */}
     </div>
+  );
+};
+
+interface LinkItemProps {
+  item: ParsedLinks;
+  isActive: boolean;
+  linksIndex: number;
+  index: number;
+  linkSelected: number;
+  focused: boolean;
+  parent: HTMLDivElement | null;
+  files: GameRegionFiles["gameFiles"];
+  handleSelect: (link: ParsedLinks, isActive: boolean) => void;
+}
+
+const LinkItem = ({
+  item,
+  files,
+  isActive,
+  linksIndex,
+  focused,
+  parent,
+  handleSelect,
+  index: i,
+  linkSelected,
+}: LinkItemProps) => {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [, ratio] = useInViewport(ref, {
+    threshold: [0, 0.25, 0.5, 0.75, 1],
+    root: () => parent,
+  });
+
+  useEffect(() => {
+    if (
+      focused &&
+      linkSelected === i &&
+      typeof ratio === "number" &&
+      ratio < 1
+    ) {
+      ref.current?.scrollIntoView();
+    }
+  }, [focused, linkSelected, i, ratio]);
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      key={JSON.stringify(item)}
+      className={clsx(
+        "v-stack p-2 rounded-xl",
+        (!focused || linkSelected !== i) &&
+          !isActive &&
+          "border border-secondary/50",
+        focused && linkSelected === i && `border border-focus`,
+        isActive && "bg-secondary/20"
+      )}
+      onClick={() => handleSelect(item, !!isActive)}
+    >
+      <p className="w-full h-stack justify-between text-text text-sm font-bold">
+        <span>
+          {!!files[linksIndex] && (
+            <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold mr-2">
+              {files[linksIndex].serial}
+            </span>
+          )}
+          <span>{item.fileName}</span>
+        </span>
+
+        <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
+          {item.size}Mb
+        </span>
+      </p>
+    </button>
   );
 };
 
@@ -219,6 +387,8 @@ interface RegionListProps {
   handleEdit?: () => void;
   selected?: GameRegionFiles;
   isComplete?: boolean;
+  focused: boolean;
+  regionSelected: number;
 }
 
 const RegionList = ({
@@ -228,16 +398,19 @@ const RegionList = ({
   handleEdit,
   selected,
   isComplete,
+  focused,
+  regionSelected,
 }: RegionListProps) => {
+  const ref = useRef<HTMLDivElement>(null);
   return (
-    <div className="v-stack ">
-      <p className="text-text  mt-4">Select Game Region:</p>
+    <div ref={ref} className="v-stack ">
+      <p className="text-text">Select Game Region:</p>
 
       <AnimatePresence>
         {!loading && (
           <motion.div
             key="disc-list"
-            className="v-stack gap-4 overflow-auto py-2 pr-4 origin-top scroll1"
+            className="v-stack gap-4 overflow-auto py-2 pr-2 origin-top scroll1"
             initial={{ opacity: 0, maxHeight: "0vh" }}
             animate={{ opacity: 1, maxHeight: "50vh" }}
             exit={{ opacity: 0, maxHeight: "0vh" }}
@@ -254,34 +427,23 @@ const RegionList = ({
               },
             }}
           >
-            {gameFiles.map((v) => {
+            {gameFiles.map((v, i) => {
               const discs = v.gameFiles ?? [];
               const unsetDiscs = discs.filter((o) => !o.playable);
               const isActive = equals(selected, v);
               return (
-                <button
-                  type="button"
+                <RegionItem
+                  discs={discs}
+                  focused={focused}
+                  handleSelect={handleSelect}
+                  index={i}
+                  isActive={isActive}
+                  item={v}
+                  parent={ref.current}
+                  regionSelected={regionSelected}
+                  unsetDiscs={unsetDiscs}
                   key={JSON.stringify(v)}
-                  className={clsx(
-                    "v-stack p-2 rounded-xl border border-secondary/50",
-                    isActive && "bg-secondary/20 border-focus"
-                  )}
-                  onClick={() => handleSelect?.(v)}
-                >
-                  <p className="w-full h-stack justify-between text-text text-sm font-bold">
-                    <span>{v.title}</span>
-
-                    <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
-                      {v.region}
-                    </span>
-                  </p>
-                  <p className="w-full mt-2 h-stack justify-between text-text text-xs">
-                    <span>{`${discs.map((o) => o.serial).join(", ")}`}</span>
-                    <span className="mr-1">{`${
-                      discs.length - unsetDiscs.length
-                    } / ${unsetDiscs.length} Disc(s)`}</span>
-                  </p>
-                </button>
+                />
               );
             })}
           </motion.div>
@@ -303,6 +465,75 @@ const RegionList = ({
         </div>
       )}
     </div>
+  );
+};
+
+interface RegionItemProps {
+  item: GameRegionFiles;
+  isActive: boolean;
+  index: number;
+  regionSelected: number;
+  focused: boolean;
+  parent: HTMLDivElement | null;
+  discs: GameRegionFiles["gameFiles"];
+  unsetDiscs: GameRegionFiles["gameFiles"];
+  handleSelect?: (item: GameRegionFiles) => void;
+}
+
+const RegionItem = ({
+  item,
+  discs,
+  unsetDiscs,
+  isActive,
+  focused,
+  parent,
+  handleSelect,
+  index: i,
+  regionSelected,
+}: RegionItemProps) => {
+  const ref = useRef<HTMLButtonElement>(null);
+  const [, ratio] = useInViewport(ref, {
+    threshold: [0, 0.25, 0.5, 0.75, 1],
+    root: () => parent,
+  });
+
+  useEffect(() => {
+    if (
+      focused &&
+      regionSelected === i &&
+      typeof ratio === "number" &&
+      ratio < 1
+    ) {
+      ref.current?.scrollIntoView();
+    }
+  }, [focused, regionSelected, i, ratio]);
+
+  return (
+    <button
+      ref={ref}
+      type="button"
+      className={clsx(
+        "v-stack p-2 rounded-xl",
+        (!focused || regionSelected !== i) && "border border-secondary/50",
+        focused && regionSelected === i && `border border-focus`,
+        isActive && "bg-secondary/20 border-focus"
+      )}
+      onClick={() => handleSelect?.(item)}
+    >
+      <p className="w-full h-stack justify-between text-text text-sm font-bold">
+        <span>{item.title}</span>
+
+        <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
+          {item.region}
+        </span>
+      </p>
+      <p className="w-full mt-2 h-stack justify-between text-text text-xs">
+        <span>{`${discs.map((o) => o.serial).join(", ")}`}</span>
+        <span className="mr-1">{`${discs.length - unsetDiscs.length} / ${
+          unsetDiscs.length
+        } Disc(s)`}</span>
+      </p>
+    </button>
   );
 };
 

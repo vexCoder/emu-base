@@ -1,17 +1,25 @@
 import ConsoleIcon from "@elements/ConsoleIcon";
+import Keyboard from "@elements/Keyboard";
 import Modal from "@elements/Modal";
-import { Cog8ToothIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import {
+  Cog8ToothIcon,
+  MagnifyingGlassIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 import useNavigate from "@hooks/useNavigate";
 import { useMainStore } from "@utils/store.utils";
-import { useCounter, useMount, useToggle } from "ahooks";
+import { useCounter, useMount, useToggle, useWhyDidYouUpdate } from "ahooks";
 import clsx from "clsx";
-import { useState } from "react";
+import { useCallback, useState } from "react";
+import { createPortal } from "react-dom";
 import ConsoleList from "./ConsoleList";
+import GameSearch from "./GameSearch";
 import Settings from "./Settings";
 
 const Header = () => {
   const store = useMainStore();
   const [selected, setSelected] = useState<string>();
+  const [searchOpen, toggleSearch] = useToggle(false);
   const [settingsOpen, toggleSettings] = useToggle(false);
   const [consolesOpen, toggleConsoles] = useToggle(false);
   const [btnSelected, navActions] = useCounter(0, {
@@ -31,7 +39,26 @@ const Header = () => {
     }
   });
 
-  const { focused } = useNavigate("game-header", {
+  const { focused, setFocus } = useNavigate("game-header", {
+    globalActions: {
+      ctrlLeft() {
+        if (store.focused !== "game-console-list") {
+          setFocus("game-console-list");
+          toggleConsoles.set(true);
+        }
+      },
+      ctrlMiddle() {
+        if (store.focused !== "game-search") {
+          setFocus("game-search");
+          toggleSearch.set(true);
+        }
+
+        if (store.focused === "game-search" && store.lastFocused) {
+          setFocus(store.lastFocused);
+          toggleSearch.set(false);
+        }
+      },
+    },
     actions: {
       left() {
         navActions.dec();
@@ -39,16 +66,20 @@ const Header = () => {
       right() {
         navActions.inc();
       },
-      bottom(setFocus) {
+      bottom() {
         setFocus("game-list");
       },
-      btnBottom(setFocus) {
-        if (btnSelected === 2) {
+      btnBottom() {
+        if (btnSelected === 3) {
           window.win.close();
         }
-        if (btnSelected === 1) {
+        if (btnSelected === 2) {
           toggleSettings.set(true);
           setFocus("game-settings");
+        }
+        if (btnSelected === 1) {
+          toggleSearch.set(true);
+          setFocus("game-search");
         }
         if (btnSelected === 0) {
           toggleConsoles.set(true);
@@ -58,8 +89,48 @@ const Header = () => {
     },
   });
 
+  const storeSet = store.set;
+  const handleInputChange = useCallback(
+    (v: string) => {
+      storeSet({ search: v });
+    },
+    [storeSet]
+  );
+
+  useWhyDidYouUpdate("Header", storeSet);
+
   return (
     <>
+      <Modal
+        duration={0.3}
+        open={searchOpen}
+        handleClose={() => toggleSearch.set(false)}
+        className={clsx("transition-[top]", searchOpen && "top-1/4")}
+      >
+        <GameSearch />
+      </Modal>
+      {createPortal(
+        <div
+          className={clsx(
+            "center-transform rounded-xl p-4 transition-[top] min-w-[75vw] z-50 bg-primary",
+            searchOpen && "!top-3/4",
+            !searchOpen && "!top-[125%]"
+          )}
+        >
+          <Keyboard
+            hideInput
+            placeholder="Enter Game Title"
+            value={store.search}
+            focusKey="game-search"
+            onClose={() => {
+              setFocus("game-header");
+              toggleSearch.set(false);
+            }}
+            onInputChange={handleInputChange}
+          />
+        </div>,
+        document.body
+      )}
       <Modal
         duration={0.3}
         open={settingsOpen}
@@ -91,12 +162,30 @@ const Header = () => {
         </button>
 
         <div className="h-stack gap-4">
+          <div className="h-stack items-center">
+            <button
+              className="h-stack items-center gap-2 py-1 px-2 rounded-full bg-secondary/50"
+              type="button"
+              onClick={() => toggleSearch.set(true)}
+            >
+              <MagnifyingGlassIcon
+                className={clsx(
+                  "w-[1.5em] h-[1.5em] text-text",
+                  focused && btnSelected === 1 && "!text-focus ",
+                  (!focused || btnSelected !== 1) && "!text-text"
+                )}
+              />
+              <p className="text-text leading-[1em] min-w-[75px]">
+                {store.search}
+              </p>
+            </button>
+          </div>
           <button type="button" onClick={() => toggleSettings.set(true)}>
             <Cog8ToothIcon
               className={clsx(
                 "w-[3em] h-[3em] text-text",
-                focused && btnSelected === 1 && "!text-focus ",
-                (!focused || btnSelected !== 1) && "!text-text"
+                focused && btnSelected === 2 && "!text-focus ",
+                (!focused || btnSelected !== 2) && "!text-text"
               )}
             />
           </button>
@@ -104,8 +193,8 @@ const Header = () => {
             <XCircleIcon
               className={clsx(
                 "w-[3em] h-[3em] text-text",
-                focused && btnSelected === 2 && "!text-focus ",
-                (!focused || btnSelected !== 2) && "!text-text"
+                focused && btnSelected === 3 && "!text-focus ",
+                (!focused || btnSelected !== 3) && "!text-text"
               )}
             />
           </button>

@@ -6,6 +6,7 @@ import {
   useMount,
   useSetState,
 } from "ahooks";
+import { keys } from "ramda";
 import { useEffect, useRef, useState } from "react";
 import useGamePad from "./useGamePad";
 
@@ -69,7 +70,7 @@ const useNavigate = (
   }, [isFocused, key, onFocus, ...deps]);
 
   const setFocus = (focus: string) => {
-    store.set({ focused: focus });
+    store.set((prev) => ({ focused: focus, lastFocused: prev.focused }));
   };
 
   const press = (fn: ActionType) => {
@@ -136,9 +137,10 @@ const useNavigate = (
     if (down.ctrlRight) press("ctrlRight");
   }, 100);
 
+  const globalKeys = keys(options?.globalActions ?? {});
   useGamePad(
     {
-      focused: isFocused,
+      focused: isFocused || !!globalKeys.length,
       onConnect: (gp) => {
         store.set({ gamepad: gp });
       },

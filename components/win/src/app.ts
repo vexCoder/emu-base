@@ -90,6 +90,7 @@ export class Application {
     });
 
     app.on("before-quit", async () => {
+      console.log("qutting");
       this.quitting = true;
       this.overlay?.cleanUp();
     });

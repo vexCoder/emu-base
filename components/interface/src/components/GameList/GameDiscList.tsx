@@ -39,6 +39,7 @@ const GameDiscList = ({
 
   const handleDownload = (serial: string) => {
     download(serial, game.id, cons);
+    onDownload();
   };
 
   const handlePlay = (serial: string) => {

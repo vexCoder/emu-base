@@ -92,19 +92,19 @@ const GameDetails = () => {
     }
   );
 
-  const { focused } = useNavigate("game-details", {
+  const { focused, setFocus } = useNavigate("game-details", {
     actions: {
-      up(setFocus) {
+      up() {
         if (btnSlected === 0) setFocus("game-list");
         else navActions.dec();
       },
       bottom() {
         navActions.inc();
       },
-      right(setFocus) {
+      right() {
         setFocus("game-descript");
       },
-      btnBottom(setFocus) {
+      btnBottom() {
         if (btnSlected === 0) {
           handlePlay();
           if (!data) {
@@ -128,10 +128,10 @@ const GameDetails = () => {
 
   const { focused: focusedDescription } = useNavigate("game-descript", {
     actions: {
-      left(setFocus) {
+      left() {
         if (!open) setFocus("game-details");
       },
-      up(setFocus) {
+      up() {
         if (!open) setFocus("game-list");
         if (open) {
           const scrollHeight = descriptRef.current?.scrollHeight ?? 0;
@@ -182,17 +182,19 @@ const GameDetails = () => {
         </Modal>
       )}
       {gameData && (
-        <Modal
-          duration={0.3}
+        <GameRegionSettings
+          id={gameData.id}
+          console={store.console}
           open={modalOpen}
-          handleClose={() => actionsModal.set(false)}
-        >
-          <GameRegionSettings
-            id={gameData.id}
-            console={store.console}
-            onLinksSave={() => actionsModal.set(false)}
-          />
-        </Modal>
+          onLinksSave={() => {
+            setFocus("game-play");
+            actionsModal.set(false);
+          }}
+          onClose={() => {
+            setFocus("game-details");
+            actionsModal.set(false);
+          }}
+        />
       )}
       {gameData && data && (
         <Modal

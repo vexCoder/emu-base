@@ -27,13 +27,32 @@ export namespace DataApi {
       const settings = await getEmuSettings();
       const db = await getConsoleDump(cns);
 
+      const favorites = settings.get("favorites").value() ?? [];
+      const counter = page * limit;
+      const nextCounter = counter + limit;
+      if (!keyword || keyword.length < 3) {
+        const games = db.sortBy("title");
+
+        const sorted = games
+          .slice(counter, counter + limit)
+          .value() as ConsoleGameData[];
+
+        const next = games.slice(nextCounter, nextCounter + limit).value();
+
+        return {
+          res: sorted.map((game) => ({
+            ...game,
+            isFavorite: favorites.indexOf(game.id) > -1,
+          })),
+          hasNext: next.length > 0,
+        };
+      }
+
       const filtered = db.filter(
         ({ official }: ConsoleGameData) =>
           scoreMatchStrings(official, keyword) > 0.5
       );
-      const counter = page * limit;
 
-      const favorites = settings.get("favorites").value() ?? [];
       const sorted = filtered
         .sort(
           (a, b) =>
@@ -43,7 +62,6 @@ export namespace DataApi {
         .slice(counter, counter + limit)
         .value() as ConsoleGameData[];
 
-      const nextCounter = counter + limit;
       const next = filtered.slice(nextCounter, nextCounter + limit).value();
 
       return {
@@ -219,6 +237,7 @@ export namespace DataApi {
       if (!value) return false;
 
       let newMappings = {};
+      mappings.set(`${value.id}`, {}).write();
       for (let i = 0; i < serials.length; i++) {
         const serial = serials[i];
         mappings.set(`${value.id}.${serial}`, links[i]).write();
