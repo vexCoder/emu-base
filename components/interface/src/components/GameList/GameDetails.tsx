@@ -4,7 +4,13 @@ import Transition from "@elements/Transition";
 import useGetGameFiles from "@hooks/useGetGameFiles";
 import { extractString } from "@utils/helper";
 import { MainStore, useMainStore } from "@utils/store.utils";
-import { useCounter, useDebounceEffect, useToggle } from "ahooks";
+import {
+  useCounter,
+  useDebounce,
+  useDeepCompareEffect,
+  useToggle,
+  useUpdateEffect,
+} from "ahooks";
 import clsx from "clsx";
 import { clamp, pick } from "ramda";
 import { useEffect, useRef } from "react";
@@ -78,19 +84,19 @@ const GameDetails = () => {
     refresh();
   }, [modalOpen, refresh]);
 
-  useDebounceEffect(
-    () => {
-      if (selected?.id) {
-        window.data
-          .toggleFavorite(selected.id, cons, isFavorite)
-          .then(() => gameRefreshData());
-      }
-    },
-    [isFavorite],
-    {
-      wait: 500,
+  useDeepCompareEffect(() => {
+    favoriteActions.set(!!gameData?.isFavorite);
+  }, [gameData]);
+
+  const debouncedValue = useDebounce(isFavorite, { wait: 150 });
+
+  useUpdateEffect(() => {
+    if (selected?.id) {
+      window.data
+        .toggleFavorite(selected.id, cons, isFavorite)
+        .then(() => gameRefreshData());
     }
-  );
+  }, [debouncedValue]);
 
   const { focused, setFocus } = useNavigate("game-details", {
     actions: {

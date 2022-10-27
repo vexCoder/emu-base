@@ -251,18 +251,14 @@ const OverlayContent = () => {
       window.emulator.onData((val) => {
         if (val?.evt === "event.toggleTurbo") {
           store.set({ turbo: val?.value });
-        }
-
-        if (val?.evt === "event.toggleFPS") {
+        } else if (val?.evt === "event.toggleFPS") {
           store.set({ fps: val?.value });
-        }
-
-        if (val?.evt === "event.play") {
+        } else if (val?.evt === "event.play") {
           store.set(val?.value ?? {});
-        }
-
-        if (val?.evt === "event.update") {
+        } else if (val?.evt === "event.update") {
           store.set(val?.value ?? {});
+        } else {
+          store.set({ open: false });
         }
       });
     }

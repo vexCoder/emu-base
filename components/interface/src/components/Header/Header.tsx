@@ -8,9 +8,9 @@ import {
 } from "@heroicons/react/24/outline";
 import useNavigate from "@hooks/useNavigate";
 import { useMainStore } from "@utils/store.utils";
-import { useCounter, useMount, useToggle, useWhyDidYouUpdate } from "ahooks";
+import { useCounter, useMount, useToggle } from "ahooks";
 import clsx from "clsx";
-import { useCallback, useState } from "react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import ConsoleList from "./ConsoleList";
 import GameSearch from "./GameSearch";
@@ -18,7 +18,9 @@ import Settings from "./Settings";
 
 const Header = () => {
   const store = useMainStore();
+  const [inputVal, setInputVal] = useState<string>();
   const [selected, setSelected] = useState<string>();
+  const [recent, setRecent] = useState<string[]>([]);
   const [searchOpen, toggleSearch] = useToggle(false);
   const [settingsOpen, toggleSettings] = useToggle(false);
   const [consolesOpen, toggleConsoles] = useToggle(false);
@@ -37,7 +39,11 @@ const Header = () => {
         }
       });
     }
+
+    window.data.getRecentSearches().then(setRecent);
   });
+
+  const requiredFocus = ["game-header", "game-list", "game-details"];
 
   const { focused, setFocus } = useNavigate("game-header", {
     globalActions: {
@@ -48,7 +54,10 @@ const Header = () => {
         }
       },
       ctrlMiddle() {
-        if (store.focused !== "game-search") {
+        if (
+          store.focused !== "game-search" &&
+          requiredFocus.includes(store.focused)
+        ) {
           setFocus("game-search");
           toggleSearch.set(true);
         }
@@ -89,15 +98,23 @@ const Header = () => {
     },
   });
 
-  const storeSet = store.set;
-  const handleInputChange = useCallback(
-    (v: string) => {
-      storeSet({ search: v });
-    },
-    [storeSet]
-  );
+  const handleInputChange = (v: string) => {
+    setInputVal(v);
+  };
 
-  useWhyDidYouUpdate("Header", storeSet);
+  const handleChange = (v: string) => {
+    setFocus(store.lastFocused ?? "game-header");
+    toggleSearch.set(false);
+    store.set({ search: v });
+  };
+
+  useEffect(() => {
+    if (searchOpen) {
+      window.data.getRecentSearches().then((v) => {
+        setRecent(v);
+      });
+    }
+  }, [searchOpen]);
 
   return (
     <>
@@ -107,7 +124,7 @@ const Header = () => {
         handleClose={() => toggleSearch.set(false)}
         className={clsx("transition-[top]", searchOpen && "top-1/4")}
       >
-        <GameSearch />
+        <GameSearch value={inputVal} />
       </Modal>
       {createPortal(
         <div
@@ -118,6 +135,7 @@ const Header = () => {
           )}
         >
           <Keyboard
+            recent={recent}
             hideInput
             placeholder="Enter Game Title"
             value={store.search}
@@ -127,6 +145,7 @@ const Header = () => {
               toggleSearch.set(false);
             }}
             onInputChange={handleInputChange}
+            onChange={handleChange}
           />
         </div>,
         document.body

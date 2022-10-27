@@ -15,6 +15,7 @@ const getGame = async (id?: string, cons?: string) => {
 const useGetGame = ({ console: cons, id }: UseGetGameParams) => {
   const res = useRequest(() => getGame(id, cons), {
     refreshDeps: [id, cons],
+    cacheKey: `game-${id}-${cons}`,
   });
 
   return res;

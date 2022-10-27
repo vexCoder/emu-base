@@ -141,6 +141,10 @@ export const MountDataHandles = (app: Application) => {
     Data.toggleFavorite({ id, console, bool })
   );
 
+  Handlers.register("data", "getRecentSearches", async (_evt) =>
+    Data.getRecentSearches()
+  );
+
   Handlers.register("emulator", "toggleTurbo", async (_evt) => {
     app?.emulator?.toggleTurbo();
   });

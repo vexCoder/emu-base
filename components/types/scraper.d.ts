@@ -145,4 +145,5 @@ interface AppSettings {
   consoles: ConsoleSettings[];
   savestates: Record<string, number[]>;
   favorites?: string[];
+  recentSearch?: string[];
 }

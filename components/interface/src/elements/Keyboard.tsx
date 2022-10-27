@@ -17,6 +17,7 @@ type KeyboardProps = BaseProps & {
   onInputChange?: (val: string) => void;
   placeholder?: string;
   hideInput?: boolean;
+  recent?: string[];
 };
 
 const useCoordinate = () => {
@@ -47,11 +48,17 @@ const Keyboard = ({
   value: initialValue,
   hideInput,
   onInputChange,
+  recent,
 }: KeyboardProps) => {
   const { x, y, set } = useCoordinate();
 
   const [value, setValue] = useState("");
   const [shift, setShift] = useState(false);
+
+  const hasRecent = recent && recent.length;
+  const baseY = hasRecent ? 1 : 0;
+  let newKeyMap = [...keyMap];
+  if (hasRecent) newKeyMap = [recent, ...newKeyMap];
 
   useEffect(() => {
     if (initialValue) setValue(initialValue);
@@ -66,35 +73,42 @@ const Keyboard = ({
   const { focused } = useNavigate(focusKey ?? "game-keyboard", {
     actions: {
       left() {
-        set(cycleCounter(x - 1, 0, keyMap[y].length - 1), y);
+        set(cycleCounter(x - 1, 0, newKeyMap[y].length - 1), y);
       },
       right() {
-        set(cycleCounter(x + 1, 0, keyMap[y].length - 1), y);
+        set(cycleCounter(x + 1, 0, newKeyMap[y].length - 1), y);
       },
       up() {
-        const idx = cycleCounter(y - 1, 0, 4);
+        const idx = cycleCounter(y - 1, 0, 4 + baseY);
         // const newX = Math.min(x, keyMap[idx].length - 1);
-        const newX = Math.floor((x / keyMap[y].length) * keyMap[idx].length);
+        const newX = Math.floor(
+          (x / newKeyMap[y].length) * newKeyMap[idx].length
+        );
         set(newX, idx);
       },
       bottom() {
-        const idx = cycleCounter(y + 1, 0, 4);
+        const idx = cycleCounter(y + 1, 0, 4 + baseY);
         // const newX = Math.min(x, keyMap[idx].length - 1);
-        const max = keyMap[idx].length;
-        const newX = Math.floor((x / keyMap[y].length) * max);
-        set(newX, cycleCounter(y + 1, 0, 4));
+        const max = newKeyMap[idx].length;
+        const newX = Math.floor((x / newKeyMap[y].length) * max);
+        set(newX, cycleCounter(y + 1, 0, 4 + baseY));
       },
       btnRight() {
         handleButton("bck");
       },
       btnBottom() {
-        const mapVal = keyMap[y][x];
+        const mapVal = newKeyMap[y][x];
         handleButton(mapVal);
       },
     },
   });
 
   const handleButton = (val: string) => {
+    if (y === 0 && hasRecent) {
+      setValue(val);
+      return;
+    }
+
     if (val === "bck") {
       setValue((prev) => prev.slice(0, -1));
     } else if (val === "esc") {
@@ -122,6 +136,27 @@ const Keyboard = ({
 
   return (
     <div>
+      {!!recent?.length && (
+        <div className="p-1 gap-2 flex flex-row justify-between w-full">
+          {recent.map((val, i) => (
+            <button
+              type="button"
+              key={val}
+              className={clsx(
+                "p-1 rounded-full min-w-[75px] border",
+                focused && y === 0 && x === i && "border-focus text-focus",
+                !(focused && y === 0 && x === i) && "border-text text-text"
+              )}
+              onClick={() => {
+                set(i, 0);
+                handleButton(val);
+              }}
+            >
+              {val}
+            </button>
+          ))}
+        </div>
+      )}
       {!hideInput && (
         <div className="p-1">
           {value && value.length && (
@@ -144,13 +179,17 @@ const Keyboard = ({
             key={v}
             className={clsx("p-1 min-h-[75px] flex-[1_0_auto]")}
             onClick={() => {
+              set(i, baseY + 0);
               handleButton(v);
             }}
           >
             <p
               className={clsx(
                 "keyboard-button",
-                focused && y === 0 && x === i && "border border-focus m-[-1px]",
+                focused &&
+                  y === baseY + 0 &&
+                  x === i &&
+                  "border border-focus m-[-1px]",
                 v === "esc" && "bg-highlight"
               )}
             >
@@ -173,13 +212,17 @@ const Keyboard = ({
             key={v}
             className={clsx("p-1 min-h-[75px] flex-[1_0_auto]")}
             onClick={() => {
+              set(i, baseY + 1);
               handleButton(v);
             }}
           >
             <p
               className={clsx(
                 "keyboard-button",
-                focused && y === 1 && x === i && "border border-focus m-[-1px]"
+                focused &&
+                  y === baseY + 1 &&
+                  x === i &&
+                  "border border-focus m-[-1px]"
               )}
             >
               {v}
@@ -198,6 +241,7 @@ const Keyboard = ({
               v !== "enter" && "flex-[1_0_auto]"
             )}
             onClick={() => {
+              set(i, baseY + 2);
               handleButton(v);
             }}
           >
@@ -205,7 +249,10 @@ const Keyboard = ({
               className={clsx(
                 "keyboard-button",
                 v === "enter" && "bg-green-700",
-                focused && y === 2 && x === i && "border border-focus m-[-1px]"
+                focused &&
+                  y === baseY + 2 &&
+                  x === i &&
+                  "border border-focus m-[-1px]"
               )}
             >
               {v === "enter" ? (
@@ -232,13 +279,17 @@ const Keyboard = ({
             key={`${v}-${i}`}
             className={clsx("p-1 min-h-[75px] flex-[1_0_auto]")}
             onClick={() => {
+              set(i, baseY + 3);
               handleButton(v);
             }}
           >
             <p
               className={clsx(
                 "keyboard-button",
-                focused && y === 3 && x === i && "border border-focus m-[-1px]",
+                focused &&
+                  y === baseY + 3 &&
+                  x === i &&
+                  "border border-focus m-[-1px]",
                 shift && v === "shf" && "bg-focus"
               )}
             >
@@ -249,7 +300,7 @@ const Keyboard = ({
       </div>
       <div className="flex flex-row">
         {Array.from(new Set(keyMap[4]).values()).map((v, i) => {
-          const isActive = focused && y === 4 && x === i;
+          const isActive = focused && y === baseY + 4 && x === i;
 
           return (
             <button
@@ -263,6 +314,7 @@ const Keyboard = ({
                 v === "clr" && "flex-[0_0_75px]"
               )}
               onClick={() => {
+                set(i, baseY + 4);
                 handleButton(v);
               }}
             >

@@ -1,5 +1,5 @@
 import useGamePad from "@hooks/useGamePad-01";
-import { useInterval, useWhyDidYouUpdate } from "ahooks";
+import { useInterval } from "ahooks";
 import { useState } from "react";
 
 const ControllerDebug = () => {
@@ -34,8 +34,6 @@ const ControllerDebug = () => {
       y: top !== 0 ? prev.y + (speed / 100) * top : prev.y,
     }));
   }, 100);
-
-  useWhyDidYouUpdate("Debug", { buttonState });
 
   return (
     <div>

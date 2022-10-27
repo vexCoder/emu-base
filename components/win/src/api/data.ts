@@ -15,7 +15,7 @@ import {
 import extract from "extract-zip";
 import fs, { createWriteStream } from "fs-extra";
 import got from "got";
-import { ObjectChain } from "lodash";
+import _, { CollectionChain, ObjectChain } from "lodash";
 import pMap from "p-map";
 import { extname, join } from "path";
 import { filter, head, intersection, is, toLower } from "ramda";
@@ -27,11 +27,26 @@ export namespace DataApi {
       const settings = await getEmuSettings();
       const db = await getConsoleDump(cns);
 
+      const recent = settings.get("recentSearch").value() ?? [];
+      let newRecent = _.uniq([...recent, keyword]);
+      if (recent.length >= 10) newRecent = _.tail(newRecent);
+
+      settings.set("recentSearch", newRecent).write();
+
       const favorites = settings.get("favorites").value() ?? [];
       const counter = page * limit;
       const nextCounter = counter + limit;
+
       if (!keyword || keyword.length < 3) {
-        const games = db.sortBy("title");
+        const games = db
+          .map((v: ConsoleGameData) => ({
+            ...v,
+            isFavorite: favorites.indexOf(v.id) > -1,
+          }))
+          .orderBy(
+            ["title", "isFavorite"],
+            ["asc", "desc"]
+          ) as any as CollectionChain<ConsoleGameData>;
 
         const sorted = games
           .slice(counter, counter + limit)
@@ -39,19 +54,26 @@ export namespace DataApi {
 
         const next = games.slice(nextCounter, nextCounter + limit).value();
 
+        console.log(next.length);
         return {
-          res: sorted.map((game) => ({
-            ...game,
-            isFavorite: favorites.indexOf(game.id) > -1,
-          })),
+          res: sorted,
           hasNext: next.length > 0,
         };
       }
 
-      const filtered = db.filter(
-        ({ official }: ConsoleGameData) =>
-          scoreMatchStrings(official, keyword) > 0.5
-      );
+      const filtered = db
+        .filter(
+          ({ official }: ConsoleGameData) =>
+            scoreMatchStrings(official, keyword) > 0.5
+        )
+        .map((v: ConsoleGameData) => ({
+          ...v,
+          isFavorite: favorites.indexOf(v.id) > -1,
+        }))
+        .orderBy(
+          ["title", "isFavorite"],
+          ["asc", "desc"]
+        ) as any as CollectionChain<ConsoleGameData>;
 
       const sorted = filtered
         .sort(
@@ -65,12 +87,15 @@ export namespace DataApi {
       const next = filtered.slice(nextCounter, nextCounter + limit).value();
 
       return {
-        res: sorted.map((game) => ({
-          ...game,
-          isFavorite: favorites.indexOf(game.id) > -1,
-        })),
+        res: sorted,
         hasNext: next.length > 0,
       };
+    }
+
+    async getRecentSearches() {
+      const settings = await getEmuSettings();
+      const recent = settings.get("recentSearch").value() ?? [];
+      return recent;
     }
 
     async getGame({ id, console: cns }: GetGameParams) {
@@ -373,7 +398,7 @@ export namespace DataApi {
       if (isInside && !isFavorite) newFavorites = favorites;
 
       console.log(isFavorite, newFavorites);
-      settings.set("favorites", newFavorites).write();
+      await settings.set("favorites", newFavorites).write();
 
       return !isFavorite;
     }

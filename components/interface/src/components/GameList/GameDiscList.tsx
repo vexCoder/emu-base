@@ -32,14 +32,15 @@ const GameDiscList = ({
 }: GameDiscListProps) => {
   const [, download] = useDownloadDisc();
   const [, play] = usePlay();
+  const countFiles = settings.gameFiles ? settings.gameFiles.length - 1 : 0;
   const [discSelected, navActions] = useCounter(0, {
     min: 0,
-    max: settings.gameFiles?.length ?? 0,
+    max: countFiles,
   });
 
   const handleDownload = (serial: string) => {
     download(serial, game.id, cons);
-    onDownload();
+    onDownload?.(serial);
   };
 
   const handlePlay = (serial: string) => {
@@ -180,7 +181,7 @@ const Disc = ({
           {setting.link.fileName}
         </span>
         <span className="text-text text-xs">{setting.serial}</span>
-        {!setting.playable && downloading && (
+        {!setting.playable && (
           <Download
             serial={setting.serial}
             handleDownloading={handleDownloading}
@@ -227,6 +228,7 @@ const Download = ({ serial, handleDownloading }: DownloadProps) => {
     }
   }, [data?.status, data?.percentage, handleDownloading]);
 
+  if (data?.percentage === 0) return null;
   return (
     <div className="relative w-full h-1 bg-secondary/50 rounded-xl overflow-hidden mt-1">
       <div

@@ -18,6 +18,7 @@ bind("path", (h, invoker) => {
 
 bind("data", (h, invoker) => {
   h("getGames", invoker);
+  h("getRecentSearches", invoker);
   h("getGame", invoker);
   h("setGame", invoker);
   h("getImage", invoker);

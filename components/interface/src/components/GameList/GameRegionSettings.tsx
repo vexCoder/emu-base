@@ -230,13 +230,13 @@ const LinksList = ({
 
   return (
     <div className="v-stack">
-      <p className="text-text  mt-4">Select Links In Order:</p>
+      <p className="text-text mt-4">Select Links In Order:</p>
       <p className={clsx("text-text mt-6 mb-6")}>
         {files.map((v, i) => (
           <span
             key={v.serial}
             className={clsx(
-              "mr-2 rounded-xl p-2 bg-transparent border",
+              "rounded-xl p-2 bg-transparent border",
               !links[i] &&
                 "text-secondary/30 border-secondary/30 bg-transparent",
               !!links[i] && "!border-highlight !bg-highlight/10 !text-text"
@@ -252,7 +252,7 @@ const LinksList = ({
           <motion.div
             ref={ref}
             key="disc-list"
-            className="v-stack gap-4 overflow-auto py-2 pr-4 origin-top scroll1"
+            className="v-stack gap-4 overflow-auto py-2 origin-top scroll1"
             initial={{ opacity: 0, maxHeight: "0vh" }}
             animate={{ opacity: 1, maxHeight: "50vh" }}
             exit={{ opacity: 0, maxHeight: "0vh" }}
@@ -403,7 +403,7 @@ const RegionList = ({
 }: RegionListProps) => {
   const ref = useRef<HTMLDivElement>(null);
   return (
-    <div ref={ref} className="v-stack ">
+    <div ref={ref} className="v-stack">
       <p className="text-text">Select Game Region:</p>
 
       <AnimatePresence>

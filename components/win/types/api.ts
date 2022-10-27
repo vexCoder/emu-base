@@ -23,6 +23,7 @@ export interface Handles {
       [keyword: string, console: string, limit: number, page: number],
       { res: ConsoleGameData[]; hasNext: boolean }
     >;
+    getRecentSearches: Connection<[], string[]>;
 
     getGame: Connection<[id: string, console: string], ConsoleGameData>;
     setGame: Connection<

@@ -2,17 +2,9 @@ import YoutubeAudio from "@elements/YoutubeAudio";
 import useGetGames from "@hooks/useGetGames";
 import useNavigate from "@hooks/useNavigate";
 import { MainStore, useMainStore } from "@utils/store.utils";
-import {
-  useCounter,
-  useCreation,
-  useDeepCompareEffect,
-  useInViewport,
-  useToggle,
-  useWhyDidYouUpdate,
-} from "ahooks";
+import { useCounter, useCreation, useDeepCompareEffect } from "ahooks";
 import { nanoid } from "nanoid";
 import { pick, range } from "ramda";
-import { useEffect, useRef } from "react";
 import GameDetails from "./GameDetails";
 import GameImage from "./GameImage";
 
@@ -48,8 +40,10 @@ const GameList = () => {
     },
   });
 
-  const tag = store.selected?.opening?.split("https://youtu.be/")[1];
-  useWhyDidYouUpdate("GameList", { selected, max });
+  const tag = store.selected?.opening?.match(
+    /^.*(youtu.be\/|v\/|embed\/|watch\?|youtube.com\/user\/[^#]*#([^/]*?\/)*)\??v?=?([^#&?]*).*/
+  )?.[3];
+
   return (
     <div className="relative mt-[5vh] w-full h-[75vh]">
       <div className="h-[22rem]">
@@ -74,7 +68,7 @@ const GameList = () => {
         </div>
       )} */}
 
-      {tag && tag.length && !store.disc && <YoutubeAudio tag={tag} mute />}
+      {tag && tag.length && !store.disc && <YoutubeAudio tag={tag} />}
     </div>
   );
 };
@@ -94,7 +88,6 @@ const Segment = ({
   selected = 0,
   increaseMax,
 }: SegmentProps) => {
-  const [shown, actions] = useToggle(false);
   const items = useCreation<string[]>(
     () => range(0, 5).map(() => `${Segment.name}-${nanoid()}`),
     []
@@ -109,9 +102,6 @@ const Segment = ({
     page,
   });
 
-  const ref = useRef(null);
-  const [inViewport] = useInViewport(ref);
-
   const baseIndex = page * 5;
 
   useDeepCompareEffect(() => {
@@ -119,10 +109,6 @@ const Segment = ({
       increaseMax(data.res.length);
     }
   }, [loading, data]);
-
-  useEffect(() => {
-    if (inViewport) actions.set(true);
-  }, [inViewport, actions]);
 
   useDeepCompareEffect(() => {
     if (typeof selected === "number" && !loading && data) {
@@ -134,6 +120,8 @@ const Segment = ({
       }
     }
   }, [loading, selected, data]);
+
+  const showCheck = selected >= ((page + 1) * 5 * 2) / 5;
 
   return (
     <>
@@ -153,7 +141,7 @@ const Segment = ({
         );
       })}
 
-      {(inViewport || shown) && !loading && !!data?.hasNext && (
+      {showCheck && !loading && !!data?.hasNext && (
         <Segment
           focused={focused}
           page={page + 1}
