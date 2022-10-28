@@ -1,0 +1,22 @@
+{
+  "extends": ["app/node"],
+  "parserOptions": {
+    "project": "./tsconfig.json",
+    "tsconfigRootDir": "./components/builder",
+    "ecmaVersion": 2021,
+    "sourceType": "module"
+  },
+  "ignorePatterns": ["**/*.d.*", "**/*.js", "src/app.ts", "forge.config.ts"],
+  "rules": {
+    "no-console": "off",
+    "no-plusplus": "off",
+    "class-methods-use-this": "off"
+  },
+  "settings": {
+    "import/resolver": {
+      "typescript": {
+        "project": "components/builder/tsconfig.json"
+      }
+    }
+  }
+}

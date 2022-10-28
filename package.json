@@ -9,7 +9,7 @@
     "tools": "yarn workspace games-scraper execute",
     "renderer": "turbo run dev tailwind:dev --filter=interface --force",
     "main": "turbo run dev --filter=win --force",
-    "build": "turbo run build",
+    "build": "yarn workspace builder start",
     "lint": "turbo run lint",
     "test": "turbo run test",
     "postinstall": "node scripts/copy.js"
