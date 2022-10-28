@@ -16,7 +16,7 @@ const build = async () => {
     "..",
     "..",
     ".artifacts",
-    isDev ? "dev" : "build"
+    isDev ? "dev" : "dist"
   );
 
   const plugins = [];
@@ -44,9 +44,11 @@ const build = async () => {
       "electron-overlay",
       "sharp",
       "screenshot-desktop",
-      "@sensslen/node-gamepad",
     ],
     entryNames: `[name]`,
+    define: {
+      "process.env.NODE_ENV": isDev ? `"development"` : `"production"`,
+    },
   });
 };
 

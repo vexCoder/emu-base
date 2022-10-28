@@ -24,21 +24,24 @@ export default ({ mode }: ConfigEnv) => {
   const plugins = [];
 
   plugins.push(react());
-  plugins.push(
-    importer({
-      libList: [
-        { libName: "lodash", libDirectory: "", camel2DashComponentName: false },
-        { libName: "ramda", libDirectory: "", camel2DashComponentName: false },
-        {
-          libName: "ahooks",
-          style: (name) => {
-            return `ahooks/es/${name}`;
+
+  if(!isProd) {
+    plugins.push(
+      importer({
+        libList: [
+          { libName: "lodash", libDirectory: "", camel2DashComponentName: false },
+          { libName: "ramda", libDirectory: "", camel2DashComponentName: false },
+          {
+            libName: "ahooks",
+            style: (name) => {
+              return `ahooks/es/${name}`;
+            },
+            camel2DashComponentName: false,
           },
-          camel2DashComponentName: false,
-        },
-      ],
-    })
-  );
+        ],
+      })
+    );
+  }
 
   plugins.push(fonts({
     custom: {
@@ -62,7 +65,7 @@ export default ({ mode }: ConfigEnv) => {
   return defineConfig({
     plugins,
     publicDir: "./public",
-    ...(isProd && { define: env }),
+    ...(isProd && { define: env, base: './' }),
     resolve: {
       dedupe: ["react", "react-dom"],
       alias: {
@@ -87,7 +90,7 @@ export default ({ mode }: ConfigEnv) => {
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, "index.html"),
-          overlay: path.resolve(__dirname, 'overlay', "index.html"),
+          overlay: path.resolve(__dirname, "overlay.html"),
         }
       }
     },

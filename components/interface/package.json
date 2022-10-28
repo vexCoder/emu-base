@@ -6,7 +6,8 @@
   "scripts": {
     "tailwind:dev": "tailwindcss -i ./src/base.css -o ./dist/output.css --watch",
     "dev": "vite",
-    "build": "vite build",
+    "prebuild": "tailwindcss -i ./src/base.css -o ./dist/output.css",
+    "build": "set NODE_ENV=production && vite build",
     "lint": "eslint --fix"
   },
   "keywords": [],

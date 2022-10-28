@@ -45,7 +45,7 @@ class OverlayWindow {
     const isDev = process.env.NODE_ENV === "development";
     const path = isDev
       ? "http://localhost:3001/overlay/"
-      : `file://${__dirname}/index.html`;
+      : join(__dirname, "..", "view", "overlay.html");
 
     this.onDetach = options?.onDetach;
     this.onAttach = options?.onAttach;

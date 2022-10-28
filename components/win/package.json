@@ -17,6 +17,7 @@
     "package": "ts-node build/pack.ts"
   },
   "dependencies": {
+    "dayjs": "^1.11.6",
     "electron-overlay": "*",
     "electron-overlay-window": "^2.0.1",
     "esbuild": "^0.14.39",

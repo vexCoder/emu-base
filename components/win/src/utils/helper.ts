@@ -22,6 +22,7 @@ import {
 import { findBestMatch } from "string-similarity";
 import execa from "execa";
 import _ from "lodash";
+import dayjs from "dayjs";
 
 export interface WinSettings {
   x: number;
@@ -53,6 +54,17 @@ export const moveToMonitor = (
   if (maximize) win.maximize();
 };
 
+export const logToFile = async (msg: any) => {
+  const logPath = join(app.getAppPath(), "log.txt");
+  let msgString = msg;
+  if (typeof msg === "object") msgString = JSON.stringify(msg);
+  await fs.appendFile(
+    logPath,
+    `${dayjs().format("HH:mm:ss")}::${msgString}\n`,
+    "utf-8"
+  );
+};
+
 export interface CreateWindowOptions {
   urlOrPath?: string;
   loadNone?: boolean;
@@ -77,16 +89,21 @@ export const createWindow = (opts?: CreateWindowOptions) => {
   });
 
   if (opts?.loadNone) {
+    logToFile("loadNone");
     console.log("loadNone");
     win.loadURL("http://google.com");
   } else if (opts?.urlOrPath) {
+    logToFile(opts?.urlOrPath);
     const isUrl = opts.urlOrPath.startsWith("http");
+    logToFile({ isUrl });
     if (isUrl) win.loadURL(opts.urlOrPath);
     if (!isUrl) win.loadFile(opts.urlOrPath);
   } else if (isDev) {
+    logToFile("isDev");
     win.loadURL("http://localhost:3001");
     win.webContents.openDevTools();
   } else {
+    logToFile("default");
     win.loadFile("./index.html");
   }
 
@@ -133,8 +150,9 @@ export const saveImage = async (path: string, url: string) => {
 export const getSettingsPath = () => {
   const isDev = process.env.NODE_ENV === "development";
 
-  const path = isDev ? __dirname : app.getPath("appData");
+  const path = isDev ? __dirname : join(app.getPath("appData"), "emu-base");
 
+  logToFile({ path });
   ensureDirSync(path);
   return path;
 };
@@ -145,6 +163,7 @@ export const getDumpPath = (consoleName?: string) => {
     ? join(base, "dump", consoleName)
     : join(base, "dump");
 
+  logToFile({ path });
   ensureDirSync(path);
   return path;
 };

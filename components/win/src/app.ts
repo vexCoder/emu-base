@@ -1,5 +1,5 @@
 /* eslint-disable import/prefer-default-export */
-import { createWindow } from "@utils/helper";
+import { createWindow, logToFile } from "@utils/helper";
 import { app, BrowserWindow, Menu, Tray } from "electron";
 import { join } from "path";
 import Emulator from "./emulator";
@@ -10,7 +10,7 @@ export class Application {
   win?: BrowserWindow;
   overlay?: OverlayWindow;
   emulator?: Emulator;
-  icon = join(process.cwd(), "assets/game-controller128.ico");
+  icon = '';
   quitting = false;
   tray?: Tray;
 
@@ -22,6 +22,8 @@ export class Application {
   makeWindow() {
     // NOTE create a window
     const isDev = process.env.NODE_ENV === "development";
+    if(isDev) this.icon = join(process.cwd(), "assets/game-controller128.ico");
+    else this.icon = join(__dirname, "..", "assets/game-controller128.ico");
     this.tray = new Tray(this.icon);
 
     this.tray.setContextMenu(
@@ -45,7 +47,14 @@ export class Application {
       ])
     );
 
+    const path = isDev
+      ? "http://localhost:3001"
+      : join(__dirname, '..', 'view', 'index.html');
+
+    logToFile(path);
+
     this.win = createWindow({
+      urlOrPath: path,
       isDev,
       browserOptions: {
         icon: this.icon,
@@ -121,7 +130,10 @@ export class Application {
   static async boot() {
     if (require("electron-squirrel-startup")) return;
 
+
+    logToFile('booting');
     await app.whenReady();
+    logToFile('booted');
 
     // eslint-disable-next-line prettier/prettier
     new Application().init().makeWindow().startEvents().attachHandlers();

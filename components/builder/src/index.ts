@@ -11,9 +11,9 @@ consola.wrapAll();
 
 const root = join(process.cwd(), "..", "..");
 const components = join(root, "components");
+const tools = join(root, "tools");
 
 const externals = [
-  "electron",
   "electron-overlay-window",
   "ffi-napi",
   "ref-napi",
@@ -55,8 +55,18 @@ const main = async () => {
     await remove(join(root, ".artifacts", "release"));
     await ensureDir(join(root, ".artifacts", "release"));
     await ensureDir(join(root, ".artifacts", "release", "dist"));
-    await ensureDir(join(root, ".artifacts", "release", "prebuilt"));
+    await ensureDir(join(root, ".artifacts", "release", "view"));
     await ensureDir(join(root, ".artifacts", "build"));
+
+    await copy(
+      join(components, "win", "assets"),
+      join(root, ".artifacts", "release", "assets")
+    );
+
+    await copy(
+      join(components, "interface", "dist"),
+      join(root, ".artifacts", "release", "view")
+    );
 
     await copy(
       join(root, ".artifacts", "dist"),
@@ -93,14 +103,34 @@ const main = async () => {
 
     const copyPath = join(root, "scripts", "copy.js");
 
+    const externalsWithTools = [
+      ...externals,
+      "node-ovhook",
+      "electron-overlay",
+    ];
+
     await writeJSON(join(root, ".artifacts", "release", "package.json"), {
       name: "emu-base",
       main: "./dist/index.js",
       version,
+      dependencies: externalsWithTools.reduce(
+        (acc, v) => ({
+          ...acc,
+          [v]: `file:./node_modules/${v}`,
+        }),
+        {}
+      ),
       scripts: {
         postinstall: `node ${copyPath} ${prebuilts} ${target}`,
       },
     } as PackageJson);
+    console.log([
+      "dist",
+      "node_modules",
+      ...externals.map((v) => `node_modules/${v}/*`),
+      "**/components/win/node_modules",
+      "**/components/win/package.json",
+    ]);
 
     builder.build({
       config: {
@@ -125,13 +155,16 @@ const main = async () => {
         beforePack(ctx) {
           console.log(ctx);
         },
+
         files: [
           "dist",
-          "node_modules",
-          ...externals.map((v) => `node_modules/${v}`),
-          "**/components/win/node_modules",
-          "**/components/win/package.json",
+          "view",
+          "assets/**/*",
+          "node_modules/**/*",
+          "package.json",
         ],
+        includeSubNodeModules: true,
+        npmRebuild: false,
         directories: {
           app: join(root, ".artifacts", "release"),
           output: join(root, ".artifacts", "build"),
