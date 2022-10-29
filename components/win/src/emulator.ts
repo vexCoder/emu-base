@@ -18,6 +18,7 @@ import screenshot from "screenshot-desktop";
 import sharp from "sharp";
 import _ from "lodash";
 import fastq from "fastq";
+import { screen } from "electron";
 
 class Emulator {
   console: ConsoleSettings;
@@ -215,7 +216,6 @@ class Emulator {
     if (this.process && this.handle) {
       const db = await getEmuSettings();
       this.showFps = !this.showFps;
-      console.log(this.showFps);
 
       await db
         .get("consoles")
@@ -274,7 +274,6 @@ class Emulator {
 
     this.showFps = !!settings.showFps;
 
-    console.log(settings);
     const newVolume = settings.volume ?? 3;
     const isDecrease = newVolume < this.volume;
     const count = Math.abs((newVolume - this.volume) * 8);
@@ -317,8 +316,14 @@ class Emulator {
     const isDev = process.env.NODE_ENV === "development";
     const { pathing } = this.settings;
     const db = await getConsoleDump(this.console.key);
+    const settings = await getEmuSettings();
     const pathToDump = getDumpPath(this.console.key);
 
+    const monitor = settings.get("display").value();
+    const display = screen.getAllDisplays();
+    const target = display.findIndex((v, i) =>
+      monitor ? v.id === monitor : i === 0
+    );
     const game = db.find({ id }).value() as ConsoleGameData;
     this.game = game.id;
     const gameFilePath = join(pathToDump, game.unique, serial);
@@ -363,15 +368,20 @@ class Emulator {
         fastforward_ratio: `${
           this.console.retroarch.turboRate ?? this.turboRate
         }.000000`,
+        video_monitor_index: `${target !== -1 ? target : 0}`,
+        // ...(this.console.retroarch.fullscreen && {
+        //   video_fullscreen: isDev ? "false" : "true",
+        //   video_windowed_fullscreen: isDev ? "false" : "true",
+        // }),
         ...(this.console.retroarch.fullscreen && {
-          video_fullscreen: isDev ? "false" : "true",
-          video_windowed_fullscreen: isDev ? "false" : "true",
+          video_fullscreen: "true",
+          video_windowed_fullscreen: "true",
         }),
       },
       this.console.key
     );
 
-    if (this.app.win?.isFocused()) this.app?.win?.hide();
+    // if (this.app.win?.isFocused()) this.app?.win?.hide();
     this.process = execa(join(pathing.backend, "retroarch.exe"), [
       "-L",
       corePath,

@@ -45,13 +45,18 @@ export const moveToMonitor = (
     typeof rect === "function" ? rect(displays[selected].workArea) : rect;
 
   win.setPosition(x + result.x, y + result.y);
-  win.setSize(
-    result.width ?? win.getSize()[0],
-    result.height ?? win.getSize()[1],
-    true
-  );
+  if (!maximize) {
+    win.setSize(
+      result.width ?? win.getSize()[0],
+      result.height ?? win.getSize()[1],
+      false
+    );
+  }
 
-  if (maximize) win.maximize();
+  if (maximize) {
+    win.maximize();
+    win.setFullScreen(true);
+  }
 };
 
 export const logToFile = async (msg: any) => {
@@ -72,6 +77,7 @@ export interface CreateWindowOptions {
   isRestarted?: boolean;
   monitor?: number;
   browserOptions?: Partial<Electron.BrowserWindowConstructorOptions>;
+  fullscreen?: boolean;
 }
 
 export const createWindow = (opts?: CreateWindowOptions) => {
@@ -80,6 +86,7 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     browserOptions = {},
     isDev = true,
     monitor = 0,
+    fullscreen = true,
   } = opts ?? {};
 
   const win = new BrowserWindow({
@@ -113,13 +120,16 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     win.showInactive();
     win.blur();
 
+    moveToMonitor(monitor, win, undefined, fullscreen);
     win.once("blur", () => {
       // Select which monitor to use
-      moveToMonitor(monitor, win, undefined, false);
+      console.log(opts?.urlOrPath, monitor);
+      moveToMonitor(monitor, win, undefined, fullscreen);
     });
   } else {
     // Select which monitor to use
-    moveToMonitor(monitor, win, undefined, false);
+    console.log(opts?.urlOrPath, monitor);
+    moveToMonitor(monitor, win, undefined, fullscreen);
   }
 
   if (browserOptions.alwaysOnTop) {

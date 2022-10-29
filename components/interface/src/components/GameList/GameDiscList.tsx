@@ -5,6 +5,7 @@ import useDownloadDisc from "@hooks/useDownloadDisc";
 import useGetDownloadProgress from "@hooks/useGetDownloadProgress";
 import useNavigate from "@hooks/useNavigate";
 import usePlay from "@hooks/usePlay";
+import { useMainStore } from "@utils/store.utils";
 import { useCounter, useInterval, useMemoizedFn, useToggle } from "ahooks";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
@@ -30,6 +31,7 @@ const GameDiscList = ({
   onDownload,
   onClose,
 }: GameDiscListProps) => {
+  const store = useMainStore();
   const [, download] = useDownloadDisc();
   const [, play] = usePlay();
   const countFiles = settings.gameFiles ? settings.gameFiles.length - 1 : 0;
@@ -44,8 +46,10 @@ const GameDiscList = ({
   };
 
   const handlePlay = (serial: string) => {
-    play(serial, game.id, cons);
-    onPlay(serial);
+    if (!store.disc) {
+      play(serial, game.id, cons);
+      onPlay(serial);
+    }
   };
 
   const { focused } = useNavigate(
@@ -88,7 +92,7 @@ const GameDiscList = ({
     <div className="v-stack gap-4">
       <div className="h-stack items-center gap-3">
         <ConsoleIcon console={cons} size="2em" />
-        <h6 className="font-bold text-text leading-[1em]">
+        <h6 className="font-bold text-text text-xl leading-[1em]">
           {game.official} Files
         </h6>
       </div>
@@ -177,10 +181,10 @@ const Disc = ({
       </div>
 
       <div className="v-stack items-start w-full">
-        <span className="text-text font-bold leading-[1em]">
+        <span className="text-text text-xl !line-clamp-1 text-start font-bold leading-[1em]">
           {setting.link.fileName}
         </span>
-        <span className="text-text text-xs">{setting.serial}</span>
+        <span className="text-text text-lg">{setting.serial}</span>
         {!setting.playable && (
           <Download
             serial={setting.serial}
@@ -194,7 +198,7 @@ const Disc = ({
           type="button"
           disabled
           className={clsx(
-            "h-stack flex-grow-0  items-center gap-2 text-text",
+            "h-stack flex-grow-0  items-center gap-2 text-text text-xl",
             "font-bold px-3 py-1 rounded-lg box-border"
           )}
         >

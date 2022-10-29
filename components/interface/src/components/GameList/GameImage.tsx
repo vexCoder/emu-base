@@ -39,8 +39,8 @@ const GameImage = forwardRef<HTMLDivElement, GameImageProps>(
 
     // positioning
     const index = idx + 1 - selected;
-    const base = index >= 2 ? 16 : 4;
-    const gap = 16;
+    const base = index >= 2 ? 7 : -3;
+    const gap = 12;
     const left = base + index * gap;
 
     const ref2 = useRef<HTMLDivElement>(null);
@@ -54,7 +54,7 @@ const GameImage = forwardRef<HTMLDivElement, GameImageProps>(
             ref={i === segmentLength - 1 ? ref : null}
             style={{
               left: `${left}rem`,
-              top: `${selected === idx ? 10 : 15}rem`,
+              top: `${selected === idx ? 7 : 12}rem`,
               transition: "left 0.4s ease-in-out, top 0.375s ease-in-out",
             }}
           >

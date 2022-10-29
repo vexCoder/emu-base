@@ -270,6 +270,25 @@ export const getWindowRect = (handle: number) => {
   return rect ? pointerToRect(rectBuffer) : undefined;
 };
 
+interface Rect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+export const setWindowRect = (handle: number, rect: Rect) => {
+  user32.SetWindowPos(
+    handle,
+    0,
+    rect.left,
+    rect.top,
+    rect.width,
+    rect.height,
+    0x4000 | 0x0020 | 0x0020 | 0x0040
+  );
+};
+
 export const sendHoldKeyToWindow = (
   keyCode: keyof typeof keycode.codes | keyof typeof keycode.aliases
 ) => {

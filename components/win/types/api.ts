@@ -8,6 +8,8 @@ export interface Handles {
     openPath: Connection<[options?: OpenPathOptions], FileItem[]>;
     isDirectory: Connection<[path?: string], Promise<boolean>>;
     isFile: Connection<[path?: string], Promise<boolean>>;
+    getDisplays: Connection<[], Promise<Display[]>>;
+    setDisplay: Connection<[id: number]>;
   };
 
   path: {
@@ -45,7 +47,7 @@ export interface Handles {
       [pathing?: Partial<EmuPathing>],
       Pick<AppSettings, "pathing">
     >;
-    getGlobalSettings: Connection<[], Pick<AppSettings, "pathing">>;
+    getGlobalSettings: Connection<[], Pick<AppSettings, "pathing" | "display">>;
     getConsole: Connection<[id: string], ConsoleSettings>;
     getConsoleByKey: Connection<[key: string], ConsoleSettings>;
 

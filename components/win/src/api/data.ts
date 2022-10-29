@@ -54,7 +54,6 @@ export namespace DataApi {
 
         const next = games.slice(nextCounter, nextCounter + limit).value();
 
-        console.log(next.length);
         return {
           res: sorted,
           hasNext: next.length > 0,
@@ -301,7 +300,6 @@ export namespace DataApi {
 
       downloadStream
         .on("downloadProgress", ({ transferred, total, percent }) => {
-          console.log(percent);
           const percentage = Math.round(percent * 100);
           Globals.merge(`download-${serial}-progress`, {
             percentage,
@@ -397,7 +395,6 @@ export namespace DataApi {
 
       if (isInside && !isFavorite) newFavorites = favorites;
 
-      console.log(isFavorite, newFavorites);
       await settings.set("favorites", newFavorites).write();
 
       return !isFavorite;
@@ -457,12 +454,12 @@ export namespace DataApi {
     async getGlobalSettings() {
       const db = await getEmuSettings();
 
-      console.log(db.value());
-
       const pathing = db.get("pathing").value();
+      const display = db.get("display").value();
 
       return {
         pathing,
+        display,
       };
     }
 

@@ -125,7 +125,7 @@ const GameTroubleshoot = ({
       <div className="v-stack gap-4">
         <div className="h-stack items-center gap-3">
           <WrenchIcon width="2em" height="2em" className="text-text" />
-          <h6 className="font-bold text-text leading-[1em]">
+          <h6 className="font-bold text-text text-xl leading-[1em]">
             Troubleshoot: {game.official}
           </h6>
         </div>

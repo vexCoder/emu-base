@@ -103,7 +103,12 @@ const GameRegionSettings = ({
           isComplete={isComplete}
         />
       </Modal>
-      <Modal open={!!edit && open}>
+      <Modal
+        open={!!edit && open}
+        classes={{
+          content: "!min-w-[450px] !w-[70vw] !max-w-[800px]",
+        }}
+      >
         <LinksList
           id={id}
           selected={edit}
@@ -230,8 +235,8 @@ const LinksList = ({
 
   return (
     <div className="v-stack">
-      <p className="text-text mt-4">Select Links In Order:</p>
-      <p className={clsx("text-text mt-6 mb-6")}>
+      <p className="text-text mt-4 text-xl font-bold">Select Links In Order:</p>
+      <p className={clsx("h-stack gap-3 text-text mt-4 mb-4")}>
         {files.map((v, i) => (
           <span
             key={v.serial}
@@ -362,17 +367,24 @@ const LinkItem = ({
       )}
       onClick={() => handleSelect(item, !!isActive)}
     >
-      <p className="w-full h-stack justify-between text-text text-sm font-bold">
-        <span>
+      <p className="w-full h-stack justify-between text-text text-md line-clamp-1 font-bold">
+        <span className="h-stack">
           {!!files[linksIndex] && (
-            <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold mr-2">
+            <span
+              className={clsx(
+                "text-contrastText px-1 bg-highlight rounded-xl",
+                "text-xl !line-clamp-1 text-start font-bold mr-2 flex-[0_0_auto]"
+              )}
+            >
               {files[linksIndex].serial}
             </span>
           )}
-          <span>{item.fileName}</span>
+          <span className="text-xl !line-clamp-1 text-start font-bold mr-2 flex-[0_0_auto]">
+            {item.fileName}
+          </span>
         </span>
 
-        <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
+        <span className="text-contrastText bg-highlight px-2 rounded-xl text-xl font-bold">
           {item.size}Mb
         </span>
       </p>
@@ -404,7 +416,7 @@ const RegionList = ({
   const ref = useRef<HTMLDivElement>(null);
   return (
     <div ref={ref} className="v-stack">
-      <p className="text-text">Select Game Region:</p>
+      <p className="text-text text-xl font-bold mb-2">Select Game Region:</p>
 
       <AnimatePresence>
         {!loading && (
@@ -520,18 +532,20 @@ const RegionItem = ({
       )}
       onClick={() => handleSelect?.(item)}
     >
-      <p className="w-full h-stack justify-between text-text text-sm font-bold">
+      <p className="w-full h-stack items-center justify-between text-text text-lg font-bold">
         <span>{item.title}</span>
 
-        <span className="text-contrastText bg-highlight px-2 rounded-xl text-sm font-bold">
+        <span className="text-contrastText text-xl bg-highlight px-2 rounded-xl font-bold">
           {item.region}
         </span>
       </p>
-      <p className="w-full mt-2 h-stack justify-between text-text text-xs">
-        <span>{`${discs.map((o) => o.serial).join(", ")}`}</span>
-        <span className="mr-1">{`${discs.length - unsetDiscs.length} / ${
-          unsetDiscs.length
-        } Disc(s)`}</span>
+      <p className="w-full mt-2 h-stack justify-between text-text text-sm line-clamp-1">
+        <p className="!line-clamp-1 text-start">{`${discs
+          .map((o) => o.serial)
+          .join(", ")}`}</p>
+        <p className="mr-1 !line-clamp-1 flex-[0_0_auto] ml-4">{`${
+          discs.length - unsetDiscs.length
+        } / ${unsetDiscs.length} Disc(s)`}</p>
       </p>
     </button>
   );

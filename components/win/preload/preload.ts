@@ -7,6 +7,8 @@ bind("win", (h, invoker) => {
   h("openPath", invoker);
   h("isDirectory", invoker);
   h("isFile", invoker);
+  h("getDisplays", invoker);
+  h("setDisplay", invoker);
 });
 
 bind("path", (h, invoker) => {

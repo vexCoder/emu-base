@@ -92,15 +92,15 @@
   }
 
   .game-item-image-selected {
-    @apply w-96 h-96 rounded-xl;
+    @apply w-[20rem] h-[20rem] rounded-xl;
   }
 
   .game-item-image-unselected {
-    @apply w-48 h-48 rounded-xl;
+    @apply w-[10rem] h-[10rem] rounded-xl;
   }
 
   .game-item-button {
-    @apply w-96 py-2 rounded-full font-bold uppercase border;
+    @apply w-[20rem] py-2 rounded-full font-bold uppercase border;
   }
 
   .image-cache-container {

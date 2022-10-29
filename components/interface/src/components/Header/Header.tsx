@@ -26,7 +26,7 @@ const Header = () => {
   const [consolesOpen, toggleConsoles] = useToggle(false);
   const [btnSelected, navActions] = useCounter(0, {
     min: 0,
-    max: 2,
+    max: 3,
   });
 
   useMount(() => {
@@ -130,8 +130,8 @@ const Header = () => {
         <div
           className={clsx(
             "center-transform rounded-xl p-4 transition-[top] min-w-[75vw] z-50 bg-primary",
-            searchOpen && "!top-3/4",
-            !searchOpen && "!top-[125%]"
+            searchOpen && "!top-[65%]",
+            !searchOpen && "!top-[145%]"
           )}
         >
           <Keyboard
@@ -154,6 +154,9 @@ const Header = () => {
         duration={0.3}
         open={settingsOpen}
         handleClose={() => toggleSettings.set(false)}
+        classes={{
+          content: "!min-w-[450px] !w-[70vw] !max-w-[800px]",
+        }}
       >
         <Settings id={selected} onClose={() => toggleSettings.set(false)} />
       </Modal>
@@ -168,7 +171,7 @@ const Header = () => {
           onClose={() => toggleConsoles.set(false)}
         />
       </Modal>
-      <div className="h-stack justify-between p-4 w-full">
+      <div className="h-stack justify-between p-12 w-full z-10">
         <button type="button" onClick={() => toggleConsoles.set(true)}>
           <ConsoleIcon
             console={store.console}
@@ -183,7 +186,7 @@ const Header = () => {
         <div className="h-stack gap-4">
           <div className="h-stack items-center">
             <button
-              className="h-stack items-center gap-2 py-1 px-2 rounded-full bg-secondary/50"
+              className="h-stack items-center gap-2 py-1 px-2 rounded-full bg-secondary/10"
               type="button"
               onClick={() => toggleSearch.set(true)}
             >
@@ -194,7 +197,7 @@ const Header = () => {
                   (!focused || btnSelected !== 1) && "!text-text"
                 )}
               />
-              <p className="text-text leading-[1em] min-w-[75px]">
+              <p className="text-text text-xl leading-[1em] min-w-[125px]">
                 {store.search}
               </p>
             </button>

@@ -143,7 +143,7 @@ const Keyboard = ({
               type="button"
               key={val}
               className={clsx(
-                "p-1 rounded-full min-w-[75px] border",
+                "p-1 rounded-full min-w-[9vw] border",
                 focused && y === 0 && x === i && "border-focus text-focus",
                 !(focused && y === 0 && x === i) && "border-text text-text"
               )}
@@ -152,7 +152,7 @@ const Keyboard = ({
                 handleButton(val);
               }}
             >
-              {val}
+              <p className="line-clamp-1 text-xl">{val}</p>
             </button>
           ))}
         </div>
@@ -185,7 +185,7 @@ const Keyboard = ({
           >
             <p
               className={clsx(
-                "keyboard-button",
+                "keyboard-button text-2xl",
                 focused &&
                   y === baseY + 0 &&
                   x === i &&
@@ -218,7 +218,7 @@ const Keyboard = ({
           >
             <p
               className={clsx(
-                "keyboard-button",
+                "keyboard-button text-2xl",
                 focused &&
                   y === baseY + 1 &&
                   x === i &&
@@ -247,7 +247,7 @@ const Keyboard = ({
           >
             <p
               className={clsx(
-                "keyboard-button",
+                "keyboard-button text-2xl",
                 v === "enter" && "bg-green-700",
                 focused &&
                   y === baseY + 2 &&
@@ -285,7 +285,7 @@ const Keyboard = ({
           >
             <p
               className={clsx(
-                "keyboard-button",
+                "keyboard-button text-2xl",
                 focused &&
                   y === baseY + 3 &&
                   x === i &&
@@ -320,7 +320,7 @@ const Keyboard = ({
             >
               <p
                 className={clsx(
-                  "keyboard-button",
+                  "keyboard-button text-2xl",
                   v === "done" && "bg-green-700",
                   isActive && "border border-focus m-[-1px]"
                 )}
@@ -328,7 +328,7 @@ const Keyboard = ({
                 {v === "spc" && "Space"}
                 {v === "done" && "Done"}
                 {v === "pst" && <ClipboardIcon width="1em" height="1em" />}
-                {v === "clr" && "Clear"}
+                {v === "clr" && "CLR"}
               </p>
             </button>
           );

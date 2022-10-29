@@ -113,8 +113,10 @@ const Console = ({
         />
       </div>
       <div>
-        <p className="text-text font-bold text-md text-left">{`${console.name} (${count} Games)`}</p>
-        <p className="text-text text-xs text-left">{console.description}</p>
+        <p className="text-text font-bold text-2xl text-left">{`${console.name} (${count} Games)`}</p>
+        <p className="text-text text-lg text-left line-clamp-2">
+          {console.description}
+        </p>
       </div>
     </button>
   );

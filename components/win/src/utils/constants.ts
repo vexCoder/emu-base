@@ -43,8 +43,6 @@ class Constants {
     video_refresh_rate: "144.000000",
     fps_show: "false",
     input_fps_toggle: "f3",
-    // input_desktop_menu_toggle: "nul",
-    // input_menu_toggle: "nul",
     input_exit_emulator: "f12",
     input_osk_toggle: "nul",
     settings_show_onscreen_display: "true",

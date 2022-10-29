@@ -21,7 +21,8 @@ import GameRegionSettings from "./GameRegionSettings";
 import GameDiscList from "./GameDiscList";
 import GameTroubleshoot from "./GameTroubleshoot";
 
-const selector = (v: MainStore) => pick(["selected", "console", "play"], v);
+const selector = (v: MainStore) =>
+  pick(["selected", "console", "play", "set"], v);
 
 const renderer = (c: ChildNode) => {
   if (c.nodeName === "BR")
@@ -208,6 +209,9 @@ const GameDetails = () => {
           duration={0.3}
           open={downloaderOpen}
           handleClose={() => actionsDownloader.set(false)}
+          classes={{
+            content: "!min-w-[450px] !w-[60vw] !max-w-[800px]",
+          }}
         >
           <GameDiscList
             open={downloaderOpen}
@@ -224,18 +228,18 @@ const GameDetails = () => {
           />
         </Modal>
       )}
-      <section className="h-stack ml-[20rem]">
+      <section className="h-stack ml-[9rem]">
         <Transition
           in={!!gameData}
           ease="easeInOut"
           duration={[0.5, 2.25]}
           preset="SlideY"
         >
-          <aside className="v-stack gap-4 mt-[4rem] [&>*:first-child]:mt-5">
+          <aside className="v-stack gap-4 [&>*:first-child]:mt-5">
             <button
               type="button"
               className={clsx(
-                "game-item-button mt-5 text-text bg-green-500/20",
+                "game-item-button mt-5 text-text text-xl bg-green-500/20",
                 focused && btnSlected === 0 && "border-focus",
                 (!focused || btnSlected !== 0) && "border-green-700"
               )}
@@ -250,7 +254,7 @@ const GameDetails = () => {
             <button
               type="button"
               className={clsx(
-                "game-item-button text-text bg-secondary/20",
+                "game-item-button text-text text-xl bg-secondary/20",
                 focused && btnSlected === 1 && "border-focus",
                 (!focused || btnSlected !== 1) && "border-secondary"
               )}
@@ -270,7 +274,7 @@ const GameDetails = () => {
             <button
               type="button"
               className={clsx(
-                "game-item-button text-text bg-secondary/20",
+                "game-item-button text-text text-xl bg-secondary/20",
                 focused && btnSlected === 2 && "border-focus",
                 (!focused || btnSlected !== 2) && "border-secondary"
               )}
@@ -285,14 +289,14 @@ const GameDetails = () => {
           </aside>
         </Transition>
 
-        <section className="v-stack gap-2 ml-[4rem] max-w-md">
-          <p className="font-[LibreBaskerville] tracking-wider capitalize text-text text-3xl">
+        <section className="v-stack gap-2 ml-[4rem] mt-[-5rem] max-w-sm">
+          <p className="font-[LibreBaskerville] tracking-wider capitalize text-text text-4xl line-clamp-2">
             {gameData.official}
           </p>
-          <p className="font-[JosefinSans] text-text text-lg">
+          <p className="font-[JosefinSans] text-text text-xl">
             {`${gameData.developer} / ${gameData.publisher}`}
           </p>
-          <p className="h-stack gap-3 font-[JosefinSans] text-text text-sm">
+          <p className="h-stack gap-3 font-[JosefinSans] text-text text-md">
             {gameData.genre.map((v) => (
               <span key={v} className="bg-secondary/10 rounded-2xl px-3 py-1">
                 {v}
@@ -327,9 +331,9 @@ const GameDetails = () => {
                 container="div"
                 nodeRender={renderer}
                 className={clsx(
-                  !open && "overflow-hidden line-clamp-6",
+                  !open && "overflow-hidden line-clamp-5",
                   open && "overflow-auto line-clamp-none",
-                  "indent-8 text-sm text-text max-w-md text-justify pr-2 max-h-[45vh]"
+                  "indent-8 text-xl text-text max-w-md text-justify pr-2 max-h-[45vh]"
                 )}
                 style={{ transition: "all 0.5s ease-in-out" }}
               />

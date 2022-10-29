@@ -15,6 +15,9 @@ export const MountDataHandles = (app: Application) => {
     if (app) {
       // eslint-disable-next-line no-param-reassign
       app.quitting = true;
+      if (app.overlay) {
+        app.overlay.win?.destroy();
+      }
       app.win?.close();
     }
   });
@@ -26,6 +29,12 @@ export const MountDataHandles = (app: Application) => {
     if (path) check = fs.statSync(path).isDirectory();
 
     return check;
+  });
+
+  Handlers.register("win", "getDisplays", async () => Win.getDisplay());
+  Handlers.register("win", "setDisplay", async (_evt, id) => {
+    console.log("setDisplay");
+    if (app.win) Win.setDisplay(id, app.win);
   });
 
   Handlers.register("win", "isFile", async (_evt, path) => {

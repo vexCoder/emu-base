@@ -1,6 +1,6 @@
 /* eslint-disable import/prefer-default-export */
-import { createWindow, logToFile } from "@utils/helper";
-import { app, BrowserWindow, Menu, Tray } from "electron";
+import { createWindow, getEmuSettings, logToFile } from "@utils/helper";
+import { app, BrowserWindow, Menu, screen, Tray } from "electron";
 import { join } from "path";
 import Emulator from "./emulator";
 import OverlayWindow from "./overlay";
@@ -10,7 +10,7 @@ export class Application {
   win?: BrowserWindow;
   overlay?: OverlayWindow;
   emulator?: Emulator;
-  icon = '';
+  icon = "";
   quitting = false;
   tray?: Tray;
 
@@ -22,7 +22,7 @@ export class Application {
   makeWindow() {
     // NOTE create a window
     const isDev = process.env.NODE_ENV === "development";
-    if(isDev) this.icon = join(process.cwd(), "assets/game-controller128.ico");
+    if (isDev) this.icon = join(process.cwd(), "assets/game-controller128.ico");
     else this.icon = join(__dirname, "..", "assets/game-controller128.ico");
     this.tray = new Tray(this.icon);
 
@@ -49,33 +49,47 @@ export class Application {
 
     const path = isDev
       ? "http://localhost:3001"
-      : join(__dirname, '..', 'view', 'index.html');
+      : join(__dirname, "..", "view", "index.html");
 
     logToFile(path);
 
-    this.win = createWindow({
-      urlOrPath: path,
-      isDev,
-      browserOptions: {
-        icon: this.icon,
-        webPreferences: {
-          preload: join(__dirname, "preload.js"),
-          contextIsolation: true,
-          devTools: true,
-          webSecurity: false,
+    getEmuSettings().then((settings) => {
+      const monitor = settings.value().display;
+      const display = screen.getAllDisplays();
+      const target = display.findIndex((v, i) =>
+        monitor ? v.id === monitor : i === 0
+      );
+
+      if(target === -1) throw new Error("Invalid monitor");
+
+      this.win = createWindow({
+        urlOrPath: path,
+        isDev,
+        monitor: target,
+        browserOptions: {
+          icon: this.icon,
+          frame: false,
+          fullscreen: false,
+          webPreferences: {
+            preload: join(__dirname, "preload.js"),
+            contextIsolation: true,
+            devTools: true,
+            webSecurity: false,
+          },
         },
-      },
-    });
+      });
 
-    this.overlay = new OverlayWindow(this);
+      this.overlay = new OverlayWindow(this);
 
-    this.overlay.createWindow(this.icon, {
-      onDetach: () => {
-        console.log("Ejecting");
-        this.win?.show();
-        this.win?.moveTop();
-        this.win?.webContents.send("emulator:onDetach");
-      },
+      this.overlay.createWindow(this.icon, {
+        monitor: target,
+        onDetach: () => {
+          console.log("Ejecting");
+          this.win?.show();
+          this.win?.moveTop();
+          this.win?.webContents.send("emulator:onDetach");
+        },
+      });
     });
 
     return this;
@@ -91,7 +105,9 @@ export class Application {
 
     app.on("window-all-closed", () => {
       console.log("window-all-closed");
-      if (process.platform !== "darwin") app.quit();
+      if (process.platform !== "darwin") {
+        app.quit();
+      }
     });
 
     app.on("activate", () => {
@@ -112,9 +128,9 @@ export class Application {
         ev.preventDefault();
         this.win?.hide();
         ev.returnValue = false;
-      }else {
+      } else {
         this.win?.destroy();
-        this.tray?.destroy()
+        this.tray?.destroy();
       }
     });
 
@@ -130,10 +146,9 @@ export class Application {
   static async boot() {
     if (require("electron-squirrel-startup")) return;
 
-
-    logToFile('booting');
+    logToFile("booting");
     await app.whenReady();
-    logToFile('booted');
+    logToFile("booted");
 
     // eslint-disable-next-line prettier/prettier
     new Application().init().makeWindow().startEvents().attachHandlers();

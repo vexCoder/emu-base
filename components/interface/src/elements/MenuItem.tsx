@@ -65,7 +65,7 @@ const MenuItem = (props: MenuItemProps) => {
         )}
         <p
           className={clsx(
-            "font-bold text-sm",
+            "font-bold text-lg line-clamp-1",
             focused && selected && "!text-focus",
             (!focused || !selected) && "!text-text"
           )}
@@ -77,7 +77,7 @@ const MenuItem = (props: MenuItemProps) => {
       {typeof children === "string" ? (
         <p
           className={clsx(
-            "text-sm",
+            "text-lg line-clamp-1",
             focused && selected && "!text-focus",
             (!focused || !selected) && "!text-text"
           )}

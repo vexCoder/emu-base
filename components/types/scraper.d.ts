@@ -131,6 +131,7 @@ interface EditableConsoleSettings {
   showFps?: boolean;
   fullscreen?: boolean;
   mute?: boolean;
+  display?: number;
 }
 
 type ConsoleLinks = ParsedLinks[];
@@ -140,10 +141,23 @@ interface EmuPathing {
   dump: string;
 }
 
+interface Display {
+  id: number;
+  size: {
+    width: number;
+    height: number;
+  },
+  position: {
+    x: number;
+    y: number;
+  }
+}
+
 interface AppSettings {
   pathing: EmuPathing;
   consoles: ConsoleSettings[];
   savestates: Record<string, number[]>;
   favorites?: string[];
   recentSearch?: string[];
+  display?: number;
 }

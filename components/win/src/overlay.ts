@@ -3,6 +3,8 @@ import {
   getWindowText,
   listWindows,
   setActiveWindow,
+  setActiveWindow3,
+  setWindowRect,
   ShowWindowFlags,
 } from "@utils/ffi";
 import { createWindow, extractMatches, retry } from "@utils/helper";
@@ -12,6 +14,7 @@ import OVHook from "node-ovhook";
 import { join } from "path";
 
 interface OverlayOptions {
+  monitor: number;
   onDetach?: () => void;
   onAttach?: () => void;
   onInit?: () => void;
@@ -53,6 +56,7 @@ class OverlayWindow {
 
     this.win = createWindow({
       urlOrPath: path,
+      monitor: options?.monitor,
       browserOptions: {
         fullscreenable: true,
         skipTaskbar: true,
@@ -155,7 +159,8 @@ class OverlayWindow {
     if (this.parentHandle) {
       const title = getWindowText(this.parentHandle);
 
-      if (this.win && !this.attached && title) {
+      const appBounds = this.app.win?.getBounds();
+      if (this.win && !this.attached && title && appBounds) {
         const display = screen.getDisplayNearestPoint(
           screen.getCursorScreenPoint()
         );
@@ -180,7 +185,17 @@ class OverlayWindow {
           (v) => v.windowId === this.parentHandle
         );
 
-        if (parent) OVHook.injectProcess(parent);
+        if (parent) {
+          setActiveWindow3(this.parentHandle);
+          setWindowRect(this.parentHandle, {
+            left: appBounds.x,
+            top: appBounds.y,
+            width: appBounds.width,
+            height: appBounds.height,
+          });
+
+          OVHook.injectProcess(parent);
+        }
 
         this.attached = true;
         return;
@@ -198,8 +213,6 @@ class OverlayWindow {
         const find = list.find(
           (e) => extractMatches(/retroarch .* .*/gi, e.title, false).length >= 1
         );
-
-        console.log(find);
 
         if (!find) throw new Error("Retroarch not found");
 

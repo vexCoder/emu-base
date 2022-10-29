@@ -1,7 +1,8 @@
 import pMap from "p-map";
 import fs from "fs-extra";
-import { getDriveList } from "@utils/helper";
+import { getDriveList, getEmuSettings, moveToMonitor } from "@utils/helper";
 import { join, resolve } from "path";
+import { BrowserWindow, screen } from "electron";
 
 export namespace WinApi {
   export class Resolver {
@@ -35,6 +36,33 @@ export namespace WinApi {
       }));
 
       return parsed;
+    }
+
+    async getDisplay() {
+      const display = screen.getAllDisplays();
+      return display.map((v) => ({
+        id: v.id,
+        size: {
+          width: v.size.width,
+          height: v.size.height,
+        },
+        position: {
+          x: v.bounds.x,
+          y: v.bounds.y,
+        },
+      }));
+    }
+
+    async setDisplay(id: number, win: BrowserWindow) {
+      const settings = await getEmuSettings();
+      const display = screen.getAllDisplays();
+      const target = display.findIndex((v) => v.id === id);
+      if (target === -1) {
+        throw new Error("Display not found");
+      }
+
+      moveToMonitor(target, win, undefined, win.isMaximized());
+      await settings.set("display", id).write();
     }
   }
 

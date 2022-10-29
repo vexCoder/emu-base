@@ -45,7 +45,7 @@ const GameList = () => {
   )?.[3];
 
   return (
-    <div className="relative mt-[5vh] w-full h-[75vh]">
+    <div className="relative mt-[-4vh] w-full h-[75vh]">
       <div className="h-[22rem]">
         <Segment
           focused={focused}

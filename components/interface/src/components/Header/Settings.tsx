@@ -33,10 +33,17 @@ interface SettingsProps {
 
 const Settings = ({ id, onClose }: SettingsProps) => {
   const [selectedPath, setSelectedPath] = useState<string>();
+  const [windows, setWindows] = useState<Display[]>([]);
   const [fpOpen, toggleFp] = useToggle(false);
+
   const [selected, actions] = useCounter(0, {
     min: 0,
     max: 5,
+  });
+
+  const [windowSelected, windowActions] = useCounter(0, {
+    min: 0,
+    max: windows.length - 1,
   });
 
   const [toEdit, setToEdit] = useState<"backend" | "dump">();
@@ -64,6 +71,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
 
   useMount(() => {
     refetch();
+    window.win.getDisplays().then(setWindows);
   });
 
   const rates = _.range(10).map((v) => 0.5 * (v + 1));
@@ -108,15 +116,24 @@ const Settings = ({ id, onClose }: SettingsProps) => {
           setToEdit("dump");
         }
 
-        if (selected === 3) {
-          setSettings((prev) => ({ ...prev, mute: !prev.mute }));
+        if (selected === 2) {
+          const win = windows[windowSelected];
+          if (win) {
+            window.win.setDisplay(win.id).then(() => {
+              window.data.getGlobalSettings().then(setGlobal);
+            });
+          }
         }
 
         if (selected === 4) {
-          setSettings((prev) => ({ ...prev, showFps: !prev.showFps }));
+          setSettings((prev) => ({ ...prev, mute: !prev.mute }));
         }
 
         if (selected === 5) {
+          setSettings((prev) => ({ ...prev, showFps: !prev.showFps }));
+        }
+
+        if (selected === 6) {
           setSettings((prev) => ({ ...prev, fullscreen: !prev.fullscreen }));
         }
       },
@@ -128,13 +145,17 @@ const Settings = ({ id, onClose }: SettingsProps) => {
         if (!id) return;
 
         if (selected === 2) {
+          windowActions.dec();
+        }
+
+        if (selected === 3) {
           const index = rates.indexOf(settings.turboRate ?? 1);
           setSettings({
             turboRate: rates[cycleCounter(index - 1, 0, rates.length - 1)],
           });
         }
 
-        if (selected === 3) {
+        if (selected === 4) {
           const index = volume.indexOf(settings.volume ?? 0);
           setSettings({
             volume: volume[cycleCounter(index - 1, 0, volume.length - 1)],
@@ -145,13 +166,17 @@ const Settings = ({ id, onClose }: SettingsProps) => {
         if (!id) return;
 
         if (selected === 2) {
+          windowActions.inc();
+        }
+
+        if (selected === 3) {
           const index = rates.indexOf(settings.turboRate ?? 1);
           setSettings({
             turboRate: rates[cycleCounter(index + 1, 0, rates.length - 1)],
           });
         }
 
-        if (selected === 3) {
+        if (selected === 4) {
           const index = volume.indexOf(settings.volume ?? 0);
           setSettings({
             volume: volume[cycleCounter(index + 1, 0, volume.length - 1)],
@@ -196,7 +221,9 @@ const Settings = ({ id, onClose }: SettingsProps) => {
       <div>
         <div className="h-stack items-center gap-3 mb-4">
           <Cog8ToothIcon className={clsx("w-[2em] h-[2em] text-text")} />
-          <h6 className="font-bold text-text leading-[1em]">Global Settings</h6>
+          <h6 className="font-bold text-text text-xl leading-[1em]">
+            Global Settings
+          </h6>
         </div>
         <div className="v-stack gap-3 mb-4">
           {/* <div
@@ -236,6 +263,35 @@ const Settings = ({ id, onClose }: SettingsProps) => {
           >
             {global.pathing?.dump}
           </MenuItem>
+          <div className="h-stack items-center justify-center gap-3 mt-4">
+            {windows.map((v, i) => {
+              const winSel = windowSelected === i && selected === 2;
+              const isActive = v.id === global.display;
+              return (
+                <button
+                  type="button"
+                  className={clsx(
+                    "v-stack items-center justify-center",
+                    "border-2 rounded-md p-4",
+                    "min-w-[140px] min-h-[100px]",
+                    !winSel && isActive && "border-highlight",
+                    !winSel &&
+                      !isActive &&
+                      !global.display &&
+                      i === 0 &&
+                      "border-highlight",
+                    winSel && "border-focus",
+                    !winSel && "border-text"
+                  )}
+                >
+                  <p className="text-text text-xl line-clamp-1">{`Display ${i}`}</p>
+                  <p className="text-text text-lg line-clamp-1">
+                    {`${v.size.width}x${v.size.height}`}{" "}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
         </div>
         {settings.key && (
           <>
@@ -245,13 +301,13 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                 size="2em"
                 className="fill-text"
               />
-              <h6 className="font-bold text-text leading-[1em]">
+              <h6 className="font-bold text-text text-xl leading-[1em]">
                 Console Settings ({settings.name})
               </h6>
             </div>
             <div className="v-stack gap-3 mb-2">
               <MenuItem
-                selected={selected === 2}
+                selected={selected === 3}
                 focused={focused}
                 label="Turbo Rate"
                 icon={BoltIcon}
@@ -264,7 +320,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                       className="text-text"
                     />
                   </button>
-                  <p className="text-text text-sm">
+                  <p className="text-text text-xl">
                     x{settings.turboRate ?? 1}
                   </p>
                   <button type="button">
@@ -277,7 +333,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                 </div>
               </MenuItem>
               <MenuItem
-                selected={selected === 3}
+                selected={selected === 4}
                 focused={focused}
                 label="Volume"
                 icon={settings.mute ? SpeakerXMarkIcon : SpeakerWaveIcon}
@@ -297,7 +353,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                 </div>
               </MenuItem>
               <MenuItem
-                selected={selected === 4}
+                selected={selected === 5}
                 focused={focused}
                 label="Show FPS"
                 icon={ChartBarIcon}
@@ -305,7 +361,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                 <button type="button">
                   <p
                     className={clsx(
-                      "ml-auto font-bold",
+                      "ml-auto font-bold text-xl",
                       settings?.showFps && "text-green-400",
                       !settings?.showFps && "text-red-400"
                     )}
@@ -315,7 +371,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                 </button>
               </MenuItem>
               <MenuItem
-                selected={selected === 5}
+                selected={selected === 6}
                 focused={focused}
                 label="Fullscreen"
                 icon={ArrowsPointingOutIcon}
@@ -323,7 +379,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                 <button type="button">
                   <p
                     className={clsx(
-                      "ml-auto font-bold",
+                      "ml-auto font-bold text-xl",
                       settings?.fullscreen && "text-green-400",
                       !settings?.fullscreen && "text-red-400"
                     )}
