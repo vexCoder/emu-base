@@ -29,6 +29,7 @@ const OverlayStatesContent = () => {
               console={store.console}
               game={store.game}
               slot={store.stateFocus}
+              timestamp={store.states[store.stateFocus] ?? 0}
               imageProps={{
                 className: "w-full h-full object-contain",
               }}
@@ -61,10 +62,10 @@ const OverlayStatesContent = () => {
                       <div className="h-stack items-center gap-2 w-full">
                         <ArrowPathIcon
                           className="text-text"
-                          width="1em"
-                          height="1em"
+                          width="1.25rem"
+                          height="1.25rem"
                         />
-                        <p>Load</p>
+                        <p className="text-lg">Load</p>
                       </div>
                     </div>
                     <div
@@ -79,10 +80,10 @@ const OverlayStatesContent = () => {
                       <div className="h-stack items-center gap-2 w-full">
                         <BookmarkSquareIcon
                           className="text-text"
-                          width="1em"
-                          height="1em"
+                          width="1.25rem"
+                          height="1.25rem"
                         />
-                        <p>Save</p>
+                        <p className="text-lg">Save</p>
                       </div>
                     </div>
                   </>
@@ -98,8 +99,8 @@ const OverlayStatesContent = () => {
                       "left-[72%]"
                   )}
                 >
-                  <p>Slot {v}</p>
-                  <p>
+                  <p className="text-lg">Slot {v}</p>
+                  <p className="text-lg">
                     {lastSaved.isValid()
                       ? lastSaved.format("MM-DD-YY HH:MM:ss")
                       : ""}
@@ -117,8 +118,8 @@ const OverlayStatesContent = () => {
         )}
       >
         <div className="h-stack items-center gap-2 w-full">
-          <XCircleIcon className="text-text" width="1em" height="1em" />
-          <p>Return</p>
+          <XCircleIcon className="text-text" width="1.25rem" height="1.25rem" />
+          <p className="text-lg">Return</p>
         </div>
       </div>
     </div>
@@ -132,6 +133,7 @@ const OverlayStates = () => {
     <Modal
       classes={{
         backdrop: "bg-transparent",
+        content: "top-[45%]",
       }}
       open={store.route === "states" && store.open}
       handleClose={() => store.set({ open: false })}

@@ -7,7 +7,7 @@
   "scripts": {
     "fi": "npx rimraf **/node_modules/** && npx rimraf yarn.lock && yarn install",
     "tools": "yarn workspace games-scraper execute",
-    "renderer": "turbo run dev tailwind:dev --filter=interface --force",
+    "renderer": "turbo run dev --filter=interface --force",
     "main": "turbo run dev --filter=win --force",
     "build": "turbo run build --filter=win --filter=interface",
     "postbuild": "yarn workspace builder start",
@@ -40,5 +40,8 @@
       "**/typescript/**"
     ]
   },
-  "packageManager": "yarn@1.22.18"
+  "packageManager": "yarn@1.22.18",
+  "dependencies": {
+    "node-ovhook": "1.0.0"
+  }
 }

@@ -2,7 +2,7 @@ const { pipe, map, reduce, keys } = require("ramda");
 const plugin = require("tailwindcss/plugin");
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./src/**/*.tsx"],
+  content: ["src/**/*.tsx"],
   theme: {
     extend: {
       colors: ({ theme }) => {

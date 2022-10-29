@@ -13,7 +13,8 @@ import {
   scoreMatchStrings,
 } from "@utils/helper";
 import extract from "extract-zip";
-import fs, { createWriteStream } from "fs-extra";
+import { createWriteStream } from "fs";
+import fs from "fs-extra";
 import got from "got";
 import _, { CollectionChain, ObjectChain } from "lodash";
 import pMap from "p-map";
@@ -124,7 +125,8 @@ export namespace DataApi {
 
     async getImage({ path, url }: GetImageParams) {
       // NOTE: Check if prod use electron static paths
-      const file = join(__dirname, "dump", path);
+      const pathToDump = getDumpPath();
+      const file = join(pathToDump, path);
       try {
         const base64 = await fs.readFile(file, "base64");
         return `data:image/png;base64,${base64}`;
@@ -281,11 +283,11 @@ export namespace DataApi {
       if (!game || !link) return false;
 
       const gameFilePath = join(pathToDump, game.unique, serial);
+      await fs.ensureDir(gameFilePath);
       const gameFile = join(pathToDump, game.unique, `${serial}.zip`);
       const downloadStream = got.stream(link.link);
-      const fileWriterStream = createWriteStream(gameFile);
+      const fileWriterStream = createWriteStream(gameFile, { flags: "a" });
 
-      await fs.ensureDir(gameFilePath);
       const handleRemove = (reason: string, error = true) => {
         if (error) console.error(reason);
         else console.log(reason);

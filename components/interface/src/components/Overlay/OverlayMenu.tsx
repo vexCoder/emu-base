@@ -24,8 +24,12 @@ const OverlayMenuContent = () => {
         type="button"
       >
         <div className="h-stack items-center gap-2">
-          <BookmarkSquareIcon className="text-text" width="1em" height="1em" />
-          <p>Save/Load</p>
+          <BookmarkSquareIcon
+            className="text-text text-xl"
+            width="1em"
+            height="1em"
+          />
+          <p className="text-lg">Save/Load</p>
         </div>
       </button>
       <button
@@ -36,11 +40,15 @@ const OverlayMenuContent = () => {
         type="button"
       >
         <div className="h-stack items-center gap-2 w-full">
-          <ChartBarIcon className="text-text" width="1em" height="1em" />
-          <p>FPS:</p>
+          <ChartBarIcon
+            className="text-text text-xl"
+            width="1.25rem"
+            height="1.25rem"
+          />
+          <p className="text-lg">FPS:</p>
           <p
             className={clsx(
-              "ml-auto font-bold",
+              "ml-auto font-bold text-lg",
               store.fps && "text-green-400",
               !store.fps && "text-red-400"
             )}
@@ -58,12 +66,20 @@ const OverlayMenuContent = () => {
       >
         <div className="h-stack items-center gap-2 w-full">
           {!store.mute && (
-            <SpeakerWaveIcon className="text-text" width="1em" height="1em" />
+            <SpeakerWaveIcon
+              className="text-text text-xl"
+              width="1.25rem"
+              height="1.25rem"
+            />
           )}
           {store.mute && (
-            <SpeakerXMarkIcon className="text-text" width="1em" height="1em" />
+            <SpeakerXMarkIcon
+              className="text-text text-xl"
+              width="1.25rem"
+              height="1.25rem"
+            />
           )}
-          <p>Volume:</p>
+          <p className="text-lg">Volume:</p>
           <div
             className={clsx(
               "h-stack ml-auto font-bold h-6 py-[0.1rem] gap-1 items-end"
@@ -94,16 +110,16 @@ const OverlayMenuContent = () => {
         <div className="h-stack items-center gap-2 w-full">
           <ForwardIcon
             className={clsx(
-              "text-text",
+              "text-text text-xl",
               store.disableTurbo && "text-gray-400/50"
             )}
-            width="1em"
-            height="1em"
+            width="1.25rem"
+            height="1.25rem"
           />
-          <p>Turbo:</p>
+          <p className="text-lg">Turbo:</p>
           <p
             className={clsx(
-              "ml-auto font-bold",
+              "ml-auto font-bold text-lg",
               store.turbo && "text-green-400",
               !store.turbo && "text-red-400",
               store.disableTurbo && "text-gray-400/50"
@@ -121,8 +137,12 @@ const OverlayMenuContent = () => {
         type="button"
       >
         <div className="h-stack items-center gap-2 w-full">
-          <XCircleIcon className="text-text" width="1em" height="1em" />
-          <p>Quit</p>
+          <XCircleIcon
+            className="text-text text-xl"
+            width="1.25rem"
+            height="1.25rem"
+          />
+          <p className="text-lg">Quit</p>
         </div>
       </button>
     </div>
@@ -136,6 +156,7 @@ const OverlayMenu = () => {
     <Modal
       classes={{
         backdrop: "bg-transparent",
+        content: "top-[45%]",
       }}
       open={store.route === "menu" && store.open}
       handleClose={() => store.set({ open: false })}

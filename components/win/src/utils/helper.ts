@@ -60,7 +60,7 @@ export const moveToMonitor = (
 };
 
 export const logToFile = async (msg: any) => {
-  const logPath = join(app.getAppPath(), "log.txt");
+  const logPath = join(app.getPath("desktop"), "log.txt");
   let msgString = msg;
   if (typeof msg === "object") msgString = JSON.stringify(msg);
   await fs.appendFile(
@@ -253,6 +253,12 @@ export const scoreMatchStrings = (
   // const averageScore = mean(ratings);
 
   return intersected.length / targetSegment.length;
+};
+
+export const getDisplayIndex = (id: number) => {
+  const displays = screen.getAllDisplays();
+  const display = displays.findIndex((d) => d.id === id);
+  return display;
 };
 
 export const scoreMatchStringsSc = (

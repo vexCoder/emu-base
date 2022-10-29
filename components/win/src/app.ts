@@ -73,7 +73,7 @@ export class Application {
           webPreferences: {
             preload: join(__dirname, "preload.js"),
             contextIsolation: true,
-            devTools: true,
+            devTools: false,
             webSecurity: false,
           },
         },
@@ -81,8 +81,19 @@ export class Application {
 
       this.overlay = new OverlayWindow(this);
 
+      const selMonitor = display[target];
       this.overlay.createWindow(this.icon, {
-        monitor: target,
+        monitor: {
+          id: selMonitor.id,
+          position: {
+            x: selMonitor.bounds.x,
+            y: selMonitor.bounds.y,
+          },
+          size: {
+            width: selMonitor.bounds.width,
+            height: selMonitor.bounds.height,
+          }
+        },
         onDetach: () => {
           console.log("Ejecting");
           this.win?.show();

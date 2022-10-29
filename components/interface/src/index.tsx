@@ -1,5 +1,6 @@
 import ReactDOM from "react-dom/client";
 import "virtual:fonts.css";
+import "./base.css";
 import App from "./App";
 
 const rootElement =

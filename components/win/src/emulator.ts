@@ -3,8 +3,10 @@ import Constants from "@utils/constants";
 import { getWindowRect } from "@utils/ffi";
 import {
   getConsoleDump,
+  getDisplayIndex,
   getDumpPath,
   getEmuSettings,
+  logToFile,
   sleep,
   updateCfg,
 } from "@utils/helper";
@@ -82,6 +84,8 @@ class Emulator {
         )
         .write();
 
+      const dp = emu.get("display").value();
+
       const savestates = emu?.get(`savestates.${this.game}`).value();
       this.app?.overlay?.sendData({
         evt: "event.update",
@@ -93,25 +97,43 @@ class Emulator {
       await sleep(250);
       if (pos && this.game) {
         await sleep(500);
-        screenshot({ format: "png" }).then(async (buf) => {
+        const dps = await screenshot.listDisplays();
+        const target = dps[getDisplayIndex(dp)];
+        screenshot({
+          format: "png",
+          ...(!!target && { screen: target.id }),
+        }).then(async (buf) => {
           const db = await getConsoleDump(this.console.key);
           const pathToDump = getDumpPath(this.console.key);
           const game = db.find({ id: this.game }).value() as ConsoleGameData;
           const pathToGame = join(pathToDump, game.unique);
           const savestate_directory = join(pathToGame, "savestate");
 
+          logToFile({ savestate_directory });
+
+          console.log({
+            left: pos.left,
+            top: pos.top,
+            width: pos.right - pos.left - 10,
+            height: pos.bottom - pos.top - 10,
+          });
+
           return sharp(buf)
             .extract({
-              left: pos.left,
-              top: pos.top,
+              left: 0,
+              top: 0,
               width: pos.right - pos.left,
               height: pos.bottom - pos.top,
             })
-            .toFile(join(savestate_directory, `slot_${slot}.png`));
+            .toFile(join(savestate_directory, `slot_${slot}.png`))
+            .catch((err) => {
+              logToFile(err.message);
+            });
         });
       }
 
       await this.sendMessage("PAUSE_TOGGLE");
+      await sleep(50);
       await this.sendMessage("SAVE_STATE");
       this.state_slot = slot;
     }
@@ -136,6 +158,7 @@ class Emulator {
 
       await sleep(250);
       await this.sendMessage("PAUSE_TOGGLE");
+      await sleep(50);
       await this.sendMessage("LOAD_STATE");
       this.state_slot = slot;
     }
@@ -265,7 +288,7 @@ class Emulator {
       .find({ id: this.console.id })
       .get("retroarch")
       .value();
-    const savestates = emu.get(`savestates.${game.id}`).value();
+    const savestates = emu.get(`savestates.${game.id}`).value() ?? [];
 
     this.turbo = !!settings.turbo;
     if (settings.turbo) {
@@ -313,7 +336,6 @@ class Emulator {
   }
 
   async play(id: string, serial: string) {
-    const isDev = process.env.NODE_ENV === "development";
     const { pathing } = this.settings;
     const db = await getConsoleDump(this.console.key);
     const settings = await getEmuSettings();

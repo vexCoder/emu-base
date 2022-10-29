@@ -138,7 +138,7 @@ const main = async () => {
         productName: "Emu Base",
         copyright: "© 2022 Deamorta",
         win: {
-          asar: false,
+          asar: true,
           target: "nsis",
           icon: iconPath,
         },

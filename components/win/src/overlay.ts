@@ -3,7 +3,6 @@ import {
   getWindowText,
   listWindows,
   setActiveWindow,
-  setActiveWindow3,
   setWindowRect,
   ShowWindowFlags,
 } from "@utils/ffi";
@@ -14,7 +13,7 @@ import OVHook from "node-ovhook";
 import { join } from "path";
 
 interface OverlayOptions {
-  monitor: number;
+  monitor: Display;
   onDetach?: () => void;
   onAttach?: () => void;
   onInit?: () => void;
@@ -33,6 +32,13 @@ class OverlayWindow {
   started: boolean = false;
 
   app: Application;
+
+  displayBound: Electron.Rectangle = {
+    height: 0,
+    width: 0,
+    x: 0,
+    y: 0,
+  };
 
   onDetach?: () => void;
 
@@ -53,10 +59,15 @@ class OverlayWindow {
     this.onDetach = options?.onDetach;
     this.onAttach = options?.onAttach;
     this.onInit = options?.onInit;
+    this.displayBound = {
+      height: options?.monitor.size.height || 0,
+      width: options?.monitor.size.width || 0,
+      x: options?.monitor.position.x || 0,
+      y: options?.monitor.position.y || 0,
+    };
 
     this.win = createWindow({
       urlOrPath: path,
-      monitor: options?.monitor,
       browserOptions: {
         fullscreenable: true,
         skipTaskbar: true,
@@ -105,7 +116,6 @@ class OverlayWindow {
         } else if (evt === "graphics.window.event.focus") {
           if (this.started) {
             if (!args.focused) {
-              this.win?.hide();
               setTimeout(() => {
                 const parent = OVHook.getTopWindows().find(
                   (v) => v.windowId === this.parentHandle
@@ -117,7 +127,6 @@ class OverlayWindow {
               }, 1500);
             }
             if (args.focused) {
-              this.win?.show();
               setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
             }
           }
@@ -139,6 +148,8 @@ class OverlayWindow {
           evt === "graphics.window.event.resize" ||
           evt === "graphics.window"
         ) {
+          if (evt === "graphics.window")
+            setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
           this.win?.setSize(args.width, args.height);
         }
 
@@ -159,12 +170,7 @@ class OverlayWindow {
     if (this.parentHandle) {
       const title = getWindowText(this.parentHandle);
 
-      const appBounds = this.app.win?.getBounds();
-      if (this.win && !this.attached && title && appBounds) {
-        const display = screen.getDisplayNearestPoint(
-          screen.getCursorScreenPoint()
-        );
-
+      if (this.win && !this.attached && title && this.displayBound) {
         IOverlay.start();
 
         this.events();
@@ -174,9 +180,9 @@ class OverlayWindow {
           transparent: true,
           resizable: true,
           nativeHandle: this.win.getNativeWindowHandle().readUInt32LE(0),
-          rect: this.win.getBounds(),
-          maxWidth: display.bounds.width,
-          maxHeight: display.bounds.height,
+          rect: this.displayBound,
+          maxWidth: this.displayBound.width,
+          maxHeight: this.displayBound.height,
           minWidth: 100,
           minHeight: 100,
         });
@@ -186,12 +192,11 @@ class OverlayWindow {
         );
 
         if (parent) {
-          setActiveWindow3(this.parentHandle);
           setWindowRect(this.parentHandle, {
-            left: appBounds.x,
-            top: appBounds.y,
-            width: appBounds.width,
-            height: appBounds.height,
+            left: this.displayBound.x,
+            top: this.displayBound.y,
+            width: this.displayBound.width,
+            height: this.displayBound.height,
           });
 
           OVHook.injectProcess(parent);

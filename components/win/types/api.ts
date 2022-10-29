@@ -34,7 +34,7 @@ export interface Handles {
     >;
 
     getImage: Connection<
-      [path: string, url?: string],
+      [console: string, url?: string],
       Promise<string | undefined>
     >;
 

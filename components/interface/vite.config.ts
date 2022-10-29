@@ -90,7 +90,7 @@ export default ({ mode }: ConfigEnv) => {
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, "index.html"),
-          overlay: path.resolve(__dirname, "overlay.html"),
+          overlay: isProd ? path.resolve(__dirname, "overlay.html") : path.resolve(__dirname, "overlay", "index.html"),
         }
       }
     },

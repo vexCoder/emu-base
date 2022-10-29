@@ -532,7 +532,7 @@ const RegionItem = ({
       )}
       onClick={() => handleSelect?.(item)}
     >
-      <p className="w-full h-stack items-center justify-between text-text text-lg font-bold">
+      <p className="w-full h-stack items-center justify-between text-text text-lg line-clamp-1 font-bold">
         <span>{item.title}</span>
 
         <span className="text-contrastText text-xl bg-highlight px-2 rounded-xl font-bold">

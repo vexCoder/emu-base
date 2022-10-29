@@ -45,10 +45,11 @@ class Constants {
     input_fps_toggle: "f3",
     input_exit_emulator: "f12",
     input_osk_toggle: "nul",
-    settings_show_onscreen_display: "true",
     audio_mute_enable: "false",
     audio_volume: "-8.000000",
     auto_remaps_enable: "false",
+    input_player1_joypad_index: "1",
+    input_enable_hotkey: "shift",
   };
 }
 

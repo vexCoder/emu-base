@@ -8,20 +8,22 @@ type SlotImageProps = {
   console: string;
   game: string;
   imageProps?: BaseComponentProps<"img">;
+  timestamp: number;
 };
 
 const SlotImage = ({
   slot,
-  console,
+  console: cons,
   game,
   imageProps = {},
+  timestamp,
   ...rest
 }: SlotImageProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
     window.data
-      .getImage(join("/", [console, game, "savestate", `slot_${slot}.png`]))
+      .getImage(join("/", [cons, game, "savestate", `slot_${slot}.png`]))
       .then((src) => {
         const loadImage = new Image();
 
@@ -31,14 +33,17 @@ const SlotImage = ({
           setImage(loadImage);
         };
       });
-  }, [slot, console, game, setImage]);
+  }, [slot, cons, game, setImage, timestamp]);
 
   return (
     <div {...rest} className={clsx(rest.className, "image-cache-container")}>
       {image && (
         <img
           {...imageProps}
-          className={clsx(imageProps.className, "image-cache-image")}
+          className={clsx(
+            imageProps.className,
+            "image-cache-image object-cover"
+          )}
           src={image.src}
           alt="test"
         />

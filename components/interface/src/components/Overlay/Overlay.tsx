@@ -39,7 +39,7 @@ const handleMenu = (
     };
 
   if (key === "key.circle" && prev.open) {
-    return { ...prev, focus: 0, open: false };
+    return { ...prev, focus: 0 };
   }
 
   if (key === "key.left") {
@@ -265,7 +265,7 @@ const OverlayContent = () => {
   });
 
   return (
-    <div className="w-[100vw] h-[100vh] p-4">
+    <div className="relative w-[100vw] h-[100vh] p-4">
       <OverlayPerformance />
       <OverlayMenu />
       <OverlayStates />

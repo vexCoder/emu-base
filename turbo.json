@@ -2,7 +2,6 @@
   "pipeline": {
       "lint": {},
       "dev": {},
-      "tailwind:dev": {},
       "build": {}
   }
 }

@@ -196,6 +196,7 @@ const GameDetails = () => {
           onLinksSave={() => {
             setFocus("game-play");
             actionsModal.set(false);
+            actionsDownloader.set(true);
           }}
           onClose={() => {
             setFocus("game-details");

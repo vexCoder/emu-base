@@ -28,7 +28,8 @@ const build = async () => {
     );
   }
 
-  if (!isDev) plugins.push(obfuscator());
+  const test = false;
+  if (!isDev && test) plugins.push(obfuscator());
 
   await makeEsbuild(["src/index.ts", "preload/preload.ts"], pathToBuild, {
     watch: isDev,
