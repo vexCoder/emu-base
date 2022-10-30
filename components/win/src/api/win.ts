@@ -96,12 +96,14 @@ export namespace WinApi {
           }
 
           if (shutdown.timeout === 0) {
-            if (app.overlay) {
+            if (app.overlay && app.overlay.win) {
               app.overlay.win?.close();
-              app.overlay.win?.destroy();
+              if (!app.overlay.win.isDestroyed()) app.overlay.win?.destroy();
             }
 
-            app.win?.close();
+            if (app.win) {
+              app.win?.close();
+            }
 
             execa("shutdown", ["/s", "/t", "0"]);
           } else {

@@ -1,4 +1,5 @@
 /* eslint-disable import/prefer-default-export */
+import { setActiveWindow, ShowWindowFlags } from "@utils/ffi";
 import {
   createWindow,
   getDisplayById,
@@ -65,10 +66,13 @@ export class Application {
       monitor,
       onDetach: () => {
         console.log("Ejecting");
-        this.overlay?.win?.hide();
-        this.win?.show();
-        this.win?.moveTop();
-        this.win?.webContents.send("emulator:onDetach");
+        if(this.overlay?.win) this.overlay?.win?.hide();
+        if(this.win) {
+          this.win?.show();
+          this.win?.moveTop();
+          setActiveWindow(this.win?.getNativeWindowHandle().readUInt32LE(0), ShowWindowFlags.SW_SHOW);
+          this.win?.webContents.send("emulator:onDetach");
+        }
       },
     });
 

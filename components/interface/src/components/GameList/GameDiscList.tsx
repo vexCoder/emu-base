@@ -152,7 +152,6 @@ const Disc = ({
         onDownload(setting.serial);
       }
 
-      console.log(st);
       setState(st);
     }
   );
@@ -253,7 +252,6 @@ const Download = ({
     refresh();
   }, 500);
 
-  console.log(data);
   useDeepCompareEffect(() => {
     if (data?.status === DownloadStatus.Downloading) {
       handleDownloading(data, "downloading");

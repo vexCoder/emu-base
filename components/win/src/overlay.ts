@@ -175,6 +175,8 @@ class OverlayWindow {
       if (this.win && !this.attached && title && this.displayBound) {
         IOverlay.start();
 
+        this.win.show();
+
         this.events();
 
         IOverlay.addWindow(this.win.id, {
