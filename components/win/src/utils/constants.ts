@@ -50,6 +50,7 @@ class Constants {
     auto_remaps_enable: "false",
     input_player1_joypad_index: "1",
     input_enable_hotkey: "shift",
+    video_font_enable: "false",
   };
 }
 

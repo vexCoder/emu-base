@@ -11,16 +11,21 @@ export const MountDataHandles = (app: Application) => {
   const Data = new DataApi.Resolver();
   const Win = new WinApi.Resolver();
 
-  Handlers.register("win", "close", async () => {
-    if (app) {
-      // eslint-disable-next-line no-param-reassign
-      app.quitting = true;
-      if (app.overlay) {
-        app.overlay.win?.destroy();
+  Handlers.register(
+    "win",
+    "shutdown",
+    async (_evt, timeout = 10000, abort = false) => {
+      if (app) {
+        Win.shutdown({
+          timeout,
+          abort,
+          app,
+        });
       }
-      app.win?.close();
     }
-  });
+  );
+
+  Handlers.register("win", "isShuttingDown", async (_evt) => Win.isShutdown());
 
   Handlers.register("win", "minimize", async () => app?.win?.minimize());
 
@@ -138,8 +143,11 @@ export const MountDataHandles = (app: Application) => {
     })
   );
 
-  Handlers.register("data", "getDownloadProgress", async (_evt, serial) =>
-    Data.getDownloadProgress({ serial })
+  Handlers.register(
+    "data",
+    "getDownloadProgress",
+    async (_evt, serial, cons, id) =>
+      Data.getDownloadProgress({ serial, app, console: cons, id })
   );
 
   Handlers.register("data", "play", async (_evt, serial, id, cons) =>

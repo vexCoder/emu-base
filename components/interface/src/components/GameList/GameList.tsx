@@ -2,34 +2,49 @@ import YoutubeAudio from "@elements/YoutubeAudio";
 import useGetGames from "@hooks/useGetGames";
 import useNavigate from "@hooks/useNavigate";
 import { MainStore, useMainStore } from "@utils/store.utils";
-import { useCounter, useCreation, useDeepCompareEffect } from "ahooks";
+import {
+  useCreation,
+  useDeepCompareEffect,
+  useInViewport,
+  useMemoizedFn,
+  useSize,
+} from "ahooks";
 import { nanoid } from "nanoid";
 import { pick, range } from "ramda";
+import { useRef, useEffect } from "react";
 import GameDetails from "./GameDetails";
 import GameImage from "./GameImage";
 
 const selector = (v: MainStore) =>
   pick(
-    ["selected", "select", "count", "cycle", "set", "games", "disc", "search"],
+    [
+      "selected",
+      "select",
+      "count",
+      "cycle",
+      "set",
+      "games",
+      "disc",
+      "search",
+      "selectedIndex",
+      "list",
+    ],
     v
   );
 
 const GameList = () => {
-  const [max, maxCounter] = useCounter(0);
-  const [selected, actions] = useCounter(0, {
-    min: 0,
-    max: max - 1,
-  });
+  const ref = useRef(null);
+  const size = useSize(ref);
 
   const store = useMainStore(selector);
   const { focused } = useNavigate("game-list", {
-    autoFocus: true,
+    // autoFocus: true,
     actions: {
       left() {
-        actions.dec();
+        store.list.dec();
       },
       right() {
-        actions.inc();
+        store.list.inc();
       },
       bottom(setFocus) {
         setFocus("game-details");
@@ -40,19 +55,28 @@ const GameList = () => {
     },
   });
 
+  const count = size?.width ? Math.ceil(size.width / 200) : 5;
+  const storeSet = useMemoizedFn(store.set);
+  useEffect(() => {
+    storeSet({ selectedIndex: 0, maxSelectedIndex: count });
+  }, [store.search, storeSet, count]);
+
   const tag = store.selected?.opening?.match(
     /^.*(youtu.be\/|v\/|embed\/|watch\?|youtube.com\/user\/[^#]*#([^/]*?\/)*)\??v?=?([^#&?]*).*/
   )?.[3];
 
   return (
-    <div className="relative mt-[-4vh] w-full h-[75vh]">
+    <div ref={ref} className="relative mt-[-4vh] w-full h-[75vh]">
       <div className="h-[22rem]">
-        <Segment
-          focused={focused}
-          keyword={store.search}
-          selected={selected}
-          increaseMax={(n: number) => maxCounter.inc(n)}
-        />
+        {size?.width && (
+          <Segment
+            focused={focused}
+            keyword={store.search}
+            selected={store.selectedIndex}
+            count={count}
+            increaseMax={(n: number) => store.list.incMax(n)}
+          />
+        )}
       </div>
 
       <GameDetails />
@@ -78,6 +102,7 @@ interface SegmentProps {
   page?: number;
   selected?: number;
   keyword: string;
+  count?: number;
   increaseMax: (n: number) => void;
 }
 
@@ -87,10 +112,14 @@ const Segment = ({
   keyword,
   selected = 0,
   increaseMax,
+  count = 5,
 }: SegmentProps) => {
+  const ref = useRef(null);
+  const [inViewport] = useInViewport(ref);
+
   const items = useCreation<string[]>(
-    () => range(0, 5).map(() => `${Segment.name}-${nanoid()}`),
-    []
+    () => range(0, count).map(() => `${Segment.name}-${nanoid()}`),
+    [count]
   );
 
   const store = useMainStore(selector);
@@ -98,11 +127,11 @@ const Segment = ({
   const { data, loading } = useGetGames({
     keyword: keyword ?? "final fantasy",
     console: "ps1",
-    limit: 5,
+    limit: count,
     page,
   });
 
-  const baseIndex = page * 5;
+  const baseIndex = page * count;
 
   useDeepCompareEffect(() => {
     if (!loading && data) {
@@ -121,7 +150,7 @@ const Segment = ({
     }
   }, [loading, selected, data]);
 
-  const showCheck = selected >= ((page + 1) * 5 * 2) / 5;
+  const showCheck = selected >= (page + 1) * count;
 
   return (
     <>
@@ -137,11 +166,12 @@ const Segment = ({
             index={i}
             selected={selected}
             loading={loading}
+            {...(i === items.length - 1 && { ref })}
           />
         );
       })}
 
-      {showCheck && !loading && !!data?.hasNext && (
+      {(inViewport || showCheck) && !loading && !!data?.hasNext && (
         <Segment
           focused={focused}
           page={page + 1}

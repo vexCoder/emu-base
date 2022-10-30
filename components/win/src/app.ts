@@ -1,6 +1,12 @@
 /* eslint-disable import/prefer-default-export */
-import { createWindow, getEmuSettings, logToFile } from "@utils/helper";
-import { app, BrowserWindow, Menu, screen, Tray } from "electron";
+import {
+  createWindow,
+  getDisplayById,
+  getDisplayIndex,
+  getEmuSettings,
+  logToFile,
+} from "@utils/helper";
+import { app, BrowserWindow, Tray } from "electron";
 import { join } from "path";
 import Emulator from "./emulator";
 import OverlayWindow from "./overlay";
@@ -11,7 +17,6 @@ export class Application {
   overlay?: OverlayWindow;
   emulator?: Emulator;
   icon = "";
-  quitting = false;
   tray?: Tray;
 
   init() {
@@ -19,33 +24,11 @@ export class Application {
     return this;
   }
 
-  makeWindow() {
+  makeWindow(settings: AppSettings) {
     // NOTE create a window
     const isDev = process.env.NODE_ENV === "development";
     if (isDev) this.icon = join(process.cwd(), "assets/game-controller128.ico");
     else this.icon = join(__dirname, "..", "assets/game-controller128.ico");
-    this.tray = new Tray(this.icon);
-
-    this.tray.setContextMenu(
-      Menu.buildFromTemplate([
-        {
-          label: "Show",
-          click: () => {
-            this.win?.show();
-            this.win?.webContents.send("eject-game");
-          },
-        },
-        {
-          label: "Quit",
-          click: () => {
-            this.quitting = true;
-            this.win?.destroy();
-            this.overlay?.cleanUp();
-            app.quit();
-          },
-        },
-      ])
-    );
 
     const path = isDev
       ? "http://localhost:3001"
@@ -53,54 +36,40 @@ export class Application {
 
     logToFile(path);
 
-    getEmuSettings().then((settings) => {
-      const monitor = settings.value().display;
-      const display = screen.getAllDisplays();
-      const target = display.findIndex((v, i) =>
-        monitor ? v.id === monitor : i === 0
-      );
+    const monitor = getDisplayById(settings.display);
+    const target = getDisplayIndex(monitor?.id ?? 0);
 
-      if(target === -1) throw new Error("Invalid monitor");
+    if (target === -1) throw new Error("Invalid monitor");
 
-      this.win = createWindow({
-        urlOrPath: path,
-        isDev,
-        monitor: target,
-        browserOptions: {
-          icon: this.icon,
-          frame: false,
-          fullscreen: false,
-          webPreferences: {
-            preload: join(__dirname, "preload.js"),
-            contextIsolation: true,
-            devTools: false,
-            webSecurity: false,
-          },
+    this.win = createWindow({
+      urlOrPath: path,
+      isDev,
+      monitor: target,
+      fullscreen: !isDev,
+      browserOptions: {
+        icon: this.icon,
+        frame: false,
+        fullscreen: false,
+        webPreferences: {
+          preload: join(__dirname, "preload.js"),
+          contextIsolation: true,
+          devTools: true,
+          webSecurity: false,
         },
-      });
+      },
+    });
 
-      this.overlay = new OverlayWindow(this);
+    this.overlay = new OverlayWindow(this);
 
-      const selMonitor = display[target];
-      this.overlay.createWindow(this.icon, {
-        monitor: {
-          id: selMonitor.id,
-          position: {
-            x: selMonitor.bounds.x,
-            y: selMonitor.bounds.y,
-          },
-          size: {
-            width: selMonitor.bounds.width,
-            height: selMonitor.bounds.height,
-          }
-        },
-        onDetach: () => {
-          console.log("Ejecting");
-          this.win?.show();
-          this.win?.moveTop();
-          this.win?.webContents.send("emulator:onDetach");
-        },
-      });
+    this.overlay.createWindow(this.icon, {
+      monitor,
+      onDetach: () => {
+        console.log("Ejecting");
+        this.overlay?.win?.hide();
+        this.win?.show();
+        this.win?.moveTop();
+        this.win?.webContents.send("emulator:onDetach");
+      },
     });
 
     return this;
@@ -127,22 +96,16 @@ export class Application {
 
     app.on("before-quit", async () => {
       console.log("qutting");
-      this.quitting = true;
       this.overlay?.cleanUp();
     });
 
     this.win.on("focus", () => {});
 
-    this.win.on("close", (ev) => {
+    this.win.on("closed", () => {
       console.log("close");
-      if (!this.quitting) {
-        ev.preventDefault();
-        this.win?.hide();
-        ev.returnValue = false;
-      } else {
-        this.win?.destroy();
-        this.tray?.destroy();
-      }
+      this.win?.destroy();
+      this.overlay?.win?.close();
+      this.overlay?.win?.destroy();
     });
 
     return this;
@@ -161,7 +124,8 @@ export class Application {
     await app.whenReady();
     logToFile("booted");
 
+    const settings = (await getEmuSettings()).value()
     // eslint-disable-next-line prettier/prettier
-    new Application().init().makeWindow().startEvents().attachHandlers();
+    new Application().init().makeWindow(settings).startEvents().attachHandlers();
   }
 }

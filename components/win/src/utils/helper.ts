@@ -23,6 +23,7 @@ import { findBestMatch } from "string-similarity";
 import execa from "execa";
 import _ from "lodash";
 import dayjs from "dayjs";
+import { setActiveWindow, ShowWindowFlags } from "./ffi";
 
 export interface WinSettings {
   x: number;
@@ -44,6 +45,10 @@ export const moveToMonitor = (
   const result =
     typeof rect === "function" ? rect(displays[selected].workArea) : rect;
 
+  setActiveWindow(
+    win.getNativeWindowHandle().readUInt32LE(0),
+    ShowWindowFlags.SW_SHOW
+  );
   win.setPosition(x + result.x, y + result.y);
   if (!maximize) {
     win.setSize(
@@ -60,7 +65,11 @@ export const moveToMonitor = (
 };
 
 export const logToFile = async (msg: any) => {
-  const logPath = join(app.getPath("desktop"), "log.txt");
+  const isDev = process.env.NODE_ENV === "development";
+  const logPath = join(
+    isDev ? app.getPath("desktop") : join(app.getPath("appData"), "emu-base"),
+    "log.txt"
+  );
   let msgString = msg;
   if (typeof msg === "object") msgString = JSON.stringify(msg);
   await fs.appendFile(
@@ -86,7 +95,7 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     browserOptions = {},
     isDev = true,
     monitor = 0,
-    fullscreen = true,
+    fullscreen = false,
   } = opts ?? {};
 
   const win = new BrowserWindow({
@@ -114,22 +123,26 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     win.loadFile("./index.html");
   }
 
+  const resize = isDev
+    ? () => ({ x: 0, y: 0, width: 800, height: 600 })
+    : undefined;
+
   if (isRestarted && isDev) {
     // Bring to front
     win.minimize();
     win.showInactive();
     win.blur();
 
-    moveToMonitor(monitor, win, undefined, fullscreen);
+    moveToMonitor(monitor, win, resize, fullscreen);
     win.once("blur", () => {
       // Select which monitor to use
       console.log(opts?.urlOrPath, monitor);
-      moveToMonitor(monitor, win, undefined, fullscreen);
+      moveToMonitor(monitor, win, resize, fullscreen);
     });
   } else {
     // Select which monitor to use
     console.log(opts?.urlOrPath, monitor);
-    moveToMonitor(monitor, win, undefined, fullscreen);
+    moveToMonitor(monitor, win, resize, fullscreen);
   }
 
   if (browserOptions.alwaysOnTop) {
@@ -255,11 +268,35 @@ export const scoreMatchStrings = (
   return intersected.length / targetSegment.length;
 };
 
-export const getDisplayIndex = (id: number) => {
+export const getDisplayById = (id?: number) => {
   const displays = screen.getAllDisplays();
-  const display = displays.findIndex((d) => d.id === id);
+  const display = displays.find((d) => d.id === id);
   return display;
 };
+
+export const getDisplayByIndex = (idx: number) => {
+  const displays = screen.getAllDisplays();
+  const display = displays.find((__, i) => i === idx);
+  return display;
+};
+
+export const getDisplayIndex = (id: number) => {
+  const displays = screen.getAllDisplays();
+  const idx = displays.findIndex((d) => d.id === id);
+  return idx;
+};
+
+export const parseDisplay = (d?: Electron.Display) => ({
+  id: d?.id ?? 0,
+  position: {
+    x: d?.bounds.x ?? 0,
+    y: d?.bounds.y ?? 0,
+  },
+  size: {
+    width: d?.bounds.width ?? 0,
+    height: d?.bounds.height ?? 0,
+  },
+});
 
 export const scoreMatchStringsSc = (
   src: string[],

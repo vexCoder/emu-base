@@ -6,9 +6,14 @@ import useGetDownloadProgress from "@hooks/useGetDownloadProgress";
 import useNavigate from "@hooks/useNavigate";
 import usePlay from "@hooks/usePlay";
 import { useMainStore } from "@utils/store.utils";
-import { useCounter, useInterval, useMemoizedFn, useToggle } from "ahooks";
+import {
+  useCounter,
+  useDeepCompareEffect,
+  useInterval,
+  useMemoizedFn,
+} from "ahooks";
 import clsx from "clsx";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { DownloadStatus } from "types/enums";
 
@@ -102,6 +107,8 @@ const GameDiscList = ({
           <Disc
             focused={focused && discSelected === i}
             key={setting.serial}
+            console={cons}
+            id={game.id}
             setting={setting}
             onDownload={onDownload}
             handleDownload={handleDownload}
@@ -114,6 +121,8 @@ const GameDiscList = ({
 };
 
 interface DiscProps {
+  console: string;
+  id: string;
   focused: boolean;
   setting: GameRegionFiles["gameFiles"][number];
   handleDownload: (serial: string) => void;
@@ -121,26 +130,32 @@ interface DiscProps {
   onDownload: (serial: string) => void;
 }
 
+type DiscStatus = "checking" | "idle" | "playable" | "downloading";
+
 const Disc = ({
+  console: cons,
+  id,
   setting,
   handleDownload,
   handlePlay: _handlePlay,
   onDownload,
   focused,
 }: DiscProps) => {
-  const [downloading, actions] = useToggle(false);
+  const [state, setState] = useState<DiscStatus>("checking");
   const [progress, setProgress] = useState(0);
 
-  const handleDownloading = useMemoizedFn((p: number, bool?: boolean) => {
-    setProgress(p);
+  const handleDownloading = useMemoizedFn(
+    (p: DownloadProgress, st: DiscStatus) => {
+      if (p.transferred > 0 && p.total > 0) setProgress(p.percentage);
 
-    if (progress >= 1) {
-      actions.set(!!bool);
-      if (!bool) {
+      if (st === "playable") {
         onDownload(setting.serial);
       }
+
+      console.log(st);
+      setState(st);
     }
-  });
+  );
 
   const handlePlay = () => {
     _handlePlay(setting.serial);
@@ -154,6 +169,10 @@ const Disc = ({
     }
   };
 
+  const isChecking = state === "checking";
+  const isDownloading = state === "downloading";
+  const isPlayable = state === "playable";
+
   return (
     <button
       type="button"
@@ -165,10 +184,10 @@ const Disc = ({
       )}
     >
       <div>
-        {!setting.playable && downloading && (
+        {!setting.playable && (isChecking || isDownloading) && (
           <Spinner className="w-[1.5em] h-[1.5em] animate-spin text-gray-600 fill-green-400" />
         )}
-        {!setting.playable && !downloading && (
+        {!setting.playable && !isDownloading && !isChecking && (
           <ArrowDownTrayIcon
             className="text-green-400"
             width="1.5em"
@@ -185,15 +204,17 @@ const Disc = ({
           {setting.link.fileName}
         </span>
         <span className="text-text text-lg">{setting.serial}</span>
-        {!setting.playable && (
+        {(!setting.playable || isPlayable) && (
           <Download
             serial={setting.serial}
+            console={cons}
+            id={id}
             handleDownloading={handleDownloading}
           />
         )}
       </div>
 
-      {!setting.playable && downloading && (
+      {!setting.playable && isDownloading && (
         <button
           type="button"
           disabled
@@ -211,28 +232,41 @@ const Disc = ({
 
 interface DownloadProps {
   serial: string;
-  handleDownloading: (progress: number, bool?: boolean) => void;
+  console: string;
+  id: string;
+  handleDownloading: (progress: DownloadProgress, state: DiscStatus) => void;
 }
 
-const Download = ({ serial, handleDownloading }: DownloadProps) => {
+const Download = ({
+  serial,
+  console: cons,
+  id,
+  handleDownloading,
+}: DownloadProps) => {
   const { data, refresh } = useGetDownloadProgress({
     serial,
+    console: cons,
+    id,
   });
 
   useInterval(() => {
     refresh();
-  }, 1000);
+  }, 500);
 
-  useEffect(() => {
+  console.log(data);
+  useDeepCompareEffect(() => {
     if (data?.status === DownloadStatus.Downloading) {
-      handleDownloading(data?.percentage, true);
+      handleDownloading(data, "downloading");
     }
     if (data?.status === DownloadStatus.Completed) {
-      handleDownloading(data?.percentage, false);
+      handleDownloading(data, "playable");
     }
-  }, [data?.status, data?.percentage, handleDownloading]);
+    if (data?.status === DownloadStatus.NotDownloading) {
+      handleDownloading(data, "idle");
+    }
+  }, [data, handleDownloading]);
 
-  if (data?.percentage === 0) return null;
+  if (data?.status === DownloadStatus.NotDownloading || !data) return null;
   return (
     <div className="relative w-full h-1 bg-secondary/50 rounded-xl overflow-hidden mt-1">
       <div

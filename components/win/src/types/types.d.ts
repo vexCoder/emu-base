@@ -1,5 +1,4 @@
 interface Application {
-  quitting: boolean;
   win?: import('electron').BrowserWindow;
   overlay?: import('../overlay').default;
   emulator?: import('../emulator').default;
@@ -7,7 +6,7 @@ interface Application {
   setEmulator(emu: import('../emulator').default);
 
   init(): Application;
-  makeWindow(): Application;
+  makeWindow(settings: AppSettings): Application;
   startEvents(): Application;
   attachHandlers(): Application;
 }

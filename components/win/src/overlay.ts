@@ -13,7 +13,7 @@ import OVHook from "node-ovhook";
 import { join } from "path";
 
 interface OverlayOptions {
-  monitor: Display;
+  monitor?: Electron.Display;
   onDetach?: () => void;
   onAttach?: () => void;
   onInit?: () => void;
@@ -60,10 +60,10 @@ class OverlayWindow {
     this.onAttach = options?.onAttach;
     this.onInit = options?.onInit;
     this.displayBound = {
-      height: options?.monitor.size.height || 0,
-      width: options?.monitor.size.width || 0,
-      x: options?.monitor.position.x || 0,
-      y: options?.monitor.position.y || 0,
+      height: options?.monitor?.size.height || 0,
+      width: options?.monitor?.size.width || 0,
+      x: options?.monitor?.bounds.x || 0,
+      y: options?.monitor?.bounds.y || 0,
     };
 
     this.win = createWindow({
@@ -85,6 +85,8 @@ class OverlayWindow {
         },
       },
     });
+
+    this.win.hide();
   }
 
   setOnInit(onInit: () => void) {
@@ -244,8 +246,7 @@ class OverlayWindow {
 
   cleanUp() {
     console.log("clean up");
-    this.win?.hide();
-    if (this.win) IOverlay.closeWindow(this.win.id);
+    if (this.win && !this.win.isDestroyed()) IOverlay.closeWindow(this.win.id);
     this.attached = false;
     this.started = false;
   }

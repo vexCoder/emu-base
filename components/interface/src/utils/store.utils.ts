@@ -1,4 +1,5 @@
 import { ThemeKeys, themeKeys } from "@root/themes";
+import _ from "lodash";
 import { clamp } from "ramda";
 import create from "zustand";
 import { persist, subscribeWithSelector } from "zustand/middleware";
@@ -101,11 +102,14 @@ export interface MainSettings {
   console: string;
   games: ConsoleGameData[];
   selected?: ConsoleGameData;
+  selectedIndex: number;
+  maxSelectedIndex: number;
   count: number;
   disc?: string;
   focused: string;
   lastFocused?: string;
   gamepad?: Gamepad;
+  shutdown?: boolean;
 }
 
 export interface MainActions {
@@ -115,6 +119,11 @@ export interface MainActions {
   select: (game: ConsoleGameData) => void;
   play: (serial: string) => void;
   eject: () => void;
+  list: {
+    inc: () => void;
+    dec: () => void;
+    incMax: (val: number) => void;
+  };
 }
 
 export type MainStore = MainSettings & MainActions;
@@ -126,6 +135,36 @@ export const useMainStore = create(
     focused: "game-list",
     console: "ps1",
     games: [],
+
+    // games-list
+    selectedIndex: 0,
+    maxSelectedIndex: 0,
+    list: {
+      inc() {
+        set({
+          selectedIndex: _.clamp(
+            get().selectedIndex + 1,
+            0,
+            get().maxSelectedIndex
+          ),
+        });
+      },
+      dec() {
+        set({
+          selectedIndex: _.clamp(
+            get().selectedIndex - 1,
+            0,
+            get().maxSelectedIndex
+          ),
+        });
+      },
+      incMax(val: number) {
+        set({
+          maxSelectedIndex: get().maxSelectedIndex + val,
+        });
+      },
+    },
+
     count: 5,
     // setters
     set(state) {

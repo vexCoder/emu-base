@@ -9,12 +9,13 @@ import {
   getDiscMappings,
   getDumpPath,
   getEmuSettings,
+  logToFile,
   saveImage,
   scoreMatchStrings,
 } from "@utils/helper";
 import extract from "extract-zip";
 import { createWriteStream } from "fs";
-import fs from "fs-extra";
+import fs, { readdir } from "fs-extra";
 import got from "got";
 import _, { CollectionChain, ObjectChain } from "lodash";
 import pMap from "p-map";
@@ -283,12 +284,22 @@ export namespace DataApi {
       if (!game || !link) return false;
 
       const gameFilePath = join(pathToDump, game.unique, serial);
+      const gameFileExists = (await readdir(gameFilePath)).some((v) => {
+        const ext = extname(v);
+        return (ext === ".iso" || ext === ".bin") && v.indexOf(serial) > -1;
+      });
+
+      if (gameFileExists) await fs.remove(gameFilePath);
+
       await fs.ensureDir(gameFilePath);
       const gameFile = join(pathToDump, game.unique, `${serial}.zip`);
+      const zipFileExists = await fs.pathExists(gameFile);
+      if (zipFileExists) await fs.remove(gameFile);
       const downloadStream = got.stream(link.link);
       const fileWriterStream = createWriteStream(gameFile, { flags: "a" });
 
       const handleRemove = (reason: string, error = true) => {
+        logToFile(reason);
         if (error) console.error(reason);
         else console.log(reason);
         Globals.merge(`download-${serial}-progress`, {
@@ -347,19 +358,44 @@ export namespace DataApi {
       return true;
     }
 
-    async getDownloadProgress({ serial }: GetDownloadProgressParams) {
+    async getDownloadProgress({
+      console: cons,
+      id,
+      serial,
+    }: GetDownloadProgressParams) {
+      const defaultRes = {
+        percentage: 0,
+        status: DownloadStatus.NotDownloading,
+        transferred: 0,
+        total: 0,
+      };
       const progress = Globals.get(`download-${serial}-progress`) as
         | DownloadProgress
         | undefined;
 
-      return (
-        progress ?? {
-          percentage: 0,
-          status: DownloadStatus.NotDownloading,
+      const db = await getConsoleDump(cons);
+      const pathToDump = getDumpPath(cons);
+      const game = db.find({ id }).value() as ConsoleGameData;
+
+      if (!game) return defaultRes;
+      const gameFilePath = join(pathToDump, game.unique, serial);
+
+      await fs.ensureDir(gameFilePath);
+      const check = (await readdir(gameFilePath)).some((v) => {
+        const ext = extname(v);
+        return (ext === ".iso" || ext === ".bin") && v.indexOf(serial) > -1;
+      });
+
+      if (check && !progress) {
+        return {
+          percentage: 100,
+          status: DownloadStatus.Completed,
           transferred: 0,
           total: 0,
-        }
-      );
+        };
+      }
+
+      return progress ?? defaultRes;
     }
 
     async play({ id, console: cons, serial, app }: PlayParams) {
@@ -486,6 +522,8 @@ export namespace DataApi {
     console: string;
   }
   interface GetDownloadProgressParams extends Base {
+    console: string;
+    id: string;
     serial: string;
   }
 

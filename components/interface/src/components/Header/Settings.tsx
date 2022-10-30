@@ -284,7 +284,9 @@ const Settings = ({ id, onClose }: SettingsProps) => {
                     !winSel && "border-text"
                   )}
                 >
-                  <p className="text-text text-xl line-clamp-1">{`Display ${i}`}</p>
+                  <p className="text-text text-xl line-clamp-1">{`Display ${
+                    i + 1
+                  }`}</p>
                   <p className="text-text text-lg line-clamp-1">
                     {`${v.size.width}x${v.size.height}`}{" "}
                   </p>

@@ -26,7 +26,8 @@ type ActionType =
 type Actions = Record<ActionType, (setFocus: (focus: string) => void) => void>;
 
 interface UseNavigateOptions {
-  onFocus?: (key: string) => void;
+  onFocus?: (key: string, setFocus: (focus: string) => void) => void;
+  onBlur?: (key: string, setFocus: (focus: string) => void) => void;
   autoFocus?: boolean;
   actions?: Partial<Actions>;
   globalActions?: Partial<Actions>;
@@ -42,6 +43,7 @@ const useNavigate = (
   const [active, setActive] = useState(false);
   const isFocused = store.focused === key;
   const onFocus = useMemoizedFn(options?.onFocus ?? (() => {}));
+  const onBlur = useMemoizedFn(options?.onBlur ?? (() => {}));
 
   const latestData = useLatest({
     key,
@@ -61,16 +63,17 @@ const useNavigate = (
 
   useEffect(() => {
     if (isFocused) {
-      onFocus?.(key);
+      onFocus?.(key, setFocus);
       setActive(true);
     } else {
+      onBlur?.(key, setFocus);
       setActive(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFocused, key, onFocus, ...deps]);
+  }, [isFocused, key, onFocus, onBlur, ...deps]);
 
   const setFocus = (focus: string) => {
-    store.set((prev) => ({ focused: focus, lastFocused: prev.focused }));
+    store.set((prev) => ({ lastFocused: prev.focused, focused: focus }));
   };
 
   const press = (fn: ActionType) => {

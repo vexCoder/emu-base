@@ -1,5 +1,7 @@
 import GameList from "@components/GameList/GameList";
 import Header from "@components/Header/Header";
+import Shutdown from "@components/Utils/Shutdown";
+import useNavigate from "@hooks/useNavigate";
 import { useMainStore } from "@utils/store.utils";
 import { useMount } from "ahooks";
 import { AnimatePresence, motion } from "framer-motion";
@@ -7,14 +9,18 @@ import { AnimatePresence, motion } from "framer-motion";
 const Main = () => {
   const store = useMainStore();
 
+  const { setFocus } = useNavigate("main");
+
   useMount(() => {
     window.emulator.onDetach(() => {
       store.eject();
+      setFocus("game-list");
     });
   });
 
   return (
     <div className="bg-primary h-[100vh] flex flex-col items-start">
+      <Shutdown />
       <AnimatePresence>
         {store.disc && (
           <motion.div

@@ -3,7 +3,8 @@ import { bind } from "./make";
 bind("win", (h, invoker) => {
   h("minimize", invoker);
   h("maximize", invoker);
-  h("close", invoker);
+  h("shutdown", invoker);
+  h("isShuttingDown", invoker);
   h("openPath", invoker);
   h("isDirectory", invoker);
   h("isFile", invoker);

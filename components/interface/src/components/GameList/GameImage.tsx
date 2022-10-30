@@ -47,32 +47,34 @@ const GameImage = forwardRef<HTMLDivElement, GameImageProps>(
     const [inViewport] = useInViewport(ref2);
 
     return (
-      <div ref={ref2} className="v-stack">
-        {inViewport && (
-          <div
-            className="fixed"
-            ref={i === segmentLength - 1 ? ref : null}
-            style={{
-              left: `${left}rem`,
-              top: `${selected === idx ? 7 : 12}rem`,
-              transition: "left 0.4s ease-in-out, top 0.375s ease-in-out",
-            }}
-          >
-            {game && !loading && (
-              <ImageCache
-                className={clsx(
-                  isActive
-                    ? "game-item-image-selected"
-                    : "game-item-image-unselected",
-                  "transition-[width,height] ease-in-out duration-500",
-                  focused && isActive && "border-2 border-focus"
-                )}
-                path={pathToGame("cover.png")}
-                url={game.cover}
-              />
-            )}
-          </div>
-        )}
+      <div ref={ref}>
+        <div ref={ref2} className="v-stack">
+          {inViewport && (
+            <div
+              className="fixed"
+              ref={i === segmentLength - 1 ? ref : null}
+              style={{
+                left: `${left}rem`,
+                top: `${selected === idx ? 7 : 12}rem`,
+                transition: "left 0.4s ease-in-out, top 0.375s ease-in-out",
+              }}
+            >
+              {game && !loading && (
+                <ImageCache
+                  className={clsx(
+                    isActive
+                      ? "game-item-image-selected"
+                      : "game-item-image-unselected",
+                    "transition-[width,height] linear duration-500",
+                    focused && isActive && "border-2 border-focus"
+                  )}
+                  path={pathToGame("cover.png")}
+                  url={game.cover}
+                />
+              )}
+            </div>
+          )}
+        </div>
       </div>
     );
   }

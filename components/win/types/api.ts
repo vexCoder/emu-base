@@ -4,7 +4,8 @@ export interface Handles {
   win: {
     minimize: Connection;
     maximize: Connection;
-    close: Connection;
+    shutdown: Connection<[timeout?: number, abort?: boolean]>;
+    isShuttingDown: Connection<[], ShutdownSettings>;
     openPath: Connection<[options?: OpenPathOptions], FileItem[]>;
     isDirectory: Connection<[path?: string], Promise<boolean>>;
     isFile: Connection<[path?: string], Promise<boolean>>;
@@ -79,7 +80,7 @@ export interface Handles {
     >;
 
     getDownloadProgress: Connection<
-      [serial: string],
+      [serial: string, console: string, id: string],
       Promise<DownloadProgress | undefined>
     >;
 

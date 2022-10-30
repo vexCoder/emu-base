@@ -1,8 +1,15 @@
 import pMap from "p-map";
 import fs from "fs-extra";
-import { getDriveList, getEmuSettings, moveToMonitor } from "@utils/helper";
+import {
+  getDriveList,
+  getEmuSettings,
+  logToFile,
+  moveToMonitor,
+} from "@utils/helper";
 import { join, resolve } from "path";
 import { BrowserWindow, screen } from "electron";
+import Globals from "@utils/globals";
+import execa from "execa";
 
 export namespace WinApi {
   export class Resolver {
@@ -64,6 +71,55 @@ export namespace WinApi {
       moveToMonitor(target, win, undefined, win.isMaximized());
       await settings.set("display", id).write();
     }
+
+    async shutdown({ timeout, abort, app }: ShutdownParams) {
+      if (abort) {
+        Globals.set("shutdown", {
+          abort: true,
+          timeout: 0,
+        });
+
+        return;
+      }
+
+      if (app) {
+        Globals.set("shutdown", {
+          abort: false,
+          timeout: timeout / 1000,
+        });
+
+        setInterval(() => {
+          const shutdown = Globals.get<ShutdownSettings>("shutdown");
+
+          if (shutdown.abort) {
+            return;
+          }
+
+          if (shutdown.timeout === 0) {
+            if (app.overlay) {
+              app.overlay.win?.close();
+              app.overlay.win?.destroy();
+            }
+
+            app.win?.close();
+
+            execa("shutdown", ["/s", "/t", "0"]);
+          } else {
+            const msg = `Shutting down in ${shutdown.timeout - 1} seconds`;
+            logToFile(msg);
+            console.log(msg);
+            Globals.set("shutdown", {
+              ...shutdown,
+              timeout: shutdown.timeout - 1,
+            });
+          }
+        }, 1000);
+      }
+    }
+
+    async isShutdown() {
+      return Globals.get<ShutdownSettings>("shutdown");
+    }
   }
 
   interface Base {
@@ -71,4 +127,9 @@ export namespace WinApi {
   }
 
   type GetPathFilesAndFolder = OpenPathOptions & Base;
+
+  interface ShutdownParams extends Base {
+    timeout: number;
+    abort: boolean;
+  }
 }

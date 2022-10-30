@@ -80,7 +80,8 @@ const Header = () => {
       },
       btnBottom() {
         if (btnSelected === 3) {
-          window.win.close();
+          store.set({ shutdown: true });
+          setFocus("shutdown");
         }
         if (btnSelected === 2) {
           toggleSettings.set(true);
@@ -211,7 +212,7 @@ const Header = () => {
               )}
             />
           </button>
-          <button type="button" onClick={() => window.win.close()}>
+          <button type="button">
             <XCircleIcon
               className={clsx(
                 "w-[3em] h-[3em] text-text",

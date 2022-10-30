@@ -75,3 +75,8 @@ interface FileItem {
   name: string;
   isDirectory: boolean;
 }
+
+interface ShutdownSettings {
+  abort: boolean;
+  timeout: number;
+}

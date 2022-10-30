@@ -290,7 +290,7 @@ const GameDetails = () => {
           </aside>
         </Transition>
 
-        <section className="v-stack gap-2 ml-[4rem] mt-[-5rem] max-w-sm">
+        <section className="v-stack gap-2 ml-[4rem] mt-[-5rem] max-w-[50vw] sm:max-w-[40vw]">
           <p className="font-[LibreBaskerville] tracking-wider capitalize text-text text-4xl line-clamp-2">
             {gameData.official}
           </p>
@@ -334,7 +334,7 @@ const GameDetails = () => {
                 className={clsx(
                   !open && "overflow-hidden line-clamp-5",
                   open && "overflow-auto line-clamp-none",
-                  "indent-8 text-xl text-text max-w-md text-justify pr-2 max-h-[45vh]"
+                  "indent-8 text-xl text-text w-full text-justify pr-2 max-h-[45vh]"
                 )}
                 style={{ transition: "all 0.5s ease-in-out" }}
               />
