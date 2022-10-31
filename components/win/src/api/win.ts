@@ -96,7 +96,11 @@ export namespace WinApi {
           }
 
           if (shutdown.timeout === 0) {
-            if (app.overlay && app.overlay.win && !app.overlay.win.isDestroyed()) {
+            if (
+              app.overlay &&
+              app.overlay.win &&
+              !app.overlay.win.isDestroyed()
+            ) {
               app.overlay.win?.close();
               app.overlay.win?.destroy();
             }
