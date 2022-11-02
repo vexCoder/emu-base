@@ -6,7 +6,7 @@ import {
   setWindowRect,
   ShowWindowFlags,
 } from "@utils/ffi";
-import { createWindow, extractMatches, retry } from "@utils/helper";
+import { createWindow, getExeList2, retry } from "@utils/helper";
 import { BrowserWindow, screen } from "electron";
 import IOverlay from "electron-overlay";
 import OVHook from "node-ovhook";
@@ -117,17 +117,6 @@ class OverlayWindow {
           this.win.webContents.sendInputEvent(inputEvent);
         } else if (evt === "graphics.window.event.focus") {
           if (this.started) {
-            if (!args.focused) {
-              setTimeout(() => {
-                const parent = OVHook.getTopWindows().find(
-                  (v) => v.windowId === this.parentHandle
-                );
-                if (!parent) {
-                  this.cleanUp();
-                  this.onDetach?.();
-                }
-              }, 1500);
-            }
             if (args.focused) {
               setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
             }
@@ -165,6 +154,17 @@ class OverlayWindow {
           );
         }
       }
+
+      setTimeout(() => {
+        const parent = OVHook.getTopWindows().find(
+          (v) => v.windowId === this.parentHandle
+        );
+
+        if (!parent) {
+          this.cleanUp();
+          this.onDetach?.();
+        }
+      }, 1500);
     });
   }
 
@@ -218,14 +218,26 @@ class OverlayWindow {
     const exe = await retry(
       async () => {
         const list = listWindows();
+        const testList = await getExeList2();
 
-        const find = list.find(
-          (e) => extractMatches(/retroarch .* .*/gi, e.title, false).length >= 1
+        const filtered2 = testList.filter(
+          (e) => e.name.toLowerCase().indexOf("retroarch") !== -1
+        );
+        const pids = filtered2.map((o) => o.pid);
+        const find2 = list.find(
+          (v) =>
+            pids.includes(v.pid) &&
+            v.title.toLowerCase().indexOf("retroarch") !== -1
         );
 
-        if (!find) throw new Error("Retroarch not found");
+        console.log(
+          filtered2.map((v) => v.name),
+          pids,
+          find2
+        );
+        if (!find2) throw new Error("Retroarch not found");
 
-        return find;
+        return find2;
       },
       100,
       1000

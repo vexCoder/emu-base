@@ -6,7 +6,8 @@ import { JSONFile, Low } from "lowdb";
 import meow from "meow";
 import { join } from "path";
 import * as R from "ramda";
-import { Video } from "scrape-youtube";
+import * as R2 from "rambda";
+import { Video, youtube } from "scrape-youtube";
 
 export const fetchImage = async (url: string) => {
   const test = await got(url, {
@@ -55,6 +56,10 @@ export const getCli = () => {
         type: "string",
         alias: "P",
       },
+      linkOnly: {
+        type: "boolean",
+        alias: "L",
+      },
     },
   });
 
@@ -97,6 +102,7 @@ export const getEmuSettings = () => {
 
 export const getConsoleDump = (consoleName: string) => {
   const pathToDump = getDumpPath(consoleName);
+  console.log(pathToDump);
   fs.ensureDirSync(pathToDump);
   const adapter = new JSONFile<ConsoleGameData[]>(
     join(pathToDump, `dump.json`)
@@ -200,8 +206,47 @@ export const scoreTitlesMusic = (video: Video) => {
   return score;
 };
 
+export const sleep = async (ms: number) =>
+  new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 // export const getRegion = (serial: string) => {
 //   switch(serial.toLowerCase()) {
 //     case "slus":
 //   }
 // }
+
+export const searchMusicVideo = async (keyword: string, console: string) => {
+  const search = `${keyword} ${console} music opening`;
+  const search2 = `${keyword} ${console} ost`;
+  const results = await youtube.search(search);
+  const results2 = await youtube.search(search2);
+
+  const openingVideo = R2.pipe<
+    [Video[]],
+    { item: Video; score: number; scoreMatch: number }[],
+    { item: Video; score: number; scoreMatch: number }[],
+    { item: Video; score: number; scoreMatch: number }[],
+    { item: Video; score: number; scoreMatch: number }[],
+    { item: Video; score: number; scoreMatch: number }
+  >(
+    R2.map((v) => ({
+      item: v,
+      score: 0,
+      scoreMatch: scoreMatchStrings(v.title, keyword),
+    })),
+    R2.filter((v) => v.scoreMatch >= 0.35 && v.item.duration < 300),
+    R2.map((v) => ({
+      ...v,
+      score: scoreTitlesMusic(v.item),
+    })),
+    R2.sort((a, b) => b.score - a.score),
+    R2.head
+  )(results.videos.concat(results2.videos));
+
+  const opening: string = openingVideo
+    ? (R2.path(["item", "link"])(openingVideo) as string)
+    : "";
+
+  return opening;
+};

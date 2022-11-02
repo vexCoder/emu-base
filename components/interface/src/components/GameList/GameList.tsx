@@ -8,10 +8,11 @@ import {
   useInViewport,
   useMemoizedFn,
   useSize,
+  useUpdateEffect,
 } from "ahooks";
 import { nanoid } from "nanoid";
 import { pick, range } from "ramda";
-import { useRef, useEffect } from "react";
+import { useRef } from "react";
 import GameDetails from "./GameDetails";
 import GameImage from "./GameImage";
 
@@ -28,6 +29,7 @@ const selector = (v: MainStore) =>
       "search",
       "selectedIndex",
       "list",
+      "console",
     ],
     v
   );
@@ -57,9 +59,10 @@ const GameList = () => {
 
   const count = size?.width ? Math.ceil(size.width / 200) : 5;
   const storeSet = useMemoizedFn(store.set);
-  useEffect(() => {
-    storeSet({ selectedIndex: 0, maxSelectedIndex: count });
-  }, [store.search, storeSet, count]);
+  useUpdateEffect(() => {
+    const count2 = size?.width ? Math.ceil(size.width / 200) : 5;
+    storeSet({ selectedIndex: 0, maxSelectedIndex: count2 });
+  }, [store.search, storeSet, store.console]);
 
   const tag = store.selected?.opening?.match(
     /^.*(youtu.be\/|v\/|embed\/|watch\?|youtube.com\/user\/[^#]*#([^/]*?\/)*)\??v?=?([^#&?]*).*/
@@ -73,6 +76,7 @@ const GameList = () => {
             focused={focused}
             keyword={store.search}
             selected={store.selectedIndex}
+            console={store.console}
             count={count}
             increaseMax={(n: number) => store.list.incMax(n)}
           />
@@ -102,6 +106,7 @@ interface SegmentProps {
   page?: number;
   selected?: number;
   keyword: string;
+  console: string;
   count?: number;
   increaseMax: (n: number) => void;
 }
@@ -113,6 +118,7 @@ const Segment = ({
   selected = 0,
   increaseMax,
   count = 5,
+  console: cons,
 }: SegmentProps) => {
   const ref = useRef(null);
   const [inViewport] = useInViewport(ref);
@@ -125,8 +131,8 @@ const Segment = ({
   const store = useMainStore(selector);
 
   const { data, loading } = useGetGames({
-    keyword: keyword ?? "final fantasy",
-    console: "ps1",
+    keyword,
+    console: cons,
     limit: count,
     page,
   });
@@ -178,6 +184,7 @@ const Segment = ({
           keyword={keyword}
           selected={selected}
           increaseMax={increaseMax}
+          console={store.console}
         />
       )}
     </>

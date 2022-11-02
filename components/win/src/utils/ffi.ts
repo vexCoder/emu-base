@@ -26,6 +26,7 @@ const user32 = new FFI.Library("user32.dll", {
   GetWindowThreadProcessId: ["long", ["long", "pointer"]],
   GetForegroundWindow: ["long", []],
   GetWindowRect: ["bool", ["long", "pointer"]],
+  GetWindowModuleFileNameA: ["long", ["long", stringPtr, "long"]],
   SetFocus: ["long", ["long"]],
   SetWindowPos: ["bool", ["long", "long", "int", "int", "int", "int", "uint"]],
   SetForegroundWindow: ["bool", ["long"]],
@@ -33,8 +34,15 @@ const user32 = new FFI.Library("user32.dll", {
   AttachThreadInput: ["bool", ["int", "long", "bool"]],
 });
 
+const psapi = new FFI.Library("psapi.dll", {
+  GetProcessImageFileNameA: ["long", ["long", stringPtr, "long"]],
+  GetModuleFileNameExA: ["long", ["long", "long", stringPtr, "long"]],
+});
+
 const kernel32 = new FFI.Library("Kernel32.dll", {
   GetCurrentThreadId: ["int", []],
+  OpenProcess: ["long", ["uint", "bool", "int"]],
+  CloseHandle: ["bool", ["long"]],
 });
 
 // typedef struct tagMOUSEINPUT {
@@ -233,19 +241,43 @@ export const getParentWindow = (handle: number | any) => {
   return parent;
 };
 
+export const getWindowProcessPath = (handle: number | any) => {
+  const windowThreadId = user32.GetWindowThreadProcessId(handle, null);
+  const processHandle = kernel32.OpenProcess(
+    0x0400 | 0x0010,
+    false,
+    windowThreadId
+  );
+  console.log(processHandle);
+  const buf = Buffer.alloc(255);
+  psapi.GetModuleFileNameExA(processHandle, null, buf, 255);
+  const name = ref.readCString(buf, 0);
+  console.log(name);
+  kernel32.CloseHandle(processHandle);
+
+  return name;
+};
+
 export const listWindows = () => {
   const handles: number[] = [];
   const callback = new FFI.Callback("bool", ["long", "int32"], (handle) => {
-    handles.push(handle);
+    const processId = ref.alloc("int");
+    user32.GetWindowThreadProcessId(handle, processId);
+    handles.push({ handle, pid: processId.deref() });
     return true;
   });
 
   user32.EnumWindows(callback, 0);
 
-  const windows: { title: string; handle: number }[] = handles
-    .map((v) => ({
-      title: getWindowText(v),
-      handle: v,
+  const windows: {
+    title: string;
+    handle: number;
+    pid: number;
+  }[] = handles
+    .map(({ handle, pid }) => ({
+      title: getWindowText(handle),
+      handle,
+      pid,
     }))
     .filter((v) => !!v.title.length);
 

@@ -119,7 +119,9 @@ const GameRegionSettings = ({
           }}
           focusLinkKey={focusLinkKey}
           onLinksSave={() => {
-            if (edit) onLinksSave?.(edit);
+            if (edit) {
+              onLinksSave?.(edit);
+            }
           }}
         />
       </Modal>
@@ -175,7 +177,7 @@ const LinksList = ({
 
   const [, execute] = useSetGameLinks();
 
-  const handleSet = () => {
+  const handleSet = async () => {
     const serials = files.map((o) => o.serial);
 
     if (links.length !== serials.length) {
@@ -186,7 +188,7 @@ const LinksList = ({
       return;
     }
 
-    execute(id, serials, links as ParsedLinks[], cons);
+    await execute(id, serials, links as ParsedLinks[], cons);
     onLinksSave?.();
   };
 

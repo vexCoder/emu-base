@@ -178,8 +178,15 @@ const Header = () => {
             console={store.console}
             size="3em"
             className={clsx(
-              focused && btnSelected === 0 && "!fill-focus ",
-              (!focused || btnSelected !== 0) && "!fill-text"
+              focused && btnSelected === 0 && "!fill-focus text-focus ",
+              (!focused || btnSelected !== 0) && "!fill-text text-text ",
+              store.console === "psp" &&
+                focused &&
+                btnSelected === 0 &&
+                "stroke-focus",
+              store.console === "psp" &&
+                (!focused || btnSelected !== 0) &&
+                "stroke-text"
             )}
           />
         </button>
@@ -194,7 +201,7 @@ const Header = () => {
               <MagnifyingGlassIcon
                 className={clsx(
                   "w-[1.5em] h-[1.5em] text-text",
-                  focused && btnSelected === 1 && "!text-focus ",
+                  focused && btnSelected === 1 && "!text-focus",
                   (!focused || btnSelected !== 1) && "!text-text"
                 )}
               />

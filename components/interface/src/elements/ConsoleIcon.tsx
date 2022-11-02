@@ -1,3 +1,5 @@
+import PSPIcon from "@components/Utils/PSP";
+import { pspPath } from "@utils/extra.icons";
 import { useCreation } from "ahooks";
 import { forwardRef } from "react";
 import { siPlaystation } from "simple-icons/icons";
@@ -25,10 +27,28 @@ const ConsoleIcon = forwardRef<SVGSVGElement, ConsoleIconProps>(
         return siPlaystation.path;
       }
 
+      if (cons?.toLowerCase() === "psp") {
+        return pspPath;
+      }
       return null;
     }, [cons]);
 
+    if (cons?.toLowerCase() === "psp") {
+      return (
+        <PSPIcon
+          {...rest}
+          width={size}
+          height={size}
+          color={color}
+          fill={color}
+          stroke={color}
+          ref={ref}
+        />
+      );
+    }
+
     if (!iconPath) return null;
+
     return (
       <svg
         {...rest}

@@ -37,6 +37,9 @@ const ConsoleList = ({ selected, setSelected, onClose }: ConsoleListProps) => {
       btnBottom(setFocus) {
         const sel = consoles[consoleSelected];
         if (sel) {
+          window.data.getConsole(sel).then((v) => {
+            store.set({ console: v.key });
+          });
           setSelected(sel);
           setFocus("game-header");
           onClose();
@@ -54,7 +57,7 @@ const ConsoleList = ({ selected, setSelected, onClose }: ConsoleListProps) => {
   });
 
   return (
-    <div>
+    <div className="v-stack gap-3">
       {consoles.map((v, i) => (
         <Console
           id={v}
@@ -109,7 +112,11 @@ const Console = ({
         <ConsoleIcon
           console={console?.key}
           size="3em"
-          className={clsx(focused && "!fill-focus ", !focused && "!fill-text")}
+          className={clsx(
+            focused && "!fill-focus text-focus",
+            focused && console?.key === "psp" && "stroke-focus",
+            !focused && "!fill-text text-text"
+          )}
         />
       </div>
       <div>

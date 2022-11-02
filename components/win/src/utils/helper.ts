@@ -18,6 +18,7 @@ import {
   sum,
   keys,
   reduce,
+  slice,
 } from "ramda";
 import { findBestMatch } from "string-similarity";
 import execa from "execa";
@@ -99,8 +100,8 @@ export const createWindow = (opts?: CreateWindowOptions) => {
   } = opts ?? {};
 
   const win = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1080,
+    height: 810,
     ...browserOptions,
   });
 
@@ -124,7 +125,7 @@ export const createWindow = (opts?: CreateWindowOptions) => {
   }
 
   const resize = isDev
-    ? () => ({ x: 0, y: 0, width: 800, height: 600 })
+    ? () => ({ x: 0, y: 0, width: 1080, height: 810 })
     : undefined;
 
   if (isRestarted && isDev) {
@@ -175,7 +176,6 @@ export const getSettingsPath = () => {
 
   const path = isDev ? __dirname : join(app.getPath("appData"), "emu-base");
 
-  logToFile({ path });
   ensureDirSync(path);
   return path;
 };
@@ -186,7 +186,6 @@ export const getDumpPath = (consoleName?: string) => {
     ? join(base, "dump", consoleName)
     : join(base, "dump");
 
-  logToFile({ path });
   ensureDirSync(path);
   return path;
 };
@@ -351,6 +350,48 @@ export const substr = (text: string, start: number, end?: number) =>
 export const sumIndices = curry((arr: number[], start: number, end: number) =>
   sum(arr.slice(start, end + 1))
 );
+
+export const getExeList2 = async () => {
+  const proc = await execa("wmic", [
+    "process",
+    "get",
+    "name,description,handle,ProcessId",
+  ]);
+
+  type ExeData = {
+    name: string;
+    handle: number;
+    exe: string;
+    pid: number;
+  };
+
+  const res = pipe<
+    [string],
+    string[],
+    string[][],
+    string[][],
+    string[][],
+    ExeData[]
+  >(
+    split(/(\r\n|\n)/),
+    map((x) =>
+      x
+        .split("  ")
+        .map((o) => o.trim())
+        .filter((v) => v.length >= 1)
+    ),
+    (v) => filter((o) => o.length >= 1, v),
+    slice(1, Infinity),
+    map((v) => ({
+      name: v[0],
+      handle: parseInt(v[1] ?? "-1", 10),
+      exe: v[2],
+      pid: parseInt(v[3] ?? "-1", 10),
+    }))
+  )(proc.stdout);
+
+  return res;
+};
 
 export const getExeList = async () => {
   const proc = await execa(`tasklist`, ["/v"]);

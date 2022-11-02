@@ -264,12 +264,12 @@ export namespace DataApi {
       if (!value) return false;
 
       let newMappings = {};
-      mappings.set(`${value.id}`, {}).write();
       for (let i = 0; i < serials.length; i++) {
         const serial = serials[i];
-        mappings.set(`${value.id}.${serial}`, links[i]).write();
         newMappings = { ...newMappings, [serial]: links[i] };
       }
+
+      mappings.set(`${value.id}`, newMappings).write();
 
       return newMappings;
     }

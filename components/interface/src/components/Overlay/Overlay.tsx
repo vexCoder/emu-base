@@ -265,7 +265,7 @@ const OverlayContent = () => {
   });
 
   return (
-    <div className="relative w-[100vw] h-[100vh] p-4">
+    <div className="relative w-[100vw] h-[100vh] p-4 cursor-none">
       <OverlayPerformance />
       <OverlayMenu />
       <OverlayStates />
