@@ -11,6 +11,7 @@ export default ({ mode }: ConfigEnv) => {
   process.env = { ...process.env, ...loadEnv(mode, process.cwd()) };
 
   const isProd = mode === "production";
+  console.log(mode)
 
   const env: Record<string, string | undefined> = {};
   if (isProd) {
@@ -62,9 +63,25 @@ export default ({ mode }: ConfigEnv) => {
   
   if (!isProd) plugins.push(inspect());
 
+  plugins.push({
+    name: "middleware",
+    apply: "serve",
+    configureServer(viteDevServer) {
+      return () => {
+        viteDevServer.middlewares.use(async (req, res, next) => {
+          if (req.originalUrl.startsWith("/overlay")) {
+            req.url = "/overlay/index.html";
+          }
+
+          next();
+        });
+      };
+    }
+  })
+
+  console.log(path.resolve(__dirname, "assets"))
   return defineConfig({
     plugins,
-    publicDir: "./public",
     ...(isProd && { define: env, base: './' }),
     resolve: {
       dedupe: ["react", "react-dom"],

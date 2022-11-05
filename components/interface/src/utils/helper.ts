@@ -91,3 +91,11 @@ export const cycleCounter = (value: number, min: number, max: number) => {
   if (value > max) return min;
   return value;
 };
+
+export const extractTag = (url: string) => {
+  const tag = url?.match(
+    /^.*(youtu.be\/|v\/|embed\/|watch\?|youtube.com\/user\/[^#]*#([^/]*?\/)*)\??v?=?([^#&?]*).*/
+  )?.[3];
+
+  return tag;
+};

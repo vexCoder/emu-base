@@ -16,7 +16,7 @@ const ConsoleList = ({ selected, setSelected, onClose }: ConsoleListProps) => {
   const [consoles, setConsoles] = useState<string[]>([]);
   const [consoleSelected, consoleActions] = useCounter(0, {
     min: 0,
-    max: consoles.length ?? 0,
+    max: consoles.length ? consoles.length - 1 : 0,
   });
 
   useMount(() => {
@@ -39,10 +39,10 @@ const ConsoleList = ({ selected, setSelected, onClose }: ConsoleListProps) => {
         if (sel) {
           window.data.getConsole(sel).then((v) => {
             store.set({ console: v.key });
+            setSelected(sel);
+            setFocus("game-header");
+            onClose();
           });
-          setSelected(sel);
-          setFocus("game-header");
-          onClose();
         }
       },
       btnRight(setFocus) {
@@ -114,8 +114,8 @@ const Console = ({
           size="3em"
           className={clsx(
             focused && "!fill-focus text-focus",
-            focused && console?.key === "psp" && "stroke-focus",
-            !focused && "!fill-text text-text"
+            !focused && "!fill-text text-text",
+            selected && !focused && "!fill-highlight text-highlight"
           )}
         />
       </div>

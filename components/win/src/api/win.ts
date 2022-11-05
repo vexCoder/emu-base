@@ -96,19 +96,6 @@ export namespace WinApi {
           }
 
           if (shutdown.timeout === 0) {
-            if (
-              app.overlay &&
-              app.overlay.win &&
-              !app.overlay.win.isDestroyed()
-            ) {
-              app.overlay.win?.close();
-              app.overlay.win?.destroy();
-            }
-
-            if (app.win) {
-              app.win?.close();
-            }
-
             execa("shutdown", ["/s", "/t", "0"]);
           } else {
             const msg = `Shutting down in ${shutdown.timeout - 1} seconds`;

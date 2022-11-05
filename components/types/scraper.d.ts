@@ -9,6 +9,8 @@ interface GameConsole {
   name: string;
   gameDb: string;
   parts: string[];
+  core: string;
+  description: string;
 }
 
 interface ResultLinks {
@@ -160,4 +162,38 @@ interface AppSettings {
   favorites?: string[];
   recentSearch?: string[];
   display?: number;
+}
+
+interface Result {
+  id: string;
+  title: string;
+  link: string;
+  thumbnail: string;
+  channel: Channel;
+}
+interface Video extends Result {
+  views: number;
+  uploaded: string;
+  duration: number;
+  description: string;
+}
+
+type TGDBResult = Pick<
+ConsoleGameData,
+| "description"
+| "publisher"
+| "developer"
+| "released"
+| "cover"
+| "ratings"
+| "genre"
+| "screenshots"
+> & { id: string; name: string }
+
+type ProgressData = {
+  completedFiles:number;
+  totalFiles: number;
+  totalSize: number;
+  percent: number;
+  completedSize: number;
 }

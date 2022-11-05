@@ -16,6 +16,7 @@ const useGetGame = ({ console: cons, id }: UseGetGameParams) => {
   const res = useRequest(() => getGame(id, cons), {
     refreshDeps: [id, cons],
     cacheKey: `game-${id}-${cons}`,
+    cacheTime: 1000 * 60 * 60 * 24,
   });
 
   return res;

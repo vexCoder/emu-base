@@ -72,6 +72,7 @@ const handleMenu = (
     }
 
     if (prev.focus === 3) {
+      if (prev.console === "ps2") return prev;
       window.emulator.toggleTurbo();
       return prev;
     }
@@ -88,6 +89,7 @@ const handleMenu = (
     }
 
     if (prev.focus === 0) {
+      if (prev.console === "ps2") return prev;
       return { ...prev, route: "states" };
     }
   }

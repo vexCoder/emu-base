@@ -104,9 +104,20 @@ const Header = () => {
   };
 
   const handleChange = (v: string) => {
-    setFocus(store.lastFocused ?? "game-header");
-    toggleSearch.set(false);
     store.set({ search: v });
+    toggleSearch.set(false);
+    setTimeout(() => {
+      setFocus(
+        store.lastFocused !== "game-search"
+          ? store.lastFocused ?? "game-header"
+          : "game-header"
+      );
+    }, 100);
+  };
+
+  const handleClose = () => {
+    toggleSearch.set(false);
+    setFocus(store.lastFocused ?? "game-header");
   };
 
   useEffect(() => {
@@ -141,12 +152,9 @@ const Header = () => {
             placeholder="Enter Game Title"
             value={store.search}
             focusKey="game-search"
-            onClose={() => {
-              setFocus("game-header");
-              toggleSearch.set(false);
-            }}
             onInputChange={handleInputChange}
             onChange={handleChange}
+            onClose={handleClose}
           />
         </div>,
         document.body
@@ -179,14 +187,7 @@ const Header = () => {
             size="3em"
             className={clsx(
               focused && btnSelected === 0 && "!fill-focus text-focus ",
-              (!focused || btnSelected !== 0) && "!fill-text text-text ",
-              store.console === "psp" &&
-                focused &&
-                btnSelected === 0 &&
-                "stroke-focus",
-              store.console === "psp" &&
-                (!focused || btnSelected !== 0) &&
-                "stroke-text"
+              (!focused || btnSelected !== 0) && "!fill-text text-text "
             )}
           />
         </button>
@@ -194,7 +195,11 @@ const Header = () => {
         <div className="h-stack gap-4">
           <div className="h-stack items-center">
             <button
-              className="h-stack items-center gap-2 py-1 px-2 rounded-full bg-secondary/10"
+              className={clsx(
+                "h-stack items-center gap-2 h-[3em] py-1 px-4 rounded-full bg-secondary/10",
+                focused && btnSelected === 1 && "border-2 border-focus",
+                (!focused || btnSelected !== 1) && "border-2 border-transparent"
+              )}
               type="button"
               onClick={() => toggleSearch.set(true)}
             >

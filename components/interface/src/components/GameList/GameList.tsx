@@ -5,14 +5,15 @@ import { MainStore, useMainStore } from "@utils/store.utils";
 import {
   useCreation,
   useDeepCompareEffect,
-  useInViewport,
   useMemoizedFn,
   useSize,
+  useToggle,
   useUpdateEffect,
 } from "ahooks";
 import { nanoid } from "nanoid";
 import { pick, range } from "ramda";
 import { useRef } from "react";
+import GameBackgroundImages from "./GameBackgroundImages";
 import GameDetails from "./GameDetails";
 import GameImage from "./GameImage";
 
@@ -39,7 +40,7 @@ const GameList = () => {
   const size = useSize(ref);
 
   const store = useMainStore(selector);
-  const { focused } = useNavigate("game-list", {
+  const { focused, current } = useNavigate("game-list", {
     // autoFocus: true,
     actions: {
       left() {
@@ -85,6 +86,7 @@ const GameList = () => {
 
       <GameDetails />
 
+      <div className="fixed bg-black/20 w-[18rem] h-[100vh] top-0 left-[10rem] z-[-5]" />
       {/* {store.selected && (
         <div className="absolute left-[48rem] top-[24rem] w-[40vw] text-text">
           <RenderString
@@ -96,7 +98,11 @@ const GameList = () => {
         </div>
       )} */}
 
-      {tag && tag.length && !store.disc && <YoutubeAudio tag={tag} />}
+      {current !== "game-troubleshoot-opening" &&
+        tag &&
+        tag.length &&
+        !store.disc && <YoutubeAudio tag={tag} />}
+      {store.selected && <GameBackgroundImages />}
     </div>
   );
 };
@@ -120,8 +126,7 @@ const Segment = ({
   count = 5,
   console: cons,
 }: SegmentProps) => {
-  const ref = useRef(null);
-  const [inViewport] = useInViewport(ref);
+  const [isInViewport, toggle] = useToggle(false);
 
   const items = useCreation<string[]>(
     () => range(0, count).map(() => `${Segment.name}-${nanoid()}`),
@@ -156,28 +161,44 @@ const Segment = ({
     }
   }, [loading, selected, data]);
 
+  const handleViewport = useMemoizedFn((check: boolean) => {
+    toggle.set(check);
+  });
+
   const showCheck = selected >= (page + 1) * count;
 
   return (
     <>
       {items.map((v, i) => {
         const game = data?.res?.[i];
+
+        const idx = baseIndex + i;
+        const isActive = selected === idx;
+
+        // positioning
+        const index = idx + 1 - selected;
+        const base = index >= 2 ? 7 : -3;
+        const gap = 12;
+        const left = base + index * gap;
+
+        const isRef = i === items.length - 1;
+
         return (
           <GameImage
             focused={focused}
             key={game?.id ?? v}
-            game={game}
-            segmentLength={items.length}
-            baseIndex={baseIndex}
-            index={i}
-            selected={selected}
+            cover={game?.cover}
+            unique={game?.unique}
+            isRef={isRef}
+            isActive={isActive}
+            left={left}
             loading={loading}
-            {...(i === items.length - 1 && { ref })}
+            onViewport={handleViewport}
           />
         );
       })}
 
-      {(inViewport || showCheck) && !loading && !!data?.hasNext && (
+      {(isInViewport || showCheck) && !loading && !!data?.hasNext && (
         <Segment
           focused={focused}
           page={page + 1}

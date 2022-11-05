@@ -28,7 +28,8 @@ const ModalComponent = ({
   title,
   open,
   children,
-  handleClose: _handleClose,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  handleClose,
   duration = 0.35,
   ease = "easeInOut",
   className,
@@ -38,10 +39,6 @@ const ModalComponent = ({
   const ref = useRef<HTMLDivElement>(null);
 
   const latestOpen = useLatest(open);
-
-  const handleClose = () => {
-    _handleClose?.();
-  };
 
   return (
     <section
@@ -67,11 +64,6 @@ const ModalComponent = ({
               delay: (duration * 1) / 3,
               duration: (duration * 2) / 3,
               ease,
-            }}
-            onClick={() => {
-              if (transitioned && latestOpen.current) {
-                handleClose();
-              }
             }}
             onAnimationComplete={() => {
               if (!latestOpen.current) {

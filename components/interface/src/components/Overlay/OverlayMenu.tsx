@@ -14,22 +14,29 @@ import _ from "lodash";
 const OverlayMenuContent = () => {
   const store = useOverlayStore();
 
+  const disabled = ["ps2"].indexOf(store.console ?? "") > -1;
   return (
     <div className="v-stack gap-2">
       <button
         className={clsx(
           "overlay-menu-button",
-          store.focus === 0 && "bg-highlight/20"
+          store.focus === 0 && "bg-highlight/20",
+          disabled && "border-gray-400/10"
         )}
         type="button"
       >
         <div className="h-stack items-center gap-2">
           <BookmarkSquareIcon
-            className="text-text text-xl"
+            className={clsx(
+              "text-text text-xl",
+              disabled && "!text-gray-400/10"
+            )}
             width="1em"
             height="1em"
           />
-          <p className="text-lg">Save/Load</p>
+          <p className={clsx("text-lg", disabled && "!text-gray-400/10")}>
+            Save/Load
+          </p>
         </div>
       </button>
       <button
@@ -102,7 +109,8 @@ const OverlayMenuContent = () => {
         className={clsx(
           "overlay-menu-button",
           store.focus === 3 && "bg-highlight/20",
-          store.disableTurbo && "text-gray-400/50 border-gray-400/40"
+          store.disableTurbo && "text-gray-400/10 border-gray-400/10",
+          disabled && "text-gray-400/10 border-gray-400/10"
         )}
         type="button"
         disabled={store.disableTurbo}
@@ -111,7 +119,8 @@ const OverlayMenuContent = () => {
           <ForwardIcon
             className={clsx(
               "text-text text-xl",
-              store.disableTurbo && "text-gray-400/50"
+              store.disableTurbo && "text-gray-400/10",
+              disabled && "text-gray-400/10"
             )}
             width="1.25rem"
             height="1.25rem"
@@ -122,7 +131,8 @@ const OverlayMenuContent = () => {
               "ml-auto font-bold text-lg",
               store.turbo && "text-green-400",
               !store.turbo && "text-red-400",
-              store.disableTurbo && "text-gray-400/50"
+              store.disableTurbo && "text-gray-400/10",
+              disabled && "text-gray-400/10 border-gray-400/10"
             )}
           >
             {store.turbo ? "On" : "Off"}

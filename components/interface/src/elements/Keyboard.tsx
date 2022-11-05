@@ -34,9 +34,17 @@ const useCoordinate = () => {
 
 const keyMap = [
   `esc|1|2|3|4|5|6|7|8|9|0|-|bck`.split("|"),
+  `q|w|e|r|t|y|u|i|o|p|p|p|p`.split("|"),
+  `a|s|d|f|g|h|j|k|l|enter|enter|enter|enter`.split("|"),
+  `lshf|,|z|x|c|v|b|n|m|?|.|rshf|rshf`.split("|"),
+  `spc|spc|spc|spc|spc|spc|spc|pst|clr|clr|done|done|done`.split("|"),
+];
+
+const keyRender = [
+  `esc|1|2|3|4|5|6|7|8|9|0|-|bck`.split("|"),
   `q|w|e|r|t|y|u|i|o|p`.split("|"),
   `a|s|d|f|g|h|j|k|l|enter`.split("|"),
-  `shf|,|z|x|c|v|b|n|m|?|.|shf`.split("|"),
+  `lshf|,|z|x|c|v|b|n|m|?|.|rshf`.split("|"),
   `spc|pst|clr|done`.split("|"),
 ];
 
@@ -57,8 +65,6 @@ const Keyboard = ({
 
   const hasRecent = recent && recent.length;
   const baseY = hasRecent ? 1 : 0;
-  let newKeyMap = [...keyMap];
-  if (hasRecent) newKeyMap = [recent, ...newKeyMap];
 
   useEffect(() => {
     if (initialValue) setValue(initialValue);
@@ -73,38 +79,142 @@ const Keyboard = ({
   const { focused } = useNavigate(focusKey ?? "game-keyboard", {
     actions: {
       left() {
-        set(cycleCounter(x - 1, 0, newKeyMap[y].length - 1), y);
+        const isRecent = y === 0 && !!hasRecent;
+        if (!isRecent)
+          set(cycleCounter(x - 1, 0, keyRender[y - baseY].length - 1), y);
+        if (isRecent && recent)
+          set(cycleCounter(x - 1, 0, recent.length - 1), y);
       },
       right() {
-        set(cycleCounter(x + 1, 0, newKeyMap[y].length - 1), y);
+        const isRecent = y === 0 && !!hasRecent;
+        if (!isRecent)
+          set(cycleCounter(x + 1, 0, keyRender[y - baseY].length - 1), y);
+        if (isRecent && recent)
+          set(cycleCounter(x + 1, 0, recent.length - 1), y);
       },
       up() {
         const idx = cycleCounter(y - 1, 0, 4 + baseY);
         // const newX = Math.min(x, keyMap[idx].length - 1);
-        const newX = Math.floor(
-          (x / newKeyMap[y].length) * newKeyMap[idx].length
-        );
-        set(newX, idx);
+        // const newX = Math.floor(
+        //   (x / newKeyMap[y].length) * newKeyMap[idx].length
+        // );
+        const isRecent = idx === 0 && !!hasRecent;
+        const isRecentOut = y === 0 && !!hasRecent;
+        const keySub = hasRecent ? 1 : 0;
+
+        if (idx < 0) return;
+
+        if (isRecent) {
+          const newX = Math.floor(
+            (x / keyMap[y - keySub].length) * recent.length
+          );
+
+          set(newX, idx);
+        } else if (isRecentOut) {
+          const newX = Math.floor(
+            (x / keyMap[idx - keySub].length) * recent.length
+          );
+
+          set(newX, idx);
+        } else {
+          const currX = keyMap[idx - keySub + 1].findIndex(
+            (key) => key === keyRender[idx - keySub + 1][x]
+          );
+          const currentKey = keyMap[idx - keySub + 1][currX];
+          const currentDuplicates = keyMap[idx - keySub + 1].filter(
+            (key) => key === currentKey
+          );
+          const isCurrDup = currentDuplicates.length > 1;
+          const last = keyMap[idx - keySub + 1].lastIndexOf(currentKey);
+          const first = keyMap[idx - keySub + 1].indexOf(currentKey);
+          const range = last - first;
+
+          const newKey = keyMap[idx - keySub][isCurrDup ? last : currX];
+          const duplicates = keyMap[idx - keySub].filter(
+            (key) => key === newKey
+          );
+          const isNewDup = duplicates.length > 1;
+
+          let newX = x;
+          if (isNewDup)
+            newX = keyRender[idx - keySub].findIndex((key) => key === newKey);
+          if (!isNewDup && !isCurrDup)
+            newX = keyRender[idx - keySub].findIndex((key) => key === newKey);
+          if (!isNewDup && isCurrDup) newX = first + Math.floor(range / 2);
+          if (newX === -1) newX = 0;
+
+          set(newX, idx);
+        }
       },
       bottom() {
         const idx = cycleCounter(y + 1, 0, 4 + baseY);
         // const newX = Math.min(x, keyMap[idx].length - 1);
-        const max = newKeyMap[idx].length;
-        const newX = Math.floor((x / newKeyMap[y].length) * max);
-        set(newX, cycleCounter(y + 1, 0, 4 + baseY));
+        // const max = newKeyMap[idx].length;
+        // const newX = Math.floor((x / newKeyMap[y].length) * max);
+        const isRecent = idx === 0 && !!hasRecent;
+        const isRecentOut = y === 0 && !!hasRecent;
+        const keySub = hasRecent ? 1 : 0;
+
+        if (idx > 4 + baseY) return;
+
+        if (isRecent) {
+          const newX = Math.floor(
+            (x / keyMap[y - keySub].length) * recent.length
+          );
+
+          set(newX, idx);
+        } else if (isRecentOut) {
+          const newX = Math.floor((x / keyMap[idx].length) * recent.length);
+
+          set(newX, idx);
+        } else {
+          const currX = keyMap[idx - keySub - 1].findIndex(
+            (key) => key === keyRender[idx - keySub - 1][x]
+          );
+          const currentKey = keyMap[idx - keySub - 1][currX];
+          const currentDuplicates = keyMap[idx - keySub - 1].filter(
+            (key) => key === currentKey
+          );
+          const isCurrDup = currentDuplicates.length > 1;
+          const first = keyMap[idx - keySub - 1].indexOf(currentKey);
+          const last = keyMap[idx - keySub - 1].lastIndexOf(currentKey);
+          const range = last - first;
+
+          const newKey = keyMap[idx - keySub][isCurrDup ? last : currX];
+          const duplicates = keyMap[idx - keySub].filter(
+            (key) => key === newKey
+          );
+          const isNewDup = duplicates.length > 1;
+
+          let newX = x;
+          if (isNewDup)
+            newX = keyRender[idx - keySub].findIndex((key) => key === newKey);
+          if (!isNewDup && !isCurrDup)
+            newX = keyRender[idx - keySub].findIndex((key) => key === newKey);
+          if (!isNewDup && isCurrDup) newX = first + Math.floor(range / 2);
+          if (newX === -1) newX = 0;
+
+          set(newX, idx);
+        }
       },
       btnRight() {
-        handleButton("bck");
+        handleButton("bck", false);
       },
       btnBottom() {
-        const mapVal = newKeyMap[y][x];
+        const idY = y - baseY;
+
+        if (idY === -1 && recent && recent[x]) {
+          handleButton(recent[x], true);
+        }
+        const mapVal = keyRender[idY][x];
+
         handleButton(mapVal);
       },
     },
   });
 
-  const handleButton = (val: string) => {
-    if (y === 0 && hasRecent) {
+  const handleButton = (val: string, useRecent = false) => {
+    if (y === 0 && hasRecent && useRecent) {
       setValue(val);
       return;
     }
@@ -117,7 +227,7 @@ const Keyboard = ({
       setValue((prev) => `${prev} `);
     } else if (val === "enter") {
       setValue((prev) => `${prev}\n`);
-    } else if (val === "shf") {
+    } else if (val === "rshf" || val === "lshf") {
       setShift((prev) => !prev);
       return;
     } else if (val === "pst") {
@@ -173,7 +283,7 @@ const Keyboard = ({
         </div>
       )}
       <div className="flex flex-row">
-        {keyMap[0].map((v, i) => (
+        {keyRender[0].map((v, i) => (
           <button
             type="button"
             key={v}
@@ -206,7 +316,7 @@ const Keyboard = ({
         ))}
       </div>
       <div className="flex flex-row">
-        {keyMap[1].map((v, i) => (
+        {keyRender[1].map((v, i) => (
           <button
             type="button"
             key={v}
@@ -231,7 +341,7 @@ const Keyboard = ({
         ))}
       </div>
       <div className="flex flex-row">
-        {keyMap[2].map((v, i) => (
+        {keyRender[2].map((v, i) => (
           <button
             type="button"
             key={v}
@@ -272,7 +382,7 @@ const Keyboard = ({
         ))}
       </div>
       <div className="flex flex-row">
-        {keyMap[3].map((v, i) => (
+        {keyRender[3].map((v, i) => (
           <button
             type="button"
             // eslint-disable-next-line react/no-array-index-key
@@ -293,7 +403,11 @@ const Keyboard = ({
                 shift && v === "shf" && "bg-focus"
               )}
             >
-              {v === "shf" ? <ArrowUpIcon width="1em" height="1em" /> : v}
+              {v === "lshf" || v === "rshf" ? (
+                <ArrowUpIcon width="1em" height="1em" />
+              ) : (
+                v
+              )}
             </p>
           </button>
         ))}

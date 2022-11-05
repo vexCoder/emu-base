@@ -79,7 +79,7 @@ export const getDescriptions = async (gc: GameConsole) => {
   console.log(gc.name);
   const db = getConsoleDump(gc.name);
   await db.read();
-  db.data ||= [];
+  db.data = [];
 
   const x = Xray();
   const listingsURL = `https://psxdatacenter.com/psx2/ulist2.html`;

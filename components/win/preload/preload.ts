@@ -1,5 +1,9 @@
 import { bind } from "./make";
 
+bind("debug", (h, invoker) => {
+  h("log", invoker);
+});
+
 bind("win", (h, invoker) => {
   h("minimize", invoker);
   h("maximize", invoker);
@@ -40,6 +44,11 @@ bind("data", (h, invoker) => {
   h("getGlobalSettings", invoker);
   h("setGlobalSettings", invoker);
   h("toggleFavorite", invoker);
+  h("getOpenings", invoker);
+  h("setOpening", invoker);
+  h("searchTGDB", invoker);
+  h("migrate", invoker);
+  h("queryMigrateProgress", invoker);
 });
 
 bind("emulator", (h, invoker, listener) => {

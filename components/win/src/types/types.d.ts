@@ -1,4 +1,5 @@
 interface Application {
+  icon: string;
   win?: import('electron').BrowserWindow;
   overlay?: import('../overlay').default;
   emulator?: import('../emulator').default;

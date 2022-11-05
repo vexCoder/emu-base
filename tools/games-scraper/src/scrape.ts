@@ -10,6 +10,7 @@ const scrape = async (cli: CLISettings) => {
   await pMap(consoles, async (consoleName) => {
     const c = config.consoles[consoleName];
     if (!platforms.includes(c.name)) return;
+
     const linksDb = getConsoleLinks(consoleName);
 
     await linksDb.read();

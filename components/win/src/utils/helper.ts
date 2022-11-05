@@ -20,10 +20,13 @@ import {
   reduce,
   slice,
 } from "ramda";
+import * as R2 from "ramda";
+import * as R from "rambda";
 import { findBestMatch } from "string-similarity";
 import execa from "execa";
 import _ from "lodash";
 import dayjs from "dayjs";
+import { youtube } from "scrape-youtube";
 import { setActiveWindow, ShowWindowFlags } from "./ffi";
 
 export interface WinSettings {
@@ -73,6 +76,13 @@ export const logToFile = async (msg: any) => {
   );
   let msgString = msg;
   if (typeof msg === "object") msgString = JSON.stringify(msg);
+  if (msg instanceof Error)
+    msgString = JSON.stringify({
+      name: msg.name,
+      message: msg.message,
+      stack: msg.stack,
+    });
+
   await fs.appendFile(
     logPath,
     `${dayjs().format("HH:mm:ss")}::${msgString}\n`,
@@ -113,6 +123,7 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     logToFile(opts?.urlOrPath);
     const isUrl = opts.urlOrPath.startsWith("http");
     logToFile({ isUrl });
+    console.log({ isUrl, url: opts.urlOrPath });
     if (isUrl) win.loadURL(opts.urlOrPath);
     if (!isUrl) win.loadFile(opts.urlOrPath);
   } else if (isDev) {
@@ -180,11 +191,13 @@ export const getSettingsPath = () => {
   return path;
 };
 
-export const getDumpPath = (consoleName?: string) => {
-  const base = getSettingsPath();
-  const path = consoleName
-    ? join(base, "dump", consoleName)
-    : join(base, "dump");
+export const getDumpPath = (consoleName?: string, root?: string) => {
+  const isDev = process.env.NODE_ENV === "development";
+  const settingsPath = join(getSettingsPath(), "dump");
+  const base = isDev ? settingsPath : root ?? settingsPath;
+  const path = consoleName ? join(base, consoleName) : join(base);
+
+  console.log(path);
 
   ensureDirSync(path);
   return path;
@@ -213,7 +226,9 @@ export const getDiscMappings = async (consoleName: string) => {
 };
 
 export const getConsoleDump = async (consoleName: string) => {
-  const pathToDump = getDumpPath(consoleName);
+  const settings = await getEmuSettings();
+  const dumpRoot = settings.get("pathing.dump").value();
+  const pathToDump = getDumpPath(consoleName, dumpRoot);
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<ConsoleGameData[]>(
     join(pathToDump, `dump.json`)
@@ -224,7 +239,9 @@ export const getConsoleDump = async (consoleName: string) => {
 };
 
 export const getConsoleLinks = async (consoleName: string) => {
-  const pathToDump = getDumpPath(consoleName);
+  const settings = await getEmuSettings();
+  const dumpRoot = settings.get("pathing.dump").value();
+  const pathToDump = getDumpPath(consoleName, dumpRoot);
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<ConsoleLinks>(join(pathToDump, `links.json`));
   const db = await low(adapter);
@@ -270,7 +287,7 @@ export const scoreMatchStrings = (
 export const getDisplayById = (id?: number) => {
   const displays = screen.getAllDisplays();
   const display = displays.find((d) => d.id === id);
-  return display;
+  return display ?? displays[0];
 };
 
 export const getDisplayByIndex = (idx: number) => {
@@ -351,7 +368,7 @@ export const sumIndices = curry((arr: number[], start: number, end: number) =>
   sum(arr.slice(start, end + 1))
 );
 
-export const getExeList2 = async () => {
+export const getExeList2 = async (filterNames?: string[]) => {
   const proc = await execa("wmic", [
     "process",
     "get",
@@ -390,7 +407,11 @@ export const getExeList2 = async () => {
     }))
   )(proc.stdout);
 
-  return res;
+  const filtered = res.filter((v) =>
+    (filterNames ?? []).find((o) => v.name.toLowerCase().indexOf(o) >= 0)
+  );
+
+  return filtered;
 };
 
 export const getExeList = async () => {
@@ -586,4 +607,107 @@ export const getDriveList = async () => {
   });
 
   return res;
+};
+
+export const scoreTitlesMusic = (video: Video) => {
+  const cleanedString = R.pipe(
+    R.toLower,
+    R.replace(/([^a-z0-9 ])/g, ""),
+    R.trim
+  )(video.title);
+
+  const priority: Record<string, number> = {
+    "ost|prelude": 3,
+    opening: 0.75,
+    "intro|title": 0.5,
+    "jukebox|theme|track|music": 0.5,
+    "main menu": 0.25,
+    "ps1|playstation": 0.25,
+    hd: 0.25,
+    "1|01|2|02|3|03|4|04|5|05": 0.2,
+  };
+
+  const avoid = [
+    "remake",
+    "longplay",
+    "gameplay",
+    "fmv",
+    "loop",
+    "full game",
+    "long play",
+    "game play",
+    "extended",
+  ];
+
+  const score = R.keys(priority).reduce((acc, curr) => {
+    const check = curr
+      .split("|")
+      .some((v) => cleanedString.split(" ").includes(v));
+    if (check) {
+      return acc + priority[curr];
+    }
+
+    return acc;
+  }, 0);
+
+  // console.log(video.title, score, matched);
+
+  const avoided = avoid.some((a) => cleanedString.indexOf(a) > -1);
+
+  if (avoided) {
+    return 0;
+  }
+
+  return score;
+};
+
+export const searchMusicVideo = async (keyword: string, cons: string) => {
+  const search = `${keyword} ${cons} music opening`;
+  const search2 = `${keyword} ${cons} ost`;
+  const results = await youtube.search(search);
+  const results2 = await youtube.search(search2);
+  const merge = results.videos.concat(results2.videos);
+
+  const uniquesIds = R2.pipe<
+    [Video[]],
+    Record<string, Video[]>,
+    any,
+    any,
+    any,
+    string[]
+  >(
+    R.groupBy(R.prop("id")),
+    (v) => R2.map(R.pluck("id"), v),
+    R2.map(R2.flatten),
+    R2.map(R.uniq),
+    R2.keys
+  )(merge);
+
+  const uniques = uniquesIds
+    .map((id) => merge.find((v) => v.id === id))
+    .filter(Boolean) as Video[];
+
+  const videos = R2.pipe<
+    [Video[]],
+    { item: Video; score: number; scoreMatch: number }[],
+    { item: Video; score: number; scoreMatch: number }[],
+    { item: Video; score: number; scoreMatch: number }[],
+    { item: Video; score: number; scoreMatch: number }[],
+    Video[]
+  >(
+    R2.map((v) => ({
+      item: v,
+      score: 0,
+      scoreMatch: scoreMatchStrings(v.title, keyword),
+    })),
+    R.filter((v) => v.scoreMatch >= 0.35 && v.item.duration < 300),
+    R.map((v) => ({
+      ...v,
+      score: scoreTitlesMusic(v.item),
+    })),
+    R2.sort((a, b) => b.score - a.score),
+    R.map((v) => v.item)
+  )(uniques);
+
+  return videos;
 };

@@ -16,6 +16,7 @@ type FilePickerProps = BaseProps &
     focusKey?: string;
     onClose?: () => void;
     onChange?: (p: FileItem) => void;
+    onCloseChange?: (p: FileItem) => void;
   };
 
 const FilePicker = ({
@@ -24,6 +25,7 @@ const FilePicker = ({
   focusKey,
   onClose,
   onChange,
+  onCloseChange,
 }: FilePickerProps) => {
   const ref = useRef<HTMLDivElement>(null);
 
@@ -139,13 +141,16 @@ const FilePicker = ({
               .slice(0, -1)
               .join("/");
 
-            const fileItem: FileItem | undefined = newPath
-              ? {
-                  isDirectory: true,
-                  name: newPath.split("/").slice(-1)[0],
-                  path: newPath,
-                }
-              : undefined;
+            const isRoot = !/\/\/|\\|\\\\|\//g.exec(newPath ?? "");
+
+            const fileItem: FileItem | undefined =
+              !isRoot && newPath
+                ? {
+                    isDirectory: true,
+                    name: newPath.split("/").slice(-1)[0],
+                    path: newPath,
+                  }
+                : undefined;
 
             if (fileItem) onChange?.(fileItem);
             if (newPath !== selected?.path) {
@@ -178,6 +183,7 @@ const FilePicker = ({
       },
       btnRight() {
         onClose?.();
+        if (selected) onCloseChange?.(selected);
       },
     },
   });

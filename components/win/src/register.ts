@@ -2,6 +2,7 @@
 import { DataApi } from "@api/data";
 import { WinApi } from "@api/win";
 import { Handlers } from "@utils/handlers";
+import { logToFile } from "@utils/helper";
 import fs from "fs-extra";
 import nodePath from "path";
 
@@ -10,6 +11,10 @@ export const MountDataHandles = (app: Application) => {
   // NOTE attach handlers for preload scripts
   const Data = new DataApi.Resolver();
   const Win = new WinApi.Resolver();
+
+  Handlers.register("debug", "log", async (_evt, data) => {
+    logToFile(data);
+  });
 
   Handlers.register(
     "win",
@@ -83,6 +88,22 @@ export const MountDataHandles = (app: Application) => {
 
   Handlers.register("data", "setGame", async (_evt, id, cns, data) =>
     Data.setGame({ id, console: cns, data })
+  );
+
+  Handlers.register("data", "getOpenings", async (_evt, id, cns) =>
+    Data.getGameOpenings({ id, console: cns })
+  );
+
+  Handlers.register("data", "searchTGDB", async (_evt, keyword, cns) =>
+    Data.searchTGDB({ keyword, console: cns })
+  );
+
+  Handlers.register("data", "migrate", async (_evt, path) =>
+    Data.migrate(path)
+  );
+
+  Handlers.register("data", "queryMigrateProgress", async (_evt, path) =>
+    Data.migrate(path)
   );
 
   Handlers.register("data", "getGameFiles", async (_evt, id, cons) =>

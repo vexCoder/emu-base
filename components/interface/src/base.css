@@ -17,6 +17,10 @@
     outline: none;
   }
 
+* {
+  cursor: none;
+}
+
   .scroll1::-webkit-scrollbar {
     width: 5px;
   }
@@ -92,23 +96,23 @@
   }
 
   .game-item-image-selected {
-    @apply w-[20rem] h-[20rem] rounded-xl;
+    @apply rounded-xl;
   }
 
   .game-item-image-unselected {
-    @apply w-[10rem] h-[10rem] rounded-xl;
+    @apply rounded-xl;
   }
 
   .game-item-button {
-    @apply w-[20rem] py-2 rounded-full font-bold uppercase border;
+    @apply  w-[17rem] py-2 rounded-full font-bold uppercase border-0;
   }
 
   .image-cache-container {
-    @apply block relative bg-secondary/10 animate-mount-enter-fade shadow-gentle-fade shadow-black/20 overflow-hidden;
+    @apply block relative bg-secondary/10 animate-mount-enter-fade overflow-hidden;
   }
 
   .image-cache-image {
-    @apply w-full h-full animate-mount-enter-fade shadow-gentle-fade shadow-black/20 object-cover;
+    @apply w-full h-full animate-mount-enter-fade object-cover;
   }
 
   .overlay-menu-button {

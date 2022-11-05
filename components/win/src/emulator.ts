@@ -68,7 +68,8 @@ class Emulator {
       if (slot !== this.state_slot)
         await pMap(
           range(0, diff),
-          async () => {
+          async (__, i) => {
+            console.log(`Savestate Slot: ${this.state_slot + i}`);
             await sleep(150);
             if (isDecrease) await this.sendMessage("STATE_SLOT_MINUS");
             else await this.sendMessage("STATE_SLOT_PLUS");
@@ -258,7 +259,9 @@ class Emulator {
       console.log("quit");
 
       await this.sendMessage("QUIT", () => {
-        this.client?.close();
+        setTimeout(() => {
+          this.client?.close();
+        }, 1500);
       });
     }
   }
@@ -270,7 +273,8 @@ class Emulator {
   ) {
     const buf = Buffer.from(message);
     await new Promise<void>((resolve) => {
-      this.client?.send(buf, 55355, "localhost", () => {
+      this.client?.send(buf, 55355, "localhost", (err) => {
+        if (err) console.log(err);
         if (!hideMessage) console.log(`Sent ${message} to emulator`);
         callback?.(message);
         resolve();
@@ -336,6 +340,7 @@ class Emulator {
   }
 
   async play(id: string, serial: string) {
+    const isDev = process.env.NODE_ENV === "development";
     const { pathing } = this.settings;
     const db = await getConsoleDump(this.console.key);
     const settings = await getEmuSettings();
@@ -391,13 +396,10 @@ class Emulator {
           this.console.retroarch.turboRate ?? this.turboRate
         }.000000`,
         video_monitor_index: `${target !== -1 ? target : 0}`,
-        // ...(this.console.retroarch.fullscreen && {
-        //   video_fullscreen: isDev ? "false" : "true",
-        //   video_windowed_fullscreen: isDev ? "false" : "true",
-        // }),
+        video_font_enable: "false",
         ...(this.console.retroarch.fullscreen && {
-          video_fullscreen: "true",
-          video_windowed_fullscreen: "true",
+          video_fullscreen: isDev ? "false" : "true",
+          video_windowed_fullscreen: isDev ? "false" : "true",
         }),
       },
       this.console.key

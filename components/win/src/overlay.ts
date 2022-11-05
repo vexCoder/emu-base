@@ -1,12 +1,17 @@
 import {
   getWindowRect,
   getWindowText,
-  listWindows,
   setActiveWindow,
   setWindowRect,
   ShowWindowFlags,
 } from "@utils/ffi";
-import { createWindow, getExeList2, retry } from "@utils/helper";
+import {
+  createWindow,
+  extractString,
+  getExeList2,
+  logToFile,
+  retry,
+} from "@utils/helper";
 import { BrowserWindow, screen } from "electron";
 import IOverlay from "electron-overlay";
 import OVHook from "node-ovhook";
@@ -20,6 +25,8 @@ interface OverlayOptions {
 }
 class OverlayWindow {
   win: BrowserWindow | undefined;
+
+  url: string = "";
 
   attached = false;
 
@@ -46,33 +53,35 @@ class OverlayWindow {
 
   onInit?: () => void;
 
-  constructor(app: Application) {
-    this.app = app;
-  }
-
-  createWindow(icon: string, options?: OverlayOptions) {
+  constructor(app: Application, options?: OverlayOptions) {
     const isDev = process.env.NODE_ENV === "development";
-    const path = isDev
-      ? "http://localhost:3001/overlay/"
-      : join(__dirname, "..", "view", "overlay.html");
+    this.app = app;
 
     this.onDetach = options?.onDetach;
     this.onAttach = options?.onAttach;
     this.onInit = options?.onInit;
     this.displayBound = {
-      height: options?.monitor?.size.height || 0,
-      width: options?.monitor?.size.width || 0,
+      height: isDev ? 600 : options?.monitor?.size.height || 0,
+      width: isDev ? 800 : options?.monitor?.size.width || 0,
       x: options?.monitor?.bounds.x || 0,
       y: options?.monitor?.bounds.y || 0,
     };
+  }
 
+  createWindow(icon: string) {
+    const isDev = process.env.NODE_ENV === "development";
+    const path = isDev
+      ? "http://localhost:3001/overlay/"
+      : join(__dirname, "..", "view", "overlay.html");
+
+    this.url = path;
     this.win = createWindow({
       urlOrPath: path,
       browserOptions: {
         fullscreenable: true,
         skipTaskbar: true,
         frame: false,
-        show: false,
+        show: true,
         alwaysOnTop: true,
         icon,
         transparent: true,
@@ -86,7 +95,7 @@ class OverlayWindow {
       },
     });
 
-    this.win.hide();
+    console.log({ url: this.win.webContents.getURL() });
   }
 
   setOnInit(onInit: () => void) {
@@ -119,6 +128,9 @@ class OverlayWindow {
           if (this.started) {
             if (args.focused) {
               setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
+              this.win.show();
+            } else {
+              this.win.hide();
             }
           }
         } else if (evt === "graphics.fps") {
@@ -131,7 +143,6 @@ class OverlayWindow {
 
           if (!this.started) {
             this.started = true;
-            this.win?.show();
             setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
             this.onInit?.();
           }
@@ -156,13 +167,19 @@ class OverlayWindow {
       }
 
       setTimeout(() => {
-        const parent = OVHook.getTopWindows().find(
-          (v) => v.windowId === this.parentHandle
-        );
+        if (this.win && this.parentHandle) {
+          const list = OVHook.getTopWindows();
+          const parent = list.find(
+            (v) =>
+              v.windowId === this.parentHandle &&
+              !!extractString(/(retroarch\s[^\s]+\s[^\s]+)/gi, v.title, true)
+          );
 
-        if (!parent) {
-          this.cleanUp();
-          this.onDetach?.();
+          if (!parent) {
+            this.closeWindow();
+            this.cleanUp();
+            this.onDetach?.();
+          }
         }
       }, 1500);
     });
@@ -175,9 +192,9 @@ class OverlayWindow {
       if (this.win && !this.attached && title && this.displayBound) {
         IOverlay.start();
 
-        this.win.show();
-
-        this.events();
+        const isUrl = this.url.startsWith("http");
+        if (isUrl) this.win.loadURL(this.url);
+        if (!isUrl) this.win.loadFile(this.url);
 
         IOverlay.addWindow(this.win.id, {
           name: "overlay",
@@ -204,6 +221,8 @@ class OverlayWindow {
           });
 
           OVHook.injectProcess(parent);
+
+          this.events();
         }
 
         this.attached = true;
@@ -214,11 +233,21 @@ class OverlayWindow {
     }
   };
 
+  async closeWindow() {
+    if (this.win) {
+      IOverlay.closeWindow(this.win?.id);
+      IOverlay.stop();
+      this.win?.close();
+      this.win?.destroy();
+      this.win = undefined;
+    }
+  }
+
   async queryRetroarch() {
     const exe = await retry(
       async () => {
-        const list = listWindows();
-        const testList = await getExeList2();
+        const list = OVHook.getTopWindows();
+        const testList = await getExeList2(["retroarch"]);
 
         const filtered2 = testList.filter(
           (e) => e.name.toLowerCase().indexOf("retroarch") !== -1
@@ -226,32 +255,36 @@ class OverlayWindow {
         const pids = filtered2.map((o) => o.pid);
         const find2 = list.find(
           (v) =>
-            pids.includes(v.pid) &&
-            v.title.toLowerCase().indexOf("retroarch") !== -1
+            pids.includes(v.processId) &&
+            !!extractString(/(retroarch\s[^\s]+\s[^\s]+)/gi, v.title, true)
         );
 
-        console.log(
-          filtered2.map((v) => v.name),
-          pids,
-          find2
-        );
+        logToFile([...filtered2.map((v) => v.name), pids, find2]);
         if (!find2) throw new Error("Retroarch not found");
 
+        console.log(
+          list.map((v) => `${v.title} ${v.processId} ${v.windowId}`),
+          testList.map((v) => `${v.name} ${v.handle}`),
+          find2.windowId
+        );
         return find2;
       },
       100,
       1000
     );
 
-    this.parentHandle = exe.handle;
+    this.parentHandle = exe.windowId;
     return exe;
   }
 
   async attach() {
     const exe = await this.queryRetroarch();
-    if (!exe || !this.win) throw new Error("Retroarch not found");
+    if (!exe) throw new Error("Retroarch not found");
 
-    this.win.setIgnoreMouseEvents(true);
+    setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
+
+    this.createWindow(this.app.icon);
+    this.win?.setIgnoreMouseEvents(true);
 
     this.poll();
 
@@ -260,7 +293,6 @@ class OverlayWindow {
 
   cleanUp() {
     console.log("clean up");
-    if (this.win && !this.win.isDestroyed()) IOverlay.closeWindow(this.win.id);
     this.attached = false;
     this.started = false;
   }

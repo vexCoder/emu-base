@@ -16,11 +16,13 @@ export type MappedTheme = {
 export type ThemeKeys = keyof typeof themes;
 
 export const ThemeDark = {
-  primary: "41, 45, 47",
+  primary: "22, 22, 23",
   secondary: "178, 196, 196",
   text: "250, 247, 232",
   contrastText: "33, 32, 30",
-  focus: "255, 158, 83",
+  // focus: "255, 158, 83",
+  // focus: "125, 175, 255",
+  focus: "247, 179, 43",
   highlight: "254, 74, 73",
 };
 

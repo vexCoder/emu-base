@@ -3,6 +3,7 @@ import _ from "lodash";
 import { clamp } from "ramda";
 import create from "zustand";
 import { persist, subscribeWithSelector } from "zustand/middleware";
+import { Howl } from "howler";
 import CONSTANTS from "./constants.utils";
 
 export interface ThemeStore {
@@ -21,6 +22,32 @@ export const useThemeStore = create(
       const index = themeKeys.indexOf(this.theme);
       const next = themeKeys[(index + 1) % themeKeys.length];
       set({ theme: next });
+    },
+  }))
+);
+
+export interface SoundSettings {
+  beep: Howl;
+  accept: Howl;
+}
+
+export interface SoundActions {
+  play(key: keyof SoundSettings): void;
+}
+
+export type SoundStore = SoundSettings & SoundActions;
+
+export const useSoundStore = create(
+  subscribeWithSelector<SoundStore>((_set, get) => ({
+    beep: new Howl({
+      src: "./beep.wav",
+      volume: 2,
+    }),
+    accept: new Howl({
+      src: "./accept.mp3",
+    }),
+    play(key: keyof SoundSettings) {
+      get()[key].play();
     },
   }))
 );

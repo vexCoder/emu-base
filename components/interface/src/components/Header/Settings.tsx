@@ -1,3 +1,4 @@
+import Loading from "@components/Utils/Loading";
 import ConsoleIcon from "@elements/ConsoleIcon";
 import FilePicker from "@elements/FilePicker";
 import MenuItem from "@elements/MenuItem";
@@ -14,17 +15,19 @@ import {
   SpeakerXMarkIcon,
 } from "@heroicons/react/24/outline";
 import useNavigate from "@hooks/useNavigate";
+import useQueryMigrateProgress from "@hooks/useQueryMigrateProgress";
 import { cycleCounter } from "@utils/helper";
 import {
   useCounter,
   useDebounceEffect,
+  useInterval,
   useMount,
   useSetState,
   useToggle,
 } from "ahooks";
 import clsx from "clsx";
 import _ from "lodash";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface SettingsProps {
   id?: string;
@@ -33,12 +36,14 @@ interface SettingsProps {
 
 const Settings = ({ id, onClose }: SettingsProps) => {
   const [selectedPath, setSelectedPath] = useState<string>();
+  const [newPath, setNewPath] = useState<string>();
   const [windows, setWindows] = useState<Display[]>([]);
   const [fpOpen, toggleFp] = useToggle(false);
+  const [loading, toggleLoading] = useToggle(false);
 
   const [selected, actions] = useCounter(0, {
     min: 0,
-    max: 5,
+    max: 6,
   });
 
   const [windowSelected, windowActions] = useCounter(0, {
@@ -96,9 +101,11 @@ const Settings = ({ id, onClose }: SettingsProps) => {
   const { focus, focused, setFocus } = useNavigate("game-settings", {
     actions: {
       up() {
+        if (loading) return;
         actions.dec();
       },
       bottom() {
+        if (loading) return;
         actions.inc();
       },
       btnBottom() {
@@ -143,6 +150,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
       },
       left() {
         if (!id) return;
+        if (loading) return;
 
         if (selected === 2) {
           windowActions.dec();
@@ -164,6 +172,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
       },
       right() {
         if (!id) return;
+        if (loading) return;
 
         if (selected === 2) {
           windowActions.inc();
@@ -186,6 +195,12 @@ const Settings = ({ id, onClose }: SettingsProps) => {
     },
   });
 
+  const handleSave = async (newDir: FileItem) => {
+    toggleLoading.set(true);
+    setNewPath(newDir.path);
+    await window.data.migrate(newDir.path);
+  };
+
   return (
     <>
       <Modal
@@ -205,20 +220,29 @@ const Settings = ({ id, onClose }: SettingsProps) => {
             focus();
           }}
           onChange={async (p) => {
-            await window.data.setGlobalSettings({
-              ...(toEdit === "backend" && {
+            if (toEdit === "backend") {
+              await window.data.setGlobalSettings({
                 backend: p.path,
-              }),
-              ...(toEdit === "dump" && {
-                dump: p.path,
-              }),
-            });
+              });
+            }
 
             refetch();
           }}
+          onCloseChange={handleSave}
         />
       </Modal>
-      <div>
+      <div className="relative">
+        {newPath && (
+          <MigrationLoader
+            loading={loading}
+            focused={focused}
+            path={newPath}
+            onFinish={() => {
+              toggleLoading.set(false);
+              setNewPath(undefined);
+            }}
+          />
+        )}
         <div className="h-stack items-center gap-3 mb-4">
           <Cog8ToothIcon className={clsx("w-[2em] h-[2em] text-text")} />
           <h6 className="font-bold text-text text-xl leading-[1em]">
@@ -395,6 +419,44 @@ const Settings = ({ id, onClose }: SettingsProps) => {
         )}
       </div>
     </>
+  );
+};
+
+interface MigrationLoaderProps {
+  loading: boolean;
+  focused: boolean;
+  path: string;
+  onFinish: () => void;
+}
+
+const MigrationLoader = ({
+  loading,
+  focused,
+  path,
+  onFinish,
+}: MigrationLoaderProps) => {
+  const { data, refresh } = useQueryMigrateProgress({
+    path,
+  });
+
+  useInterval(() => {
+    refresh();
+  }, 500);
+
+  const percent = data?.percent;
+  useEffect(() => {
+    if (path && percent === 100) {
+      onFinish();
+    }
+  }, [percent, path, onFinish]);
+
+  if (!path) return null;
+  return (
+    <Loading
+      loading={loading && focused}
+      align="center"
+      message={`Copying ${data?.completedFiles}/${data?.totalFiles} (${data?.percent}%)`}
+    />
   );
 };
 

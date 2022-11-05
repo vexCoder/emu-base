@@ -17,6 +17,7 @@ import { useEffect, useRef } from "react";
 import useNavigate from "@hooks/useNavigate";
 import useGetGame from "@hooks/useGetGame";
 import { HeartIcon, PlayIcon, WrenchIcon } from "@heroicons/react/24/outline";
+import { motion } from "framer-motion";
 import GameRegionSettings from "./GameRegionSettings";
 import GameDiscList from "./GameDiscList";
 import GameTroubleshoot from "./GameTroubleshoot";
@@ -53,7 +54,6 @@ const GameDetails = () => {
     max: 2,
   });
 
-  const [kbdOpen, kbdActions] = useToggle(false);
   const [open, actions] = useToggle(false);
   const [modalOpen, actionsModal] = useToggle(false);
   const [isFavorite, favoriteActions] = useToggle(false);
@@ -180,12 +180,8 @@ const GameDetails = () => {
           duration={0.3}
           open={tsOpen}
           handleClose={() => tsActions.set(false)}
-          className={clsx("transition-[top]", kbdOpen && "top-1/4")}
         >
-          <GameTroubleshoot
-            onKeyboardOpen={(bool) => kbdActions.set(!!bool)}
-            onClose={() => tsActions.set(false)}
-          />
+          <GameTroubleshoot onClose={() => tsActions.set(false)} />
         </Modal>
       )}
       {gameData && (
@@ -229,22 +225,34 @@ const GameDetails = () => {
           />
         </Modal>
       )}
-      <section className="h-stack ml-[9rem]">
+      <section className="relative h-stack ml-[10.65rem]">
+        <motion.div
+          className="absolute w-[16.5rem] left-[0.18rem] rounded-2xl h-[46px] bg-secondary/10 z-[-5]"
+          animate={{
+            top: btnSlected * 50 + 8,
+            scale: focused ? 1 : 0.7,
+            opacity: focused ? 1 : 0,
+          }}
+          transition={{
+            duration: 0.2,
+          }}
+        />
         <Transition
           in={!!gameData}
           ease="easeInOut"
           duration={[0.5, 2.25]}
           preset="SlideY"
         >
-          <aside className="v-stack gap-4 [&>*:first-child]:mt-5">
+          <aside className="v-stack gap-[4px] [&>*:first-child]:mt-2">
             <button
               type="button"
               className={clsx(
-                "game-item-button mt-5 text-text text-xl bg-green-500/20",
-                focused && btnSlected === 0 && "border-focus",
-                (!focused || btnSlected !== 0) && "border-green-700"
+                "game-item-button mt-5 text-xl transition-[color] duration-[200]",
+                focused && btnSlected === 0 && "text-focus",
+                (!focused || btnSlected !== 0) && "text-text"
+                // focused && btnSlected === 0 && "border-focus",
+                // (!focused || btnSlected !== 0) && "border-green-700"
               )}
-              onClick={handlePlay}
               disabled={loading}
             >
               <div className="inline-flex flex-row items-center justify-between w-full px-5">
@@ -255,9 +263,11 @@ const GameDetails = () => {
             <button
               type="button"
               className={clsx(
-                "game-item-button text-text text-xl bg-secondary/20",
-                focused && btnSlected === 1 && "border-focus",
-                (!focused || btnSlected !== 1) && "border-secondary"
+                "game-item-button text-xl transition-[color] duration-[200]",
+                focused && btnSlected === 1 && "text-focus",
+                (!focused || btnSlected !== 1) && "text-text"
+                // focused && btnSlected === 1 && "border-focus",
+                // (!focused || btnSlected !== 1) && "border-secondary"
               )}
             >
               <div className="inline-flex flex-row items-center justify-between w-full px-5">
@@ -266,18 +276,22 @@ const GameDetails = () => {
                   width="1.5em"
                   height="1.5em"
                   className={clsx(
-                    "transition-colors",
-                    isFavorite && "fill-red-500 text-red-700"
+                    "stroke-text transition-[color_stroke] duration-[200]",
+                    isFavorite && "fill-red-600/80",
+                    focused && btnSlected === 1 && "!stroke-focus"
                   )}
+                  strokeWidth={1.35}
                 />
               </div>
             </button>
             <button
               type="button"
               className={clsx(
-                "game-item-button text-text text-xl bg-secondary/20",
-                focused && btnSlected === 2 && "border-focus",
-                (!focused || btnSlected !== 2) && "border-secondary"
+                "game-item-button text-xl transition-[color] duration-[200]",
+                focused && btnSlected === 2 && "text-focus",
+                (!focused || btnSlected !== 2) && "text-text"
+                // focused && btnSlected === 2 && "border-focus",
+                // (!focused || btnSlected !== 2) && "border-secondary"
               )}
             >
               <div className="inline-flex flex-row items-center justify-between w-full px-5">

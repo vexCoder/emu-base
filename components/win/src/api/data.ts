@@ -12,16 +12,22 @@ import {
   logToFile,
   saveImage,
   scoreMatchStrings,
+  searchMusicVideo,
 } from "@utils/helper";
+import dayjs from "dayjs";
 import extract from "extract-zip";
 import { createWriteStream } from "fs";
 import fs, { readdir } from "fs-extra";
 import got from "got";
 import _, { CollectionChain, ObjectChain } from "lodash";
 import pMap from "p-map";
-import { extname, join } from "path";
+import { extname, join, resolve } from "path";
 import { filter, head, intersection, is, toLower } from "ramda";
 import { DownloadStatus } from "types/enums";
+import Xray from "x-ray";
+import * as R2 from "ramda";
+import parseUrl from "parse-url";
+import cpy, { ProgressData } from "cpy";
 
 export namespace DataApi {
   export class Resolver {
@@ -116,12 +122,206 @@ export namespace DataApi {
     async setGame({ id, console: cns, data }: SetGameParams) {
       const db = await getConsoleDump(cns);
 
+      const gameData = db.find({ id }).value() as ConsoleGameData;
+
       const game = db
         .find({ id })
-        .set("opening", data.opening)
+        .set("opening", data.opening ?? gameData.opening)
+        .set("description", data.description ?? gameData.description)
+        .set("publisher", data.publisher ?? gameData.publisher)
+        .set("developer", data.developer ?? gameData.developer)
+        .set("released", data.released ?? gameData.released)
+        .set("cover", data.cover ?? gameData.cover)
+        .set("ratings", data.ratings ?? gameData.ratings)
+        .set("genre", data.genre ?? gameData.genre)
+        .set("screenshots", data.screenshots ?? gameData.screenshots)
         .write() as ConsoleGameData;
 
       return game;
+    }
+
+    async searchTGDB({ keyword, console: cons }: SearchTGDBParams) {
+      const platform =
+        cons in Constants.TGDBPlatform
+          ? Constants.TGDBPlatform[cons as keyof typeof Constants.TGDBPlatform]
+          : undefined;
+
+      const x = Xray();
+
+      const url = `https://thegamesdb.net/search.php?name=${keyword
+        .trim()
+        .replace(/\s/g, "+")
+        .replace(Constants.VALID_CHAR_REGEX, "")}${
+        platform ? `&platform_id[]=${platform}` : ""
+      }`;
+
+      const results = (await x(url, "div#display > div > div", [
+        "a@href",
+      ])) as string[];
+
+      const games = await pMap(results, async (tgdbUrl) => {
+        const { id } = parseUrl(tgdbUrl).query;
+
+        if (!id) return null;
+
+        const left = "div.container-fluid > div.row > div:first-child";
+        const right = "div.container-fluid > div.row > div:last-child";
+
+        let img = "";
+        try {
+          img = await x(tgdbUrl, `${left} > div.row > div.col > div a img@src`);
+        } catch (error) {
+          console.error(error);
+        }
+
+        const lSect = (await x(
+          tgdbUrl,
+          `${left} > div.row > div.col > div > div:last-child`,
+          ["p"]
+        )) as string[];
+
+        const topSect: string[] = await x(
+          tgdbUrl,
+          `${right} > div.row:nth-child(1) > div.col > div > div.card-body`,
+          ["p@html"]
+        );
+
+        const bottomSect: string[] = await x(
+          tgdbUrl,
+          `${right} > div.row:nth-child(2) > div.col > div > div.card-body > div.row > div`,
+          ["a@href"]
+        );
+
+        const name: string = await x(
+          tgdbUrl,
+          `${right} > div.row:nth-child(1) > div.col > div > div.card-header`,
+          "*@html"
+        );
+
+        type ImageKey = "fanart" | "screenshots" | "clearlogo";
+        const images = R2.groupBy((v: string) => {
+          const m1 = v.indexOf("fanart") > -1 || v.indexOf("fanarts") > -1;
+          if (m1) return "fanart";
+          const m2 =
+            v.indexOf("screenshots") > -1 || v.indexOf("screenshot") > -1;
+          if (m2) return "screenshots";
+          const m3 =
+            v.indexOf("clearlogo") > -1 || v.indexOf("clearlogos") > -1;
+          if (m3) return "clearlogo";
+
+          return "";
+        }, bottomSect) as Record<ImageKey, string[]>;
+
+        const parseField = <T = string>(
+          text: string,
+          mapValue?: (v: string) => T
+        ): { key: string; value: T } => {
+          const [key, value, ...rest] =
+            text?.split(":").map((v) => v.trim()) ?? [];
+          const val = [value, ...rest].join(":");
+          return { key, value: (mapValue?.(val) ?? val) as T };
+        };
+
+        const fields = topSect.map((v) => parseField(v));
+        const lFields = lSect.map((v) => parseField(v));
+
+        const released = lFields.find(
+          (v) => v.key.toLowerCase().indexOf("releasedate") > -1
+        );
+        const formattedRelease = released
+          ? dayjs(released.value, "YYYY-MM-DD").unix()
+          : dayjs().unix();
+
+        const publisher = lFields.find(
+          (v) => v.key.toLowerCase().indexOf("publisher") > -1
+        );
+
+        const publisherValue = publisher?.value?.split("|")[0] ?? "n/a";
+
+        const developer = lFields.find(
+          (v) => v.key.toLowerCase().indexOf("developer") > -1
+        );
+        const developerValue = developer?.value?.split("|")[0] ?? "n/a";
+
+        const description = topSect[0];
+        const genre = fields.find(
+          (v) => v.key.toLowerCase().indexOf("genre") > -1
+        );
+        const ratings = fields.find(
+          (v) => v.key.toLowerCase().indexOf("rating") > -1
+        );
+
+        return {
+          id: tgdbUrl.split("/").pop(),
+          name,
+          description: description ?? "",
+          publisher: publisherValue,
+          developer: developerValue,
+          released: formattedRelease,
+          cover: img,
+          ratings: ratings?.value ?? "n/a",
+          genre: genre?.value?.split("|").map((v) => v.trim()) ?? [],
+          screenshots: images.fanart,
+        };
+      });
+
+      return games.filter((v): v is TGDBResult => !!v);
+    }
+
+    async getGameOpenings({ id, console: cns }: GetOpeningParams) {
+      const db = await getConsoleDump(cns);
+
+      const game = db.find({ id }).value() as ConsoleGameData;
+
+      const videos = await searchMusicVideo(game.official, cns);
+
+      return videos;
+    }
+
+    async migrate(newPath: string) {
+      const setting = await getEmuSettings();
+      const oldPath = setting.get("pathing.dump").value();
+      try {
+        await fs.access(oldPath);
+        await fs.remove(newPath);
+        await fs.ensureDir(newPath);
+        Globals.set(`dump-migrate-${newPath}`, {
+          progress: 0,
+          completedFiles: 0,
+          totalFiles: 0,
+          percent: 0,
+          completedSize: 0,
+        } as ProgressData);
+        if (resolve(oldPath) === resolve(newPath)) return;
+
+        await cpy(`./**`, resolve(newPath), {
+          overwrite: false,
+          cwd: resolve(oldPath),
+          dot: true,
+        }).on("progress", async (progress) => {
+          Globals.set(`dump-migrate-${newPath}`, progress as ProgressData);
+          if (progress.percent === 100) {
+            const settingIn = await getEmuSettings();
+            Globals.remove(`dump-migrate-${newPath}`);
+            settingIn.set("pathing.dump", newPath).write();
+          }
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    async queryMigrateProgress(newPath: string) {
+      return (
+        Globals.get(`dump-migrate-${newPath}`) ??
+        ({
+          progress: 0,
+          completedFiles: 0,
+          totalFiles: 0,
+          percent: 0,
+          completedSize: 0,
+        } as ProgressData)
+      );
     }
 
     async getImage({ path, url }: GetImageParams) {
@@ -129,10 +329,10 @@ export namespace DataApi {
       const pathToDump = getDumpPath();
       const file = join(pathToDump, path);
       try {
+        if (url) await saveImage(file, url);
         const base64 = await fs.readFile(file, "base64");
         return `data:image/png;base64,${base64}`;
       } catch (error) {
-        if (url) saveImage(file, url);
         return undefined;
       }
     }
@@ -550,6 +750,10 @@ export namespace DataApi {
     console: string;
     data: Partial<ConsoleGameData>;
   }
+  interface GetOpeningParams extends Base {
+    id: string;
+    console: string;
+  }
 
   interface GetImageParams extends Base {
     path: string;
@@ -574,6 +778,10 @@ export namespace DataApi {
     console: string;
   }
 
+  interface SearchTGDBParams extends Base {
+    keyword: string;
+    console: string;
+  }
   interface ToggleFavoriteParams extends Base {
     id: string;
     console: string;

@@ -8,10 +8,9 @@ import { getConfig, getDumpPath, getEmuSettings } from "./utils.js";
 
 const init = async () => {
   const db = getEmuSettings();
-  const { consoles } = await getConfig();
+  const { consoles, config } = await getConfig();
   const pathToDump = getDumpPath();
 
-  await fs.remove(pathToDump);
   await fs.ensureDir(pathToDump);
 
   const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
@@ -51,18 +50,8 @@ const init = async () => {
       consoleData?.pathToData ?? join(pathToConsoleDump, "dump.json");
 
     settings.consoles.push();
-    // playstation-icon.svg
-    const assets = await fs.readdir(join(process.cwd(), "assets"));
-    const consoleAssetsPath = assets
-      .filter((v) => v.split("-").includes(consoleName))
-      .map((v) => ({
-        src: join(process.cwd(), "assets", v),
-        dest: join(pathToConsoleDump, v.split("-")[1]),
-      }));
 
-    await pMap(consoleAssetsPath, async (p) => {
-      await fs.copyFile(p.src, p.dest);
-    });
+    const consoleConfig = config.consoles[consoleName];
 
     return {
       id,
@@ -70,6 +59,17 @@ const init = async () => {
       pathToData,
       name: consoleName,
       key: consoleName,
+      description: consoleConfig.description,
+      retroarch: {
+        core: consoleConfig.core,
+        fullscreen: true,
+        turboRate: 2,
+        input: "dinput",
+        turbo: false,
+        volume: 3,
+        showFps: false,
+        mute: false,
+      },
     };
   });
 

@@ -1,4 +1,4 @@
-import { useMount } from "ahooks";
+import { useMount, useUpdateEffect } from "ahooks";
 import clsx from "clsx";
 import { useState } from "react";
 
@@ -15,7 +15,7 @@ const ImageCache = ({
   ...rest
 }: ImageCacheProps) => {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
-  useMount(async () => {
+  const fetch = async () => {
     const loadImage = new Image();
 
     const imagePath = await window.data.getImage(path, url);
@@ -24,7 +24,14 @@ const ImageCache = ({
     loadImage.onload = () => {
       setImage(loadImage);
     };
+  };
+  useMount(async () => {
+    await fetch();
   });
+
+  useUpdateEffect(() => {
+    fetch();
+  }, [url]);
 
   return (
     <div {...rest} className={clsx(rest.className, "image-cache-container")}>

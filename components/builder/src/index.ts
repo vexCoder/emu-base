@@ -7,7 +7,7 @@ import { PackageJson } from "type-fest";
 import semver from "semver";
 import meow from "meow";
 
-consola.wrapAll();
+consola.wrapConsole();
 
 const root = join(process.cwd(), "..", "..");
 const components = join(root, "components");
@@ -21,6 +21,7 @@ const externals = [
   "ref-union-napi",
   "sharp",
   "screenshot-desktop",
+  "emitter",
 ];
 
 const main = async () => {
@@ -45,11 +46,17 @@ const main = async () => {
   let { version = "0.0.0" } = json;
   if (json.version && releaseType !== "debug") {
     version = semver.inc(json.version, releaseType) || "0.0.0";
-    await writeJSON(join(process.cwd(), "package.json"), {
-      ...json,
-      version,
-    });
+    await writeJSON(
+      join(process.cwd(), "package.json"),
+      {
+        ...json,
+        version,
+      },
+      { spaces: 2 }
+    );
   }
+
+  console.log(`Releasing (${releaseType}): ${version}`);
 
   if (test) {
     await remove(join(root, ".artifacts", "release"));
@@ -81,6 +88,11 @@ const main = async () => {
     await copy(
       join(tools, "electron-overlay"),
       join(root, ".artifacts", "release", "node_modules", "electron-overlay")
+    );
+
+    await copy(
+      join(tools, "game-scraper", "dump"),
+      join(root, ".artifacts", "release")
     );
 
     await Promise.all(
@@ -124,13 +136,6 @@ const main = async () => {
         postinstall: `node ${copyPath} ${prebuilts} ${target}`,
       },
     } as PackageJson);
-    console.log([
-      "dist",
-      "node_modules",
-      ...externals.map((v) => `node_modules/${v}/*`),
-      "**/components/win/node_modules",
-      "**/components/win/package.json",
-    ]);
 
     builder.build({
       config: {
@@ -152,9 +157,6 @@ const main = async () => {
         buildDependenciesFromSource: true,
         // nodeGypRebuild: true,
         buildVersion: version,
-        beforePack(ctx) {
-          console.log(ctx);
-        },
 
         files: [
           "dist",
@@ -163,6 +165,9 @@ const main = async () => {
           "node_modules/**/*",
           "package.json",
         ],
+
+        extraFiles: ["dump"],
+
         includeSubNodeModules: true,
         npmRebuild: false,
         directories: {

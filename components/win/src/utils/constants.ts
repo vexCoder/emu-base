@@ -52,6 +52,15 @@ class Constants {
     input_enable_hotkey: "shift",
     video_font_enable: "false",
   };
+
+  static TGDBPlatform = {
+    ps1: 10,
+    ps2: 11,
+    psp: 13,
+  };
+
+  static VALID_CHAR_REGEX =
+    /([^<>/a-zA-Z0-9-.,'";&()=~[\]?!<>+_*\\|{}@#$%^` \t\n])/g;
 }
 
 export default Constants;

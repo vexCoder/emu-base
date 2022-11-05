@@ -8,6 +8,8 @@ const main = async () => {
 
   await init();
 
+  if (cli.flags.consoleOnly) return;
+
   switch (command) {
     case "scrape": {
       await scrape(cli);

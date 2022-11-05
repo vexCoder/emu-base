@@ -1,6 +1,10 @@
 import { Connection } from "./preload-utils";
 
 export interface Handles {
+  debug: {
+    log: Connection<[message: any]>;
+  };
+
   win: {
     minimize: Connection;
     maximize: Connection;
@@ -39,6 +43,9 @@ export interface Handles {
       Promise<string | undefined>
     >;
 
+    migrate: Connection<[new: string]>;
+    queryMigrateProgress: Connection<[new: string], ProgressData>;
+
     setConsoleSettings: Connection<
       [console: string, settings: Partial<EditableConsoleSettings>],
       void
@@ -58,6 +65,8 @@ export interface Handles {
       [id: string, console: string],
       Promise<GameRegionFiles | undefined>
     >;
+
+    searchTGDB: Connection<[keyword: string, console: string], TGDBResult[]>;
 
     getGameRegionSettings: Connection<
       [id: string, console: string],
@@ -95,6 +104,10 @@ export interface Handles {
       [id: string, console: string, bool?: boolean],
       Promise<boolean>
     >;
+
+    getOpenings: Connection<[id: string, console: string], Video[]>;
+
+    setOpening: Connection<[url: string]>;
   };
 
   emulator: {

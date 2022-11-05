@@ -5,6 +5,7 @@ type MenuItemProps = BaseComponentProps<"div"> & {
   focused?: boolean;
   selected?: boolean;
   highlighted?: boolean;
+  disabled?: boolean;
   label: string;
   icon?: React.ReactSVGElement | React.FC<SVGProps<SVGSVGElement>>;
   classes?: {
@@ -23,6 +24,7 @@ const MenuItem = (props: MenuItemProps) => {
     label,
     icon,
     classes,
+    disabled,
     ...rest
   } = props;
 
@@ -36,7 +38,8 @@ const MenuItem = (props: MenuItemProps) => {
         "h-stack items-center gap-6 py-2 px-3 border rounded-xl justify-between",
         focused && selected && "border-focus",
         !focused && !selected && "border-secondary/50",
-        highlighted && "border-highlight"
+        highlighted && "border-highlight",
+        disabled && "!border-secondary/20"
       )}
     >
       <div className="h-stack items-center gap-3 flex-2">
@@ -48,7 +51,8 @@ const MenuItem = (props: MenuItemProps) => {
             className: clsx(
               classes?.icon,
               focused && selected && "!text-focus",
-              (!focused || !selected) && "!text-text"
+              (!focused || !selected) && "!text-text",
+              disabled && "!text-text/20"
             ),
           })}
 
@@ -59,7 +63,8 @@ const MenuItem = (props: MenuItemProps) => {
             className={clsx(
               classes?.icon,
               focused && selected && "!text-focus",
-              (!focused || !selected) && "!text-text"
+              (!focused || !selected) && "!text-text",
+              disabled && "!text-text/20"
             )}
           />
         )}
@@ -67,7 +72,8 @@ const MenuItem = (props: MenuItemProps) => {
           className={clsx(
             "font-bold text-lg line-clamp-1",
             focused && selected && "!text-focus",
-            (!focused || !selected) && "!text-text"
+            (!focused || !selected) && "!text-text",
+            disabled && "!text-text/20"
           )}
         >
           {label}
@@ -79,7 +85,8 @@ const MenuItem = (props: MenuItemProps) => {
           className={clsx(
             "text-lg line-clamp-1",
             focused && selected && "!text-focus",
-            (!focused || !selected) && "!text-text"
+            (!focused || !selected) && "!text-text",
+            disabled && "!text-text/20"
           )}
         >
           {children}

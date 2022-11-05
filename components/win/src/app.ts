@@ -5,7 +5,7 @@ import {
   getDisplayById,
   getDisplayIndex,
   getEmuSettings,
-  logToFile,
+  logToFile
 } from "@utils/helper";
 import { app, BrowserWindow, Tray } from "electron";
 import { join } from "path";
@@ -60,17 +60,16 @@ export class Application {
       },
     });
 
-    this.overlay = new OverlayWindow(this);
-
-    this.overlay.createWindow(this.icon, {
+    this.overlay = new OverlayWindow(this, {
       monitor,
       onDetach: () => {
         console.log("Ejecting");
-        if(this.overlay?.win) this.overlay?.win?.hide();
-        if(this.win) {
-          this.win?.show();
+        if (this.win) {
           this.win?.moveTop();
-          setActiveWindow(this.win?.getNativeWindowHandle().readUInt32LE(0), ShowWindowFlags.SW_SHOW);
+          setActiveWindow(
+            this.win?.getNativeWindowHandle().readUInt32LE(0),
+            ShowWindowFlags.SW_SHOW
+          );
           this.win?.webContents.send("emulator:onDetach");
         }
       },
@@ -96,11 +95,6 @@ export class Application {
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) createWindow();
-    });
-
-    app.on("before-quit", async () => {
-      console.log("qutting");
-      this.overlay?.cleanUp();
     });
 
     this.win.on("focus", () => {});

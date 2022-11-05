@@ -45,6 +45,7 @@ const build = async () => {
       "electron-overlay",
       "sharp",
       "screenshot-desktop",
+      "emitter",
     ],
     entryNames: `[name]`,
     define: {

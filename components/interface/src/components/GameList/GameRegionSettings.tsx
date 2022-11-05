@@ -2,7 +2,6 @@ import Modal from "@elements/Modal";
 import useGetGameLinks from "@hooks/useGetGameLinks";
 import useGetGameRegionSettings from "@hooks/useGetGameRegionSettings";
 import useNavigate from "@hooks/useNavigate";
-import useSetGameLinks from "@hooks/useSetGameLinks";
 import { useCounter, useDynamicList, useInViewport } from "ahooks";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
@@ -175,8 +174,6 @@ const LinksList = ({
     max: gameLinks.length - 1,
   });
 
-  const [, execute] = useSetGameLinks();
-
   const handleSet = async () => {
     const serials = files.map((o) => o.serial);
 
@@ -188,7 +185,10 @@ const LinksList = ({
       return;
     }
 
-    await execute(id, serials, links as ParsedLinks[], cons);
+    await window.data
+      .setGameLinks(id, serials, links as ParsedLinks[], cons)
+      .catch(window.debug.log);
+
     onLinksSave?.();
   };
 

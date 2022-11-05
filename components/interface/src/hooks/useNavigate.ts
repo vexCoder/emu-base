@@ -1,4 +1,4 @@
-import { useMainStore } from "@utils/store.utils";
+import { useMainStore, useSoundStore } from "@utils/store.utils";
 import {
   useInterval,
   useLatest,
@@ -31,6 +31,8 @@ interface UseNavigateOptions {
   autoFocus?: boolean;
   actions?: Partial<Actions>;
   globalActions?: Partial<Actions>;
+  directionalSound?: boolean;
+  confirmSound?: boolean;
 }
 
 const useNavigate = (
@@ -40,6 +42,7 @@ const useNavigate = (
 ) => {
   const mapRef = useRef(new Map());
   const store = useMainStore();
+  const soundStore = useSoundStore();
   const [active, setActive] = useState(false);
   const isFocused = store.focused === key;
   const onFocus = useMemoizedFn(options?.onFocus ?? (() => {}));
@@ -76,7 +79,22 @@ const useNavigate = (
     store.set((prev) => ({ lastFocused: prev.focused, focused: focus }));
   };
 
+  const beepSound = options?.directionalSound ?? true;
+  const confirmSound = options?.confirmSound ?? true;
+
   const press = (fn: ActionType) => {
+    if (["left", "right", "up", "bottom"].includes(fn)) {
+      if (beepSound) {
+        soundStore.play("beep");
+      }
+    }
+
+    if (["btnBottom"].includes(fn)) {
+      if (confirmSound) {
+        soundStore.play("accept");
+      }
+    }
+
     if (
       latestData.current.gamepad &&
       latestData.current.active &&
@@ -176,7 +194,12 @@ const useNavigate = (
     [key, isFocused, ...deps]
   );
 
-  return { focused: isFocused, setFocus, focus: () => setFocus(key) };
+  return {
+    focused: isFocused,
+    setFocus,
+    focus: () => setFocus(key),
+    current: store.focused,
+  };
 };
 
 export default useNavigate;

@@ -60,6 +60,10 @@ export const getCli = () => {
         type: "boolean",
         alias: "L",
       },
+      consoleOnly: {
+        type: "boolean",
+        alias: "C",
+      },
     },
   });
 
@@ -93,7 +97,6 @@ export const getDumpPath = (consoleName?: string) =>
 
 export const getEmuSettings = () => {
   const pathToDump = getDumpPath();
-  fs.removeSync(pathToDump);
   fs.ensureDirSync(pathToDump);
   const adapter = new JSONFile<AppSettings>(join(pathToDump, `settings.json`));
   const db = new Low(adapter);
@@ -102,7 +105,6 @@ export const getEmuSettings = () => {
 
 export const getConsoleDump = (consoleName: string) => {
   const pathToDump = getDumpPath(consoleName);
-  console.log(pathToDump);
   fs.ensureDirSync(pathToDump);
   const adapter = new JSONFile<ConsoleGameData[]>(
     join(pathToDump, `dump.json`)

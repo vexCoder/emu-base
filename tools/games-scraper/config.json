@@ -1,8 +1,10 @@
 {
   "consoles": {
     "ps1": {
+      "core": "swanstation_libretro.dll",
       "name": "ps1",
-      "gameDb": "https://psxdatacenter.com/games/",
+      "description": "The PlayStation (abbreviated as PS, commonly known as the PS1/PS one or its codename PSX) is a home video game console developed and marketed by Sony Computer Entertainment.",
+      "gameDb": "https://thegamesdb.net/search.php",
       "parts": [
         "https://archive.org/download/redump.psx",
         "https://archive.org/download/redump.psx.p2",
@@ -11,7 +13,9 @@
       ]
     },
     "psp": {
+      "core": "ppsspp_libretro.dll",
       "name": "psp",
+      "description": "The PlayStation Portable[a] (PSP) is a handheld game console developed and marketed by Sony Computer Entertainment. It was first released in Japan on December 12, 2004, in North America on March 24, 2005, and in PAL regions on September 1, 2005, and is the first handheld installment in the PlayStation line of consoles",
       "gameDb": "https://thegamesdb.net/search.php",
       "parts": [
         "https://archive.org/download/redump.psp",
@@ -19,7 +23,9 @@
       ]
     },
     "ps2": {
+      "core": "pcsx2_libretro.dll",
       "name": "ps2",
+      "description": "It is the successor to the original PlayStation, as well as the second installment in the PlayStation brand of consoles. As a sixth-generation console, it competed with Nintendo's GameCube, and Microsoft's Xbox. It is the best-selling video game console of all time, having sold over 155 million units worldwide.",
       "gameDb": "https://thegamesdb.net/search.php",
       "parts": [
         "https://archive.org/download/sony_playstation2_numberssymbols",
