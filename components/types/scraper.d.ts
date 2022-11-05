@@ -11,6 +11,8 @@ interface GameConsole {
   parts: string[];
   core: string;
   description: string;
+  mapping: string;
+  scraper: 'psxd-tgdb'
 }
 
 interface ResultLinks {
@@ -45,11 +47,6 @@ interface ParsedLinks {
   tags: string[];
   size: number;
   fileName: string;
-}
-
-interface Scraper {
-  getLinks: (parts: string[]) => Promise<ConsoleLinks>;
-  getDescriptions: (db: GameConsole) => Promise<ConsoleGameData[]>;
 }
 
 interface BasicDescription {
@@ -90,7 +87,6 @@ interface ConsoleGameData {
   developer: string;
   publisher: string;
   released: number;
-  unique: string;
   regions: GameRegion[];
   description: string;
   isFavorite?: boolean;
@@ -101,10 +97,7 @@ interface ConsoleGameData {
   cover: string;
 
   // Music
-  opening: string;
-
-  // Parsed Links
-  links: string[];
+  opening?: string;
 }
 
 interface ConsoleSettings {
@@ -191,6 +184,9 @@ ConsoleGameData,
 > & { id: string; name: string }
 
 type ProgressData = {
+  current?: string;
+  currentSize?: number;
+  currentTotalSize?: number;
   completedFiles:number;
   totalFiles: number;
   totalSize: number;

@@ -8,6 +8,8 @@ import { join } from "path";
 import * as R from "ramda";
 import * as R2 from "rambda";
 import { Video, youtube } from "scrape-youtube";
+import { createHash } from "crypto";
+import { v5 } from "uuid";
 
 export const fetchImage = async (url: string) => {
   const test = await got(url, {
@@ -252,3 +254,23 @@ export const searchMusicVideo = async (keyword: string, console: string) => {
 
   return opening;
 };
+
+export const generateId = (message: string) => {
+  const uuidNamespace = "30938e1f-1ad8-4c98-9af0-e9471b52cf1b";
+  const id = createHash("SHA256").update(`${message}`).digest("base64url");
+
+  return v5(id, uuidNamespace);
+};
+
+export const generateSerialId = (serials: string[]) => {
+  const serial = serials.join("-").toUpperCase();
+
+  return generateId(serial);
+};
+
+export const getTGDBPlatform = (platform: string) =>
+  ({
+    ps1: 10,
+    ps2: 11,
+    psp: 13,
+  }[platform] ?? 0);

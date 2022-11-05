@@ -87,7 +87,7 @@ const Header = () => {
           toggleSettings.set(true);
           setFocus("game-settings");
         }
-        if (btnSelected === 1) {
+        if (btnSelected === 1 && !searchOpen) {
           toggleSearch.set(true);
           setFocus("game-search");
         }
@@ -106,13 +106,11 @@ const Header = () => {
   const handleChange = (v: string) => {
     store.set({ search: v });
     toggleSearch.set(false);
-    setTimeout(() => {
-      setFocus(
-        store.lastFocused !== "game-search"
-          ? store.lastFocused ?? "game-header"
-          : "game-header"
-      );
-    }, 100);
+    setFocus(
+      store.lastFocused !== "game-search"
+        ? store.lastFocused ?? "game-header"
+        : "game-header"
+    );
   };
 
   const handleClose = () => {

@@ -1,54 +1,24 @@
-import { ensureDir, stat } from "fs-extra";
-import pMap from "p-map";
-import recursive from "recursive-readdir";
-import { copyFile } from "cp-file";
-import { dirname } from "path";
+import { createHash } from "crypto";
+import { v5 } from "uuid";
+
+const uuidNamespace = "30938e1f-1ad8-4c98-9af0-e9471b52cf1b";
+const encrypt = (serials: string[]) => {
+  const serial = serials.join("-").toUpperCase();
+  const id = createHash("SHA256").update(`${serial}`).digest("base64url");
+
+  return v5(id, uuidNamespace);
+};
 
 const main = async () => {
-  const target = "W:\\Projects\\emu-base\\.artifacts\\dev\\dump";
-  const files = await new Promise<string[]>((resolve) => {
-    recursive(target, [], (err, res) => {
-      if (err) console.error(err);
-      resolve(res);
-    });
-  });
+  const names = [
+    { name: "3D BASEBALL - THE MAJORS", serials: ["SLUS-00066"] },
+    { name: "2XTREME", serials: ["SCUS-94508"] },
+    { name: "007 - THE WORLD IS NOT ENOUGH", serials: ["SLUS-01272"] },
+  ];
 
-  const onProgress = (progress: ProgressData) => {
-    console.log(progress.percent);
-  };
+  const encrypted = names.map((v) => encrypt(v.serials));
 
-  const totalSize = (
-    await pMap(files, async (file) => {
-      const { size } = await stat(file);
-      return size;
-    })
-  ).reduce((a, b) => a + b, 0);
-
-  const progress = {
-    completedFiles: 0,
-    totalFiles: files.length,
-    totalSize,
-    completedSize: 0,
-    percent: 0,
-  } as ProgressData;
-
-  const dest = "W:\\Projects\\emu-base\\.artifacts\\dev\\dump2";
-  await pMap(files, async (v) => {
-    const newPath = v.replace(target, dest);
-    await ensureDir(dirname(newPath));
-    const currentSize = progress.completedSize;
-    await copyFile(v, v.replace(target, dest), {
-      overwrite: true,
-      onProgress: (cpProg) => {
-        progress.completedSize = currentSize + cpProg.writtenBytes;
-        progress.percent = progress.completedSize / progress.totalSize;
-        onProgress(progress);
-        if (cpProg.percent >= 1) {
-          progress.completedFiles++;
-        }
-      },
-    });
-  });
+  console.log(encrypted);
 };
 
 main();

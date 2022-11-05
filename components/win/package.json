@@ -17,8 +17,7 @@
     "package": "ts-node build/pack.ts"
   },
   "dependencies": {
-    "cp-file": "^10.0.0",
-    "cpy": "^9.0.1",
+    "cp-file": "^9.1.0",
     "dayjs": "^1.11.6",
     "electron-overlay": "*",
     "electron-overlay-window": "^2.0.1",
@@ -48,6 +47,7 @@
     "stream-chain": "^2.2.5",
     "stream-json": "^1.7.4",
     "string-similarity": "^4.0.4",
+    "uuid": "^9.0.0",
     "x-ray": "^2.3.4",
     "ytdl-core": "^4.11.1"
   },
@@ -65,6 +65,7 @@
     "@types/stream-json": "^1.7.2",
     "@types/string-similarity": "^4.0.0",
     "@types/throttle-debounce": "^5.0.0",
+    "@types/uuid": "^8.3.4",
     "@types/x-ray": "^2.3.3",
     "concurrently": "^7.2.1",
     "dotenv": "^16.0.1",

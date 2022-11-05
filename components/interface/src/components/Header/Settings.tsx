@@ -28,6 +28,7 @@ import {
 import clsx from "clsx";
 import _ from "lodash";
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 
 interface SettingsProps {
   id?: string;
@@ -210,6 +211,9 @@ const Settings = ({ id, onClose }: SettingsProps) => {
           toggleFp.set(false);
           focus();
         }}
+        classes={{
+          content: "!min-w-[450px] !w-[70vw] !max-w-[800px]",
+        }}
       >
         <FilePicker
           path={selectedPath}
@@ -228,21 +232,30 @@ const Settings = ({ id, onClose }: SettingsProps) => {
 
             refetch();
           }}
-          onCloseChange={handleSave}
+          onCloseChange={(p) => {
+            if (toEdit === "dump") handleSave(p);
+          }}
         />
       </Modal>
-      <div className="relative">
-        {newPath && (
+      <Modal
+        open={!!newPath && loading}
+        className="z-50"
+        classes={{ content: "!px-4 !py-8" }}
+      >
+        <div className="relative min-h-[36px]">
           <MigrationLoader
             loading={loading}
             focused={focused}
-            path={newPath}
+            path={newPath ?? ""}
             onFinish={() => {
               toggleLoading.set(false);
               setNewPath(undefined);
+              refetch();
             }}
           />
-        )}
+        </div>
+      </Modal>
+      <div className="relative">
         <div className="h-stack items-center gap-3 mb-4">
           <Cog8ToothIcon className={clsx("w-[2em] h-[2em] text-text")} />
           <h6 className="font-bold text-text text-xl leading-[1em]">
@@ -282,7 +295,7 @@ const Settings = ({ id, onClose }: SettingsProps) => {
           <MenuItem
             selected={selected === 1}
             focused={focused}
-            label="Dump Path"
+            label="Migrate Dump"
             icon={FolderIcon}
           >
             {global.pathing?.dump}
@@ -445,17 +458,56 @@ const MigrationLoader = ({
 
   const percent = data?.percent;
   useEffect(() => {
-    if (path && percent === 100) {
+    if (path && typeof percent === "number" && percent >= 1) {
       onFinish();
     }
   }, [percent, path, onFinish]);
 
   if (!path) return null;
+  const file = data?.current ? ` ${data?.current}` : "...";
+  const progress = (data?.percent ?? 0) * 100;
+
   return (
     <Loading
       loading={loading && focused}
+      hideSpinner
       align="center"
-      message={`Copying ${data?.completedFiles}/${data?.totalFiles} (${data?.percent}%)`}
+      classes={{
+        content: "!bg-transparent",
+      }}
+      message={
+        <div className="v-stack w-full">
+          <div className="h-stack items-center">
+            <p className="text-text/40 text-lg flex-1 leading-[1em]">{`Copying${file}`}</p>
+          </div>
+          <div className="relative min-h-[8px] mt-3 w-full rounded-full overflow-hidden bg-secondary/20">
+            <motion.div
+              className="absolute h-[8px] bg-highlight z-10 rounded-full"
+              animate={{
+                width: `${progress}%`,
+              }}
+            />
+          </div>
+          <div className="h-stack items-center mt-2 justify-between">
+            <p
+              className={clsx(
+                "text-sm leading-[1em] border-2 border-highlight",
+                "px-2 py-1 font-bold rounded-full text-text"
+              )}
+            >
+              {progress.toFixed(0)}%
+            </p>
+            <p
+              className={clsx(
+                "text-sm leading-[1em] border-2 border-highlight",
+                "px-2 py-1 font-bold rounded-full text-text"
+              )}
+            >
+              {`${data?.completedFiles}/${data?.totalFiles}`}
+            </p>
+          </div>
+        </div>
+      }
     />
   );
 };

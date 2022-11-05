@@ -16,10 +16,10 @@
   *:focus {
     outline: none;
   }
-
+/* 
 * {
   cursor: none;
-}
+} */
 
   .scroll1::-webkit-scrollbar {
     width: 5px;

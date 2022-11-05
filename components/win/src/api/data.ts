@@ -4,8 +4,10 @@ import Emulator from "@root/emulator";
 import Constants from "@utils/constants";
 import Globals from "@utils/globals";
 import {
+  copyFiles,
   getConsoleDump,
   getConsoleLinks,
+  getConsolePatchDump,
   getDiscMappings,
   getDumpPath,
   getEmuSettings,
@@ -27,13 +29,13 @@ import { DownloadStatus } from "types/enums";
 import Xray from "x-ray";
 import * as R2 from "ramda";
 import parseUrl from "parse-url";
-import cpy, { ProgressData } from "cpy";
 
 export namespace DataApi {
   export class Resolver {
     async getGames({ console: cns, keyword, page, limit }: GetGamesParams) {
       const settings = await getEmuSettings();
       const db = await getConsoleDump(cns);
+      const patch = await getConsolePatchDump(cns);
 
       const recent = settings.get("recentSearch").value() ?? [];
       let newRecent = _.uniq([...recent, keyword]);
@@ -49,6 +51,7 @@ export namespace DataApi {
         const games = db
           .map((v: ConsoleGameData) => ({
             ...v,
+            ...((patch.find({ id: v.id }).value() as ConsoleGameData) ?? {}),
             isFavorite: favorites.indexOf(v.id) > -1,
           }))
           .orderBy(
@@ -75,6 +78,7 @@ export namespace DataApi {
         )
         .map((v: ConsoleGameData) => ({
           ...v,
+          ...((patch.find({ id: v.id }).value() as ConsoleGameData) ?? {}),
           isFavorite: favorites.indexOf(v.id) > -1,
         }))
         .orderBy(
@@ -108,6 +112,7 @@ export namespace DataApi {
     async getGame({ id, console: cns }: GetGameParams) {
       const settings = await getEmuSettings();
       const db = await getConsoleDump(cns);
+      const patch = await getConsolePatchDump(cns);
 
       const favorites = settings.get("favorites").value() ?? [];
 
@@ -115,29 +120,62 @@ export namespace DataApi {
 
       return {
         ...game,
+        ...((patch.find({ id }).value() as ConsoleGameData) ?? {}),
         isFavorite: favorites.indexOf(game.id) > -1,
       };
     }
 
     async setGame({ id, console: cns, data }: SetGameParams) {
       const db = await getConsoleDump(cns);
+      const patch = await getConsolePatchDump(cns);
 
       const gameData = db.find({ id }).value() as ConsoleGameData;
+      const patchedGame = patch.find({ id }).value() as ConsoleGameData;
 
-      const game = db
-        .find({ id })
-        .set("opening", data.opening ?? gameData.opening)
-        .set("description", data.description ?? gameData.description)
-        .set("publisher", data.publisher ?? gameData.publisher)
-        .set("developer", data.developer ?? gameData.developer)
-        .set("released", data.released ?? gameData.released)
-        .set("cover", data.cover ?? gameData.cover)
-        .set("ratings", data.ratings ?? gameData.ratings)
-        .set("genre", data.genre ?? gameData.genre)
-        .set("screenshots", data.screenshots ?? gameData.screenshots)
-        .write() as ConsoleGameData;
+      const patchValue = <T extends keyof ConsoleGameData>(
+        key: T
+      ): ConsoleGameData[typeof key] => {
+        const dataVal = data[key];
+        if (key in data && !!dataVal) {
+          return dataVal;
+        }
 
-      return game;
+        if (
+          patchedGame &&
+          key in patchedGame &&
+          patchedGame[key] !== undefined
+        ) {
+          return patchedGame[key];
+        }
+
+        return gameData[key];
+      };
+
+      const newData = {
+        ...gameData,
+        opening: patchValue("opening"),
+        description: patchValue("description"),
+        publisher: patchValue("publisher"),
+        developer: patchValue("developer"),
+        released: patchValue("released"),
+        cover: patchValue("cover"),
+        ratings: patchValue("ratings"),
+        genre: patchValue("genre"),
+        screenshots: patchValue("screenshots"),
+      };
+
+      if (patchedGame) {
+        const find = patch.find(
+          (v: ConsoleGameData) => v.id === id
+        ) as ObjectChain<ConsoleGameData>;
+
+        find.assign(newData).write();
+      } else {
+        const list = patch.value() ?? [];
+        patch.setState([...list, newData]).write();
+      }
+
+      return newData;
     }
 
     async searchTGDB({ keyword, console: cons }: SearchTGDBParams) {
@@ -278,49 +316,64 @@ export namespace DataApi {
       return videos;
     }
 
-    async migrate(newPath: string) {
+    async migrate(argp: string) {
       const setting = await getEmuSettings();
-      const oldPath = setting.get("pathing.dump").value();
+      const op = setting.get("pathing.dump").value();
+      const np = argp;
+
+      const oldPath = resolve(op);
+      const newPath = resolve(np);
       try {
         await fs.access(oldPath);
-        await fs.remove(newPath);
-        await fs.ensureDir(newPath);
-        Globals.set(`dump-migrate-${newPath}`, {
-          progress: 0,
+        const exists = await fs.pathExists(newPath);
+        if (exists) await fs.emptyDir(newPath);
+        Globals.set(`dump-migrate-${newPath}}`, {
+          current: undefined,
+          currentSize: undefined,
+          currentTotalSize: undefined,
           completedFiles: 0,
           totalFiles: 0,
-          percent: 0,
+          totalSize: 0,
           completedSize: 0,
+          percent: 0,
         } as ProgressData);
-        if (resolve(oldPath) === resolve(newPath)) return;
+        if (oldPath === newPath) return;
 
-        await cpy(`./**`, resolve(newPath), {
-          overwrite: false,
-          cwd: resolve(oldPath),
-          dot: true,
-        }).on("progress", async (progress) => {
-          Globals.set(`dump-migrate-${newPath}`, progress as ProgressData);
-          if (progress.percent === 100) {
-            const settingIn = await getEmuSettings();
-            Globals.remove(`dump-migrate-${newPath}`);
-            settingIn.set("pathing.dump", newPath).write();
-          }
+        await copyFiles(oldPath, newPath, {
+          concurrency: 1,
+          async onProgress(progress) {
+            Globals.set(`dump-migrate-${newPath}`, progress as ProgressData);
+            if (progress.percent === 1) {
+              const settingIn = await getEmuSettings();
+              settingIn.set("pathing.dump", newPath).write();
+            }
+          },
         });
+
+        await fs.remove(oldPath);
       } catch (error) {
         console.error(error);
       }
     }
 
-    async queryMigrateProgress(newPath: string) {
+    async queryMigrateProgress(argp: string) {
+      const newPath = resolve(argp);
+      const progress = Globals.get(`dump-migrate-${newPath}`) as ProgressData;
+      if (progress && progress.percent === 1) {
+        Globals.remove(`dump-migrate-${newPath}`);
+      }
+
       return (
-        Globals.get(`dump-migrate-${newPath}`) ??
-        ({
-          progress: 0,
+        progress ?? {
+          current: undefined,
+          currentSize: undefined,
+          currentTotalSize: undefined,
           completedFiles: 0,
           totalFiles: 0,
-          percent: 0,
+          totalSize: 0,
           completedSize: 0,
-        } as ProgressData)
+          percent: 0,
+        }
       );
     }
 
@@ -351,7 +404,7 @@ export namespace DataApi {
       if (!game || !game?.regions.length || !serialMappings || !region)
         return undefined;
 
-      const gameFilePath = join(pathToDump, game.unique);
+      const gameFilePath = join(pathToDump, game.id);
       const gameFiles = await pMap(region.serials, async (serial) => {
         const exts = ["iso", "bin"];
         const extFiles = await pMap(exts, async (ext) => {
@@ -382,7 +435,7 @@ export namespace DataApi {
       const game = db.find({ id }).value() as ConsoleGameData;
 
       if (!game || !game.regions.length) return [];
-      const gameFilePath = join(pathToDump, game.unique);
+      const gameFilePath = join(pathToDump, game.id);
       const regionFiles = await pMap(game.regions, async (region) => {
         const gameFiles = await pMap(region.serials, async (serial) => {
           const exts = ["iso", "bin"];
@@ -483,7 +536,7 @@ export namespace DataApi {
       const link = mappings.get(`${id}.${serial}`).value();
       if (!game || !link) return false;
 
-      const gameFilePath = join(pathToDump, game.unique, serial);
+      const gameFilePath = join(pathToDump, game.id, serial);
       const gameFileExists = (await readdir(gameFilePath)).some((v) => {
         const ext = extname(v);
         return (ext === ".iso" || ext === ".bin") && v.indexOf(serial) > -1;
@@ -492,7 +545,7 @@ export namespace DataApi {
       if (gameFileExists) await fs.remove(gameFilePath);
 
       await fs.ensureDir(gameFilePath);
-      const gameFile = join(pathToDump, game.unique, `${serial}.zip`);
+      const gameFile = join(pathToDump, game.id, `${serial}.zip`);
       const zipFileExists = await fs.pathExists(gameFile);
       if (zipFileExists) await fs.remove(gameFile);
       const downloadStream = got.stream(link.link);
@@ -578,7 +631,7 @@ export namespace DataApi {
       const game = db.find({ id }).value() as ConsoleGameData;
 
       if (!game) return defaultRes;
-      const gameFilePath = join(pathToDump, game.unique, serial);
+      const gameFilePath = join(pathToDump, game.id, serial);
 
       await fs.ensureDir(gameFilePath);
       const check = (await readdir(gameFilePath)).some((v) => {

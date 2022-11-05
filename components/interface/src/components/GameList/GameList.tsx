@@ -79,6 +79,7 @@ const GameList = () => {
             selected={store.selectedIndex}
             console={store.console}
             count={count}
+            lastMax={0}
             increaseMax={(n: number) => store.list.incMax(n)}
           />
         )}
@@ -114,6 +115,7 @@ interface SegmentProps {
   keyword: string;
   console: string;
   count?: number;
+  lastMax: number;
   increaseMax: (n: number) => void;
 }
 
@@ -125,6 +127,7 @@ const Segment = ({
   increaseMax,
   count = 5,
   console: cons,
+  lastMax,
 }: SegmentProps) => {
   const [isInViewport, toggle] = useToggle(false);
 
@@ -146,7 +149,8 @@ const Segment = ({
 
   useDeepCompareEffect(() => {
     if (!loading && data) {
-      increaseMax(data.res.length);
+      // increaseMax(data.res.length);
+      store.list.setMax(lastMax + (data.res.length - 1));
     }
   }, [loading, data]);
 
@@ -188,7 +192,7 @@ const Segment = ({
             focused={focused}
             key={game?.id ?? v}
             cover={game?.cover}
-            unique={game?.unique}
+            id={game?.id}
             isRef={isRef}
             isActive={isActive}
             left={left}
@@ -206,6 +210,7 @@ const Segment = ({
           selected={selected}
           increaseMax={increaseMax}
           console={store.console}
+          lastMax={lastMax + (data.res.length - 1)}
         />
       )}
     </>

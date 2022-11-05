@@ -99,3 +99,10 @@ export const extractTag = (url: string) => {
 
   return tag;
 };
+
+export const bytesFormat = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(3)} KB`;
+  if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(3)} MB`;
+  return `${(bytes / 1073741824).toFixed(3)} GB`;
+};

@@ -34,7 +34,7 @@ class OverlayWindow {
 
   parentName: string | undefined;
 
-  parentHandle: number | any;
+  parent: OVHook.IWindow | undefined;
 
   started: boolean = false;
 
@@ -119,7 +119,7 @@ class OverlayWindow {
 
   events() {
     IOverlay.setEventCallback((evt, args: any) => {
-      if (this.win) {
+      if (this.win && this.parent) {
         console.log(evt, args);
         if (evt === "game.input") {
           const inputEvent = IOverlay.translateInputEvent(args);
@@ -127,7 +127,7 @@ class OverlayWindow {
         } else if (evt === "graphics.window.event.focus") {
           if (this.started) {
             if (args.focused) {
-              setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
+              setActiveWindow(this.parent.windowId, ShowWindowFlags.SW_SHOW);
               this.win.show();
             } else {
               this.win.hide();
@@ -143,7 +143,7 @@ class OverlayWindow {
 
           if (!this.started) {
             this.started = true;
-            setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
+            setActiveWindow(this.parent.windowId, ShowWindowFlags.SW_SHOW);
             this.onInit?.();
           }
         } else if (
@@ -151,11 +151,11 @@ class OverlayWindow {
           evt === "graphics.window"
         ) {
           if (evt === "graphics.window")
-            setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
+            setActiveWindow(this.parent.windowId, ShowWindowFlags.SW_SHOW);
           this.win?.setSize(args.width, args.height);
         }
 
-        const position = getWindowRect(this.parentHandle);
+        const position = getWindowRect(this.parent.windowId);
         if (position) {
           const offsetY = this.win.isMaximized() ? 0 : 50;
           const offsetX = this.win.isMaximized() ? 0 : 8;
@@ -167,11 +167,11 @@ class OverlayWindow {
       }
 
       setTimeout(() => {
-        if (this.win && this.parentHandle) {
+        if (this.win && this.parent && this.parent?.windowId) {
           const list = OVHook.getTopWindows();
           const parent = list.find(
             (v) =>
-              v.windowId === this.parentHandle &&
+              v.windowId === this.parent?.windowId &&
               !!extractString(/(retroarch\s[^\s]+\s[^\s]+)/gi, v.title, true)
           );
 
@@ -186,8 +186,8 @@ class OverlayWindow {
   }
 
   poll = () => {
-    if (this.parentHandle) {
-      const title = getWindowText(this.parentHandle);
+    if (this.parent) {
+      const title = getWindowText(this.parent.windowId);
 
       if (this.win && !this.attached && title && this.displayBound) {
         IOverlay.start();
@@ -208,22 +208,18 @@ class OverlayWindow {
           minHeight: 100,
         });
 
-        const parent = OVHook.getTopWindows().find(
-          (v) => v.windowId === this.parentHandle
-        );
+        OVHook.injectProcess(this.parent);
 
-        if (parent) {
-          setWindowRect(this.parentHandle, {
-            left: this.displayBound.x,
-            top: this.displayBound.y,
-            width: this.displayBound.width,
-            height: this.displayBound.height,
-          });
+        setWindowRect(this.parent.windowId, {
+          left: this.displayBound.x,
+          top: this.displayBound.y,
+          width: this.displayBound.width,
+          height: this.displayBound.height,
+        });
 
-          OVHook.injectProcess(parent);
+        setActiveWindow(this.parent.windowId, ShowWindowFlags.SW_SHOW);
 
-          this.events();
-        }
+        this.events();
 
         this.attached = true;
         return;
@@ -273,7 +269,7 @@ class OverlayWindow {
       1000
     );
 
-    this.parentHandle = exe.windowId;
+    this.parent = exe;
     return exe;
   }
 
@@ -281,13 +277,11 @@ class OverlayWindow {
     const exe = await this.queryRetroarch();
     if (!exe) throw new Error("Retroarch not found");
 
-    setActiveWindow(this.parentHandle, ShowWindowFlags.SW_SHOW);
-
     this.createWindow(this.app.icon);
+
     this.win?.setIgnoreMouseEvents(true);
 
     this.poll();
-
     return this.parentName;
   }
 

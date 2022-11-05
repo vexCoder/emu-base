@@ -107,7 +107,7 @@ class Emulator {
           const db = await getConsoleDump(this.console.key);
           const pathToDump = getDumpPath(this.console.key);
           const game = db.find({ id: this.game }).value() as ConsoleGameData;
-          const pathToGame = join(pathToDump, game.unique);
+          const pathToGame = join(pathToDump, game.id);
           const savestate_directory = join(pathToGame, "savestate");
 
           logToFile({ savestate_directory });
@@ -330,7 +330,7 @@ class Emulator {
         fps: this.showFps,
         turbo: this.turbo,
         console: this.console.key,
-        game: game.unique,
+        game: game.id,
         slot: this.state_slot,
         states: savestates,
         volume: this.volume,
@@ -353,7 +353,7 @@ class Emulator {
     );
     const game = db.find({ id }).value() as ConsoleGameData;
     this.game = game.id;
-    const gameFilePath = join(pathToDump, game.unique, serial);
+    const gameFilePath = join(pathToDump, game.id, serial);
     const exts = [".iso", ".bin"];
     const gameFile = await pMap(await fs.readdir(gameFilePath), async (v) => {
       const ext = extname(v);
@@ -373,7 +373,7 @@ class Emulator {
     const libretro_directory = join(pathing.backend, "cores");
     const system_directory = join(pathing.backend, "system");
 
-    const pathToGame = join(pathToDump, game.unique);
+    const pathToGame = join(pathToDump, game.id);
     const savestate_directory = join(pathToGame, "savestate");
     const savefile_directory = join(pathToGame, "saves");
     const screenshot_directory = join(pathToGame, "screenshots");
@@ -420,7 +420,7 @@ class Emulator {
     await this.app?.overlay?.setOnInit(async () => {
       await this.init();
     });
-    this.handle = this.app?.overlay?.parentHandle;
+    this.handle = this.app?.overlay?.parent?.windowId;
   }
 }
 

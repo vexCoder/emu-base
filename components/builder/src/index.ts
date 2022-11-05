@@ -21,7 +21,6 @@ const externals = [
   "ref-union-napi",
   "sharp",
   "screenshot-desktop",
-  "emitter",
 ];
 
 const main = async () => {
@@ -91,8 +90,8 @@ const main = async () => {
     );
 
     await copy(
-      join(tools, "game-scraper", "dump"),
-      join(root, ".artifacts", "release")
+      join(tools, "games-scraper", "dump"),
+      join(root, ".artifacts", "release", "dump")
     );
 
     await Promise.all(
@@ -143,9 +142,15 @@ const main = async () => {
         productName: "Emu Base",
         copyright: "© 2022 Deamorta",
         win: {
-          asar: true,
+          asar: false,
           target: "nsis",
           icon: iconPath,
+          extraFiles: [
+            {
+              from: join(root, ".artifacts", "release", "dump"),
+              to: "defaults",
+            },
+          ],
         },
         nsis: {
           oneClick: false,
@@ -153,6 +158,7 @@ const main = async () => {
           allowToChangeInstallationDirectory: true,
           installerIcon: iconPath,
           installerHeaderIcon: iconPath,
+          include: join(components, "builder", "install.nsh"),
         },
         buildDependenciesFromSource: true,
         // nodeGypRebuild: true,
@@ -165,8 +171,6 @@ const main = async () => {
           "node_modules/**/*",
           "package.json",
         ],
-
-        extraFiles: ["dump"],
 
         includeSubNodeModules: true,
         npmRebuild: false,

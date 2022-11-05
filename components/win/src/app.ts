@@ -4,10 +4,13 @@ import {
   createWindow,
   getDisplayById,
   getDisplayIndex,
+  getDumpPath,
   getEmuSettings,
-  logToFile
+  logToFile,
 } from "@utils/helper";
 import { app, BrowserWindow, Tray } from "electron";
+import { copy, ensureDir, pathExists, readJSON, remove } from "fs-extra";
+import pMap from "p-map";
 import { join } from "path";
 import Emulator from "./emulator";
 import OverlayWindow from "./overlay";
@@ -20,8 +23,74 @@ export class Application {
   icon = "";
   tray?: Tray;
 
-  init() {
+  async init() {
     // NOTE do some initialization like seeding the database
+    const isProd = process.env.NODE_ENV === "production";
+    if (isProd) {
+      const defaultPath = join(app.getPath("appData"), "emu-base", "defaults");
+      const hasDefault = await pathExists(defaultPath);
+
+      if (hasDefault) {
+        const defaultSettings = (await readJSON(
+          join(defaultPath, "settings.json")
+        )) as Pick<AppSettings, "consoles">;
+        logToFile(defaultSettings)
+        const settings = await getEmuSettings();
+
+        const consoles = settings.get("consoles").value();
+        logToFile(consoles)
+
+        const newConsoles = consoles.map((v) => {
+          const cons = defaultSettings.consoles.find((c) => c.key === v.key);
+          logToFile(cons)
+          if (!cons) return v;
+          return {
+            ...v,
+            id: cons.id,
+            description: cons.description,
+            lastUpdated: cons.lastUpdated,
+            retroarch: {
+              ...v.retroarch,
+              core: cons.retroarch.core,
+            },
+          };
+        });
+
+        settings.set("consoles", newConsoles).write();
+        const dumpRoot = settings.get("pathing.dump").value();
+
+        await pMap(newConsoles, async (v) => {
+          const key = v.key;
+          const dumpPath = join(defaultPath, key);
+          const hasDump = await pathExists(dumpPath);
+
+          logToFile(dumpPath);
+          logToFile(hasDump);
+          if (!hasDump) return;
+
+          const consoleDumpPath = getDumpPath(key, dumpRoot);
+          await ensureDir(consoleDumpPath);
+
+          logToFile(join(dumpPath, "dump.json"))
+          logToFile(join(consoleDumpPath, "dump.json"))
+          await copy(
+            join(dumpPath, "dump.json"),
+            join(consoleDumpPath, "dump.json"),
+            { overwrite: true }
+          );
+
+          await copy(
+            join(dumpPath, "links.json"),
+            join(consoleDumpPath, "links.json"),
+            { overwrite: true }
+          );
+        });
+
+        await remove(defaultPath)
+      }
+    }
+
+
     return this;
   }
 
@@ -122,8 +191,10 @@ export class Application {
     await app.whenReady();
     logToFile("booted");
 
-    const settings = (await getEmuSettings()).value()
+    const settings = (await getEmuSettings()).value();
     // eslint-disable-next-line prettier/prettier
-    new Application().init().makeWindow(settings).startEvents().attachHandlers();
+    const appn = new Application();
+    await appn.init();
+    appn.makeWindow(settings).startEvents().attachHandlers();
   }
 }

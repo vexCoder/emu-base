@@ -6,7 +6,7 @@ interface Application {
 
   setEmulator(emu: import('../emulator').default);
 
-  init(): Application;
+  init(): Promise<Application>;
   makeWindow(settings: AppSettings): Application;
   startEvents(): Application;
   attachHandlers(): Application;

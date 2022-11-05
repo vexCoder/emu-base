@@ -150,6 +150,7 @@ export interface MainActions {
     inc: () => void;
     dec: () => void;
     incMax: (val: number) => void;
+    setMax: (val: number) => void;
   };
 }
 
@@ -188,6 +189,11 @@ export const useMainStore = create(
       incMax(val: number) {
         set({
           maxSelectedIndex: get().maxSelectedIndex + val,
+        });
+      },
+      setMax(val: number) {
+        set({
+          maxSelectedIndex: val,
         });
       },
     },

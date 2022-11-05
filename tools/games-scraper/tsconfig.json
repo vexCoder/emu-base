@@ -7,6 +7,7 @@
     "moduleResolution": "Node",
     "isolatedModules": false,
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "node_modules/types/**/*.ts"],
   "exclude": [],

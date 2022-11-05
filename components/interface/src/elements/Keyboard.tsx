@@ -236,7 +236,6 @@ const Keyboard = ({
       setValue("");
     } else if (val === "done") {
       onChange?.(value);
-      onClose?.();
     } else {
       setValue((prev) => prev + (shift ? val.toUpperCase() : val));
     }

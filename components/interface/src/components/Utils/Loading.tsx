@@ -2,15 +2,28 @@ import Spinner from "@elements/Spinner";
 import { Theme } from "@root/themes";
 import clsx from "clsx";
 import { AnimatePresence, motion } from "framer-motion";
+import { ReactNode } from "react";
 
 type LoadingProps = BaseComponentProps<"div"> & {
   loading: boolean;
   color?: keyof Theme;
   align?: "left" | "center" | "right";
-  message?: string;
+  message?: string | ReactNode;
+  hideSpinner?: boolean;
+  classes?: {
+    content?: string;
+  };
 };
 
-const Loading = ({ loading, color, align, message, ...rest }: LoadingProps) => {
+const Loading = ({
+  loading,
+  color,
+  align,
+  message,
+  classes,
+  hideSpinner,
+  ...rest
+}: LoadingProps) => {
   return (
     <AnimatePresence>
       {loading && (
@@ -29,24 +42,31 @@ const Loading = ({ loading, color, align, message, ...rest }: LoadingProps) => {
               "h-stack gap-3 items-center p-2 w-full h-full bg-black/80",
               align === "left" && "justify-start",
               align === "center" && "justify-center",
-              align === "right" && "justify-end"
+              align === "right" && "justify-end",
+              classes?.content
             )}
           >
-            <Spinner
-              className={clsx(
-                "w-[1.75em] h-[1.75em] animate-spin text-gray-600",
-                color === "primary" && "fill-primary",
-                color === "secondary" && "fill-secondary",
-                color === "text" && "fill-text",
-                color === "contrastText" && "fill-contrastText",
-                color === "focus" && "fill-focus",
-                color === "highlight" && "fill-highlight",
-                !color && "fill-green-400"
-              )}
-            />
-            <span className="text-secondary text-xl font-bold">
-              {message || "Loading..."}
-            </span>
+            {!hideSpinner && (
+              <Spinner
+                className={clsx(
+                  "w-[1.75em] h-[1.75em] animate-spin text-gray-600",
+                  color === "primary" && "fill-primary",
+                  color === "secondary" && "fill-secondary",
+                  color === "text" && "fill-text",
+                  color === "contrastText" && "fill-contrastText",
+                  color === "focus" && "fill-focus",
+                  color === "highlight" && "fill-highlight",
+                  !color && "fill-green-400"
+                )}
+              />
+            )}
+            {(typeof message === "string" || !message) && (
+              <span className="text-secondary text-xl font-bold">
+                {message || "Loading..."}
+              </span>
+            )}
+
+            {message && typeof message !== "string" && message}
           </div>
         </motion.div>
       )}

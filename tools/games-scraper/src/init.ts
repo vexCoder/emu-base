@@ -1,10 +1,8 @@
 import dayjs from "dayjs";
 import fs from "fs-extra";
-import { customAlphabet } from "nanoid";
 import pMap from "p-map";
 import { join } from "path";
-import * as R from "ramda";
-import { getConfig, getDumpPath, getEmuSettings } from "./utils.js";
+import { generateId, getConfig, getDumpPath, getEmuSettings } from "./utils.js";
 
 const init = async () => {
   const db = getEmuSettings();
@@ -12,8 +10,6 @@ const init = async () => {
   const pathToDump = getDumpPath();
 
   await fs.ensureDir(pathToDump);
-
-  const nanoid = customAlphabet("0123456789abcdefghijklmnopqrstuvwxyz", 10);
 
   await db.read();
 
@@ -32,14 +28,7 @@ const init = async () => {
 
     const consoleData = settings.consoles.find((v) => v.key === consoleName);
 
-    const id =
-      consoleData?.id ??
-      R.reduceWhile(
-        (p, c) => p !== c,
-        () => nanoid(4),
-        nanoid(4),
-        ids
-      );
+    const id = generateId(consoleName);
 
     ids.push(id);
 

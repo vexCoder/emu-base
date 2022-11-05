@@ -12,7 +12,7 @@ const GameBackgroundImages = (props: GameBackgroundImagesProps) => {
   const store = useMainStore((v) => pick(["console", "selected"], v));
 
   const pathToGame = useMemoizedFn((...args: string[]) => {
-    return join("/", [store.console, store?.selected?.unique, ...args]);
+    return join("/", [store.console, store?.selected?.id, ...args]);
   });
 
   const images = store.selected?.screenshots;
@@ -26,8 +26,9 @@ const GameBackgroundImages = (props: GameBackgroundImagesProps) => {
       .map((__, i) => i)
       .filter((v) => v !== active);
 
-    activeAction.set(_.shuffle(range)[0]);
-  }, 5000);
+    const random = _.shuffle(range)[0];
+    if (random) activeAction.set(_.shuffle(range)[0]);
+  }, 15000);
 
   return (
     <div className="fixed bottom-0 right-0 z-[-10]" {...props}>
@@ -41,6 +42,7 @@ const GameBackgroundImages = (props: GameBackgroundImagesProps) => {
               initial={{ z: -20, opacity: 0 }}
               animate={{ z: -10, opacity: 1 }}
               exit={{ z: -20, opacity: 0 }}
+              transition={{ duration: 1.5 }}
             >
               <div
                 className={clsx(

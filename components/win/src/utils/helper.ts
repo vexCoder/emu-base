@@ -1,8 +1,8 @@
 import { app, BrowserWindow, Rectangle, screen } from "electron";
-import { dirname, join } from "path";
+import { basename, dirname, join, resolve as pathResolve } from "path";
 import FileAsync from "lowdb/adapters/FileAsync";
 import low from "lowdb";
-import fs, { ensureDirSync } from "fs-extra";
+import fs, { ensureDir, ensureDirSync, stat } from "fs-extra";
 import got from "got";
 import {
   toLower,
@@ -27,6 +27,9 @@ import execa from "execa";
 import _ from "lodash";
 import dayjs from "dayjs";
 import { youtube } from "scrape-youtube";
+import recursiveReadDir from "recursive-readdir";
+import pMap from "p-map";
+import cp from "cp-file";
 import { setActiveWindow, ShowWindowFlags } from "./ffi";
 
 export interface WinSettings {
@@ -192,12 +195,9 @@ export const getSettingsPath = () => {
 };
 
 export const getDumpPath = (consoleName?: string, root?: string) => {
-  const isDev = process.env.NODE_ENV === "development";
   const settingsPath = join(getSettingsPath(), "dump");
-  const base = isDev ? settingsPath : root ?? settingsPath;
+  const base = root ?? settingsPath;
   const path = consoleName ? join(base, consoleName) : join(base);
-
-  console.log(path);
 
   ensureDirSync(path);
   return path;
@@ -232,6 +232,22 @@ export const getConsoleDump = async (consoleName: string) => {
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<ConsoleGameData[]>(
     join(pathToDump, `dump.json`)
+  );
+  const db = await low(adapter);
+  await db.read();
+  return db;
+};
+
+export const getConsolePatchDump = async (consoleName: string) => {
+  const settings = await getEmuSettings();
+  const dumpRoot = settings.get("pathing.dump").value();
+  const pathToDump = getDumpPath(consoleName, dumpRoot);
+  fs.ensureDirSync(pathToDump);
+  const adapter = new FileAsync<ConsoleGameData[]>(
+    join(pathToDump, `dump.patch.json`),
+    {
+      defaultValue: [],
+    }
   );
   const db = await low(adapter);
   await db.read();
@@ -710,4 +726,93 @@ export const searchMusicVideo = async (keyword: string, cons: string) => {
   )(uniques);
 
   return videos;
+};
+
+export const bytesFormat = (bytes: number) => {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1048576) return `${(bytes / 1024).toFixed(3)} KB`;
+  if (bytes < 1073741824) return `${(bytes / 1048576).toFixed(3)} MB`;
+  return `${(bytes / 1073741824).toFixed(3)} GB`;
+};
+
+interface CopyFilesOptions {
+  onProgress?: (progress: ProgressData) => void | Promise<void>;
+  concurrency?: number;
+  delay?: number;
+}
+
+export const copyFiles = async (
+  target: string,
+  dest: string,
+  options?: CopyFilesOptions
+) => {
+  const { onProgress } = options ?? {};
+  const t = pathResolve(target);
+  const d = pathResolve(dest);
+
+  const files = await new Promise<string[]>((rsv) => {
+    recursiveReadDir(t, [], (err, res) => {
+      if (err) console.error(err);
+      rsv(res);
+    });
+  });
+
+  await ensureDir(d);
+
+  const fileSizes = (
+    await pMap(files, async (file) => {
+      const { size } = await stat(file);
+      const isDirectory = (await stat(file)).isDirectory();
+      return {
+        size,
+        isDirectory,
+      };
+    })
+  ).filter((v) => !v.isDirectory);
+
+  const totalSize = fileSizes.reduce((p, b) => p + b.size, 0);
+
+  const progress = {
+    current: undefined,
+    currentSize: undefined,
+    currentTotalSize: undefined,
+    completedFiles: 0,
+    totalFiles: files.length,
+    totalSize,
+    completedSize: 0,
+    percent: 0,
+  } as ProgressData;
+
+  const currentSizes: Record<string, number> = {};
+
+  await pMap(
+    files,
+    async (v) => {
+      const newPath = v.replace(t, d);
+      await ensureDir(dirname(newPath));
+      currentSizes[v] = 0;
+      await cp(v, newPath, {
+        overwrite: true,
+      }).on("progress", (cpProg) => {
+        progress.current = basename(cpProg.sourcePath);
+        progress.currentSize = cpProg.writtenBytes;
+        progress.currentTotalSize = cpProg.size;
+        currentSizes[v] = cpProg.writtenBytes;
+        progress.completedSize = _.values(currentSizes).reduce(
+          (p, c) => p + c,
+          0
+        );
+        progress.percent = progress.completedSize / progress.totalSize;
+        if (cpProg.percent >= 1) {
+          progress.completedFiles++;
+        }
+        onProgress?.(progress);
+      });
+
+      if (options?.delay) await sleep(options.delay);
+    },
+    {
+      concurrency: options?.concurrency ?? Infinity,
+    }
+  );
 };

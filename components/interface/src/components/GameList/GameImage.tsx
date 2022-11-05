@@ -10,7 +10,7 @@ import { deepEqual } from "fast-equals";
 type GameImageProps = BaseComponentProps<"div"> & {
   focused: boolean;
   cover?: string;
-  unique?: string;
+  id?: string;
   isRef: boolean;
   isActive: boolean;
   loading: boolean;
@@ -22,7 +22,7 @@ const GameImage = memo(
   ({
     focused,
     cover,
-    unique,
+    id,
     isRef,
     isActive,
     left,
@@ -32,7 +32,7 @@ const GameImage = memo(
     const store = useMainStore((v) => pick(["console", "selected"], v));
 
     const pathToGame = useMemoizedFn((...args: string[]) => {
-      return join("/", [store.console, unique, ...args]);
+      return join("/", [store.console, id, ...args]);
     });
 
     const ref = useRef<HTMLDivElement>(null);
@@ -48,6 +48,7 @@ const GameImage = memo(
       }
     }, [isInViewport, isRef, onViewport]);
 
+    if (!id) return null;
     return (
       <div
         ref={ref}
@@ -62,7 +63,7 @@ const GameImage = memo(
         <AnimatePresence mode="popLayout">
           {isInViewport && !loading && (
             <motion.div
-              key={`${unique}-image`}
+              key={`${id}-image`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -90,19 +91,35 @@ const GameImage = memo(
                   }}
                 />
               )}
+              {(!cover || cover === "") && (
+                <div
+                  className={clsx(
+                    "p-[5rem]",
+                    !cover && "bg-secondary/50 rounded-xl animate-pulse"
+                  )}
+                  style={{
+                    width: isActive ? "20rem" : "10rem",
+                    height: isActive ? "20rem" : "10rem",
+                    transition: "all 0.35s linear",
+                  }}
+                />
+              )}
             </motion.div>
           )}
 
           {!isInViewport && (
             <motion.div
-              key={`${unique}-image-unselected`}
+              key={`${id}-image-unselected`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { delay: 1, duration: 0.5 } }}
               transition={{ duration: 0.1 }}
             >
               <div
-                className="p-[5rem] "
+                className={clsx(
+                  "p-[5rem]",
+                  !cover && "bg-secondary/50 rounded-xl animate-pulse"
+                )}
                 style={{
                   width: isActive ? "20rem" : "10rem",
                   height: isActive ? "20rem" : "10rem",

@@ -4,6 +4,8 @@ import {
   ChevronUpIcon,
   DocumentIcon,
   FolderIcon,
+  FolderOpenIcon,
+  XMarkIcon,
 } from "@heroicons/react/24/outline";
 import useNavigate from "@hooks/useNavigate";
 import { useCounter, useInViewport, useMount } from "ahooks";
@@ -54,18 +56,31 @@ const FilePicker = ({
       if (typeof p === "object") ppath = p.path;
       if (p === undefined) ppath = p;
 
-      const f = await window.win.openPath({
-        path: ppath,
-        options: { folderOnly },
-      });
+      let f: FileItem[] = [];
+      try {
+        f = await window.win.openPath({
+          path: ppath,
+          options: { folderOnly },
+        });
+      } catch (error) {
+        f = await window.win.openPath({
+          path: undefined,
+          options: { folderOnly },
+        });
+      }
 
-      const sel = ppath
-        ? {
-            path: await window.path.resolve(ppath),
-            name: ppath ? await window.path.basename(ppath) : "/",
-            isDirectory: await window.win.isDirectory(ppath),
-          }
-        : undefined;
+      let sel: FileItem | undefined;
+      try {
+        sel = ppath
+          ? {
+              path: await window.path.resolve(ppath),
+              name: ppath ? await window.path.basename(ppath) : "/",
+              isDirectory: await window.win.isDirectory(ppath),
+            }
+          : undefined;
+      } catch (error) {
+        sel = undefined;
+      }
 
       setFiles(f.map((v, i) => ({ ...v, selected: i === 0 })));
 
@@ -114,6 +129,9 @@ const FilePicker = ({
       btnBottom() {
         if (pathSelected === 0) {
           if (menuSelected === 0) {
+            onClose?.();
+          }
+          if (menuSelected === 1) {
             const newIndex = _.clamp(recentIndex - 1, 1, recent.length);
             if (recent.length) {
               const last = recent[newIndex - 1];
@@ -124,7 +142,7 @@ const FilePicker = ({
               }
             }
           }
-          if (menuSelected === 1) {
+          if (menuSelected === 2) {
             const newIndex = _.clamp(recentIndex + 1, 1, recent.length);
             if (recent.length) {
               const next = recent[newIndex - 1];
@@ -135,7 +153,7 @@ const FilePicker = ({
               }
             }
           }
-          if (menuSelected === 2) {
+          if (menuSelected === 3) {
             const newPath = selected?.path
               .split(/\/\/|\\|\\\\/g)
               .slice(0, -1)
@@ -171,6 +189,7 @@ const FilePicker = ({
             onChange?.(selected);
             handleChangeFiles(selected);
             onClose?.();
+            if (selected) onCloseChange?.(selected);
           }
         } else if (pathSelected >= 1) {
           const sel = files[pathSelected - 1];
@@ -178,12 +197,31 @@ const FilePicker = ({
             onChange?.(sel);
             handleChangeFiles(sel);
             onClose?.();
+            if (sel) onCloseChange?.(sel);
           }
         }
       },
       btnRight() {
-        onClose?.();
-        if (selected) onCloseChange?.(selected);
+        const newPath = selected?.path
+          .split(/\/\/|\\|\\\\/g)
+          .slice(0, -1)
+          .join("/");
+
+        const isRoot = !/\/\/|\\|\\\\|\//g.exec(newPath ?? "");
+
+        const fileItem: FileItem | undefined =
+          !isRoot && newPath
+            ? {
+                isDirectory: true,
+                name: newPath.split("/").slice(-1)[0],
+                path: newPath,
+              }
+            : undefined;
+
+        if (fileItem) onChange?.(fileItem);
+        if (newPath !== selected?.path) {
+          handleChangeFiles(fileItem);
+        }
       },
     },
   });
@@ -192,12 +230,15 @@ const FilePicker = ({
     <div className="v-stack gap-2">
       {/* <div>{recentIndex}</div>
       <pre>{JSON.stringify(recent, null, 2)}</pre> */}
-      <h6 className="text-text font-bold tracking-widest">
-        {options?.folderOnly ? "Select Directory" : "Select File/Folder"}
-      </h6>
+      <div className="h-stack items-center gap-3">
+        <FolderOpenIcon width="2em" height="2em" className="text-text" />
+        <h6 className="font-bold text-text text-xl leading-[1em]">
+          {options?.folderOnly ? "Select Directory" : "Select File/Folder"}
+        </h6>
+      </div>
       <div className="v-stack border border-gray-200 rounded-xl pb-2 pt-2">
         <div className="h-stack items-center gap-4 px-3 mb-2">
-          <ChevronLeftIcon
+          <XMarkIcon
             className={clsx(
               (menuSelected !== 0 || pathSelected !== 0) && "text-text",
               focused &&
@@ -208,7 +249,7 @@ const FilePicker = ({
             width="1.25em"
             height="1.25em"
           />
-          <ChevronRightIcon
+          <ChevronLeftIcon
             className={clsx(
               (menuSelected !== 1 || pathSelected !== 0) && "text-text",
               focused &&
@@ -219,7 +260,7 @@ const FilePicker = ({
             width="1.25em"
             height="1.25em"
           />
-          <ChevronUpIcon
+          <ChevronRightIcon
             className={clsx(
               (menuSelected !== 2 || pathSelected !== 0) && "text-text",
               focused &&
@@ -230,13 +271,24 @@ const FilePicker = ({
             width="1.25em"
             height="1.25em"
           />
+          <ChevronUpIcon
+            className={clsx(
+              (menuSelected !== 3 || pathSelected !== 0) && "text-text",
+              focused &&
+                menuSelected === 3 &&
+                pathSelected === 0 &&
+                "text-focus"
+            )}
+            width="1.25em"
+            height="1.25em"
+          />
           <div className="w-full">
             <span
               className={clsx(
-                "tracking-widest",
-                (menuSelected !== 3 || pathSelected !== 0) && "text-text",
+                "tracking-widest line-clamp-1 w-full",
+                (menuSelected !== 4 || pathSelected !== 0) && "text-text",
                 focused &&
-                  menuSelected === 3 &&
+                  menuSelected === 4 &&
                   pathSelected === 0 &&
                   "text-focus"
               )}

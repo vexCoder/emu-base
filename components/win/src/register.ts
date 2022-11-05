@@ -103,7 +103,7 @@ export const MountDataHandles = (app: Application) => {
   );
 
   Handlers.register("data", "queryMigrateProgress", async (_evt, path) =>
-    Data.migrate(path)
+    Data.queryMigrateProgress(path)
   );
 
   Handlers.register("data", "getGameFiles", async (_evt, id, cons) =>

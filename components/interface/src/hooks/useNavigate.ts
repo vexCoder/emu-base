@@ -1,10 +1,11 @@
+import { mapButtons } from "@utils/gamepad.utils";
 import { useMainStore, useSoundStore } from "@utils/store.utils";
 import {
   useInterval,
   useLatest,
   useMemoizedFn,
   useMount,
-  useSetState,
+  // useSetState,
 } from "ahooks";
 import { keys } from "ramda";
 import { useEffect, useRef, useState } from "react";
@@ -22,6 +23,20 @@ type ActionType =
   | "ctrlMiddle"
   | "ctrlRight"
   | "ctrlLeft";
+
+const mapActionToButtonType: Record<ActionType, ButtonKeys> = {
+  left: "D_PAD_LEFT",
+  right: "D_PAD_RIGHT",
+  up: "D_PAD_UP",
+  bottom: "D_PAD_BOTTOM",
+  btnBottom: "BUTTON_BOTTOM",
+  btnLeft: "BUTTON_LEFT",
+  btnRight: "BUTTON_RIGHT",
+  btnUp: "BUTTON_TOP",
+  ctrlMiddle: "BUTTON_CONTROL_MIDDLE",
+  ctrlRight: "BUTTON_CONTROL_RIGHT",
+  ctrlLeft: "BUTTON_CONTROL_LEFT",
+};
 
 type Actions = Record<ActionType, (setFocus: (focus: string) => void) => void>;
 
@@ -41,6 +56,7 @@ const useNavigate = (
   deps: any[] = []
 ) => {
   const mapRef = useRef(new Map());
+  const mapStateRef = useRef(new Map());
   const store = useMainStore();
   const soundStore = useSoundStore();
   const [active, setActive] = useState(false);
@@ -82,7 +98,7 @@ const useNavigate = (
   const beepSound = options?.directionalSound ?? true;
   const confirmSound = options?.confirmSound ?? true;
 
-  const press = (fn: ActionType) => {
+  const beep = (fn: ActionType) => {
     if (["left", "right", "up", "bottom"].includes(fn)) {
       if (beepSound) {
         soundStore.play("beep");
@@ -94,21 +110,48 @@ const useNavigate = (
         soundStore.play("accept");
       }
     }
+  };
+
+  const checkButton = (fn: ActionType, check: boolean) => {
+    if (check) {
+      const gamePad = navigator
+        .getGamepads()
+        .find((v) => v?.id === store.gamepad?.id);
+      let pressed3 = false;
+
+      if (gamePad && fn) {
+        const mapped = mapButtons(gamePad.buttons as any);
+        pressed3 = mapped[mapActionToButtonType[fn]];
+
+        if (!pressed3) {
+          // setDown((prev) => ({ ...prev, [fn]: false }));
+          downRef.current[fn] = false;
+        }
+      }
+    }
+  };
+
+  const press = (fn: ActionType, checkBtn = true) => {
+    if (latestData.current.globalActions?.[fn]) {
+      checkButton(fn, checkBtn);
+      beep(fn);
+      latestData.current.globalActions[fn]?.(setFocus);
+    }
+
+    if (store.focused !== key) return;
 
     if (
       latestData.current.gamepad &&
       latestData.current.active &&
       latestData.current.actions?.[fn]
     ) {
+      checkButton(fn, checkBtn);
+      beep(fn);
       latestData.current.actions?.[fn]?.(setFocus);
-    }
-
-    if (latestData.current.globalActions?.[fn]) {
-      latestData.current.globalActions[fn]?.(setFocus);
     }
   };
 
-  const [down, setDown] = useSetState<Record<ActionType, boolean>>({
+  const downRef = useRef<Record<ActionType, boolean>>({
     left: false,
     right: false,
     up: false,
@@ -122,40 +165,41 @@ const useNavigate = (
     ctrlLeft: false,
   });
 
-  const handlePress = (action: ActionType, bool: boolean) => {
+  const handlePress = useMemoizedFn((action: ActionType, bool: boolean) => {
     // if (action === "bottom") console.log(action, bool);
+    const pressed = mapRef.current.get(action);
+
     if (bool) {
       mapRef.current.set(action, true);
+      mapStateRef.current.set(action, true);
 
       setTimeout(() => {
-        const pressed = mapRef.current.get(action);
+        const pressed2 = mapRef.current.get(action);
 
-        if (pressed) {
-          setDown((prev) => ({ ...prev, [action]: true }));
+        if (pressed2) {
+          downRef.current[action] = true;
+          // setDown((prev) => ({ ...prev, [action]: true }));
         }
       }, 750);
-    } else {
-      const pressed = mapRef.current.get(action);
-      if (pressed) {
-        mapRef.current.set(action, false);
-        press(action);
-        setDown((prev) => ({ ...prev, [action]: false }));
-      }
+    } else if (pressed) {
+      mapRef.current.set(action, false);
+      press(action, false);
+      downRef.current[action] = false;
     }
-  };
+  });
 
   useInterval(() => {
-    if (down.left) press("left");
-    if (down.right) press("right");
-    if (down.up) press("up");
-    if (down.bottom) press("bottom");
-    if (down.btnBottom) press("btnBottom");
-    if (down.btnLeft) press("btnLeft");
-    if (down.btnRight) press("btnRight");
-    if (down.btnUp) press("btnUp");
-    if (down.ctrlLeft) press("ctrlLeft");
-    if (down.ctrlMiddle) press("ctrlMiddle");
-    if (down.ctrlRight) press("ctrlRight");
+    if (downRef.current.left) press("left");
+    if (downRef.current.right) press("right");
+    if (downRef.current.up) press("up");
+    if (downRef.current.bottom) press("bottom");
+    if (downRef.current.btnBottom) press("btnBottom");
+    if (downRef.current.btnLeft) press("btnLeft");
+    if (downRef.current.btnRight) press("btnRight");
+    if (downRef.current.btnUp) press("btnUp");
+    if (downRef.current.ctrlLeft) press("ctrlLeft");
+    if (downRef.current.ctrlMiddle) press("ctrlMiddle");
+    if (downRef.current.ctrlRight) press("ctrlRight");
   }, 100);
 
   const globalKeys = keys(options?.globalActions ?? {});
