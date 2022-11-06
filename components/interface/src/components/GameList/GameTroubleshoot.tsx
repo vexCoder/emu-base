@@ -24,9 +24,11 @@ const selector = (v: MainStore) =>
 
 interface GameTroubleshootProps {
   onClose?: () => void;
+  onOpen?: () => void;
+  open?: boolean;
 }
 
-const GameTroubleshoot = ({ onClose }: GameTroubleshootProps) => {
+const GameTroubleshoot = ({ onClose, onOpen, open }: GameTroubleshootProps) => {
   const store = useMainStore(selector);
   const [selected, menuActions] = useCounter(0, {
     min: 0,
@@ -35,7 +37,11 @@ const GameTroubleshoot = ({ onClose }: GameTroubleshootProps) => {
 
   const [modalOpen, actionsModal] = useToggle(false);
   const [openOpenings, setOpenOpenings] = useState(false);
-  const { data: game, refresh } = useGetGame({
+  const {
+    data: game,
+    refresh,
+    loading,
+  } = useGetGame({
     console: store.console,
     id: store.selected?.id,
   });
@@ -55,16 +61,19 @@ const GameTroubleshoot = ({ onClose }: GameTroubleshootProps) => {
         if (selected === 0) {
           setOpenOpenings(true);
           setFocus("game-troubleshoot-opening");
+          onClose?.();
         }
 
         if (selected === 1) {
           tgdbModal.set(true);
           setFocus("game-tgdb");
+          onClose?.();
         }
 
         if (selected === 2) {
           actionsModal.set(true);
           setFocus("game-troubleshoot-region-settings");
+          onClose?.();
         }
       },
       btnRight() {
@@ -91,10 +100,12 @@ const GameTroubleshoot = ({ onClose }: GameTroubleshootProps) => {
           onLinksSave={() => {
             actionsModal.set(false);
             setFocus("game-troubleshoot");
+            onOpen?.();
           }}
           onClose={() => {
             actionsModal.set(false);
             setFocus("game-troubleshoot");
+            onOpen?.();
           }}
         />
       )}
@@ -103,50 +114,56 @@ const GameTroubleshoot = ({ onClose }: GameTroubleshootProps) => {
           onClose={() => {
             refresh();
             setOpenOpenings(false);
+            onOpen?.();
           }}
         />
       </Modal>
-      <TGDB
-        open={tgdbOpen}
-        keyOpen={keyOpen}
-        setKeyOpen={setKeyOpen}
-        setOpen={setOpen}
-        lastFocused={store.lastFocused}
-        title={game.official}
-        setFocus={setFocus}
-        refresh={refresh}
-      />
-      <div className="v-stack gap-4">
-        <div className="h-stack items-center gap-3">
-          <WrenchIcon width="2em" height="2em" className="text-text" />
-          <h6 className="font-bold text-text text-xl leading-[1em]">
-            Troubleshoot: {game.official}
-          </h6>
-        </div>
+      {game && !loading && (
+        <TGDB
+          open={tgdbOpen}
+          keyOpen={keyOpen}
+          setKeyOpen={setKeyOpen}
+          setOpen={setOpen}
+          onOpen={onOpen}
+          lastFocused={store.lastFocused}
+          title={game.official}
+          setFocus={setFocus}
+          refresh={refresh}
+        />
+      )}
+      <Modal open={!!open} duration={0.3}>
+        <div className="v-stack gap-4">
+          <div className="h-stack items-center gap-3">
+            <WrenchIcon width="2em" height="2em" className="text-text" />
+            <h6 className="font-bold text-text text-xl leading-[1em]">
+              Troubleshoot: {game.official}
+            </h6>
+          </div>
 
-        <div className="v-stack gap-2">
-          <MenuItem
-            selected={selected === 0}
-            focused={focused}
-            label="Game Opening"
-            icon={MusicalNoteIcon}
-          >
-            {game.opening}
-          </MenuItem>
-          <MenuItem
-            selected={selected === 1}
-            focused={focused}
-            label="Search TGDB"
-            icon={CircleStackIcon}
-          />
-          <MenuItem
-            selected={selected === 2}
-            focused={focused}
-            label="Select Region"
-            icon={GlobeAltIcon}
-          />
+          <div className="v-stack gap-2">
+            <MenuItem
+              selected={selected === 0}
+              focused={focused}
+              label="Game Opening"
+              icon={MusicalNoteIcon}
+            >
+              {game.opening}
+            </MenuItem>
+            <MenuItem
+              selected={selected === 1}
+              focused={focused}
+              label="Search TGDB"
+              icon={CircleStackIcon}
+            />
+            <MenuItem
+              selected={selected === 2}
+              focused={focused}
+              label="Select Region"
+              icon={GlobeAltIcon}
+            />
+          </div>
         </div>
-      </div>
+      </Modal>
     </>
   );
 };
@@ -160,6 +177,7 @@ interface TGDBProps {
   setFocus: (key: string) => void;
   lastFocused?: string;
   title: string;
+  onOpen?: () => void;
 }
 
 const TGDB = ({
@@ -171,6 +189,7 @@ const TGDB = ({
   setFocus,
   lastFocused,
   title,
+  onOpen,
 }: TGDBProps) => {
   const [inputVal, setInputVal] = useState<string>();
   const [search, setSearch] = useState<string>();
@@ -189,18 +208,17 @@ const TGDB = ({
   const handleChange = (v: string) => {
     setSearch(v);
     setKeyOpen(false);
-    setTimeout(() => {
-      setFocus(
-        lastFocused !== "game-search"
-          ? lastFocused ?? "game-header"
-          : "game-header"
-      );
-    }, 100);
+    setFocus(
+      lastFocused !== "game-search"
+        ? lastFocused ?? "game-header"
+        : "game-header"
+    );
   };
 
   const handleClose = () => {
     setKeyOpen(false);
     setFocus("game-tgdb");
+    onOpen?.();
   };
 
   return (
@@ -218,7 +236,9 @@ const TGDB = ({
           onClose={() => {
             refresh();
             setOpen(false);
+            setKeyOpen(false);
             setInputVal("");
+            onOpen?.();
           }}
           onKeyboard={(b) => {
             setKeyOpen(b);

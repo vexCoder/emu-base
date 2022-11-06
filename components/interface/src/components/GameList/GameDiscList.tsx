@@ -265,6 +265,7 @@ const Download = ({
   }, [data, handleDownloading]);
 
   if (data?.status === DownloadStatus.NotDownloading || !data) return null;
+  if (data?.status !== DownloadStatus.Downloading || !data) return null;
   return (
     <div className="relative w-full h-1 bg-secondary/50 rounded-xl overflow-hidden mt-1">
       <div

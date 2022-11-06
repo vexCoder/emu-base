@@ -32,6 +32,9 @@ const user32 = new FFI.Library("user32.dll", {
   SetForegroundWindow: ["bool", ["long"]],
   BringWindowToTop: ["bool", ["int"]],
   AttachThreadInput: ["bool", ["int", "long", "bool"]],
+  CloseWindow: ["bool", ["long"]],
+  PostMessageA: ["bool", ["long", "uint", "int", "int"]],
+  MonitorFromWindow: ["long", ["long", "uint"]],
 });
 
 const psapi = new FFI.Library("psapi.dll", {
@@ -355,4 +358,8 @@ export const sendHoldKeyToWindow = (
     });
     user32.SendInput(1, keyUpInput.ref(), INPUT.size);
   };
+};
+
+export const closeWindow = (handle: number) => {
+  user32.PostMessageA(handle, 0x0010, 0, 0);
 };

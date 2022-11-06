@@ -6,6 +6,7 @@ import {
   MagnifyingGlassIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline";
+import useGlobalNavigate from "@hooks/useGlobalNavigate";
 import useNavigate from "@hooks/useNavigate";
 import { useMainStore } from "@utils/store.utils";
 import { useCounter, useMount, useToggle } from "ahooks";
@@ -45,12 +46,20 @@ const Header = () => {
 
   const requiredFocus = ["game-header", "game-list", "game-details"];
 
-  const { focused, setFocus } = useNavigate("game-header", {
-    globalActions: {
+  useGlobalNavigate({
+    actions: {
       ctrlLeft() {
-        if (store.focused !== "game-console-list") {
+        if (
+          store.focused !== "game-console-list" &&
+          requiredFocus.includes(store.focused)
+        ) {
           setFocus("game-console-list");
           toggleConsoles.set(true);
+        }
+
+        if (store.focused === "game-console-list" && store.lastFocused) {
+          setFocus(store.lastFocused);
+          toggleConsoles.set(false);
         }
       },
       ctrlMiddle() {
@@ -68,6 +77,9 @@ const Header = () => {
         }
       },
     },
+  });
+
+  const { focused, setFocus } = useNavigate("game-header", {
     actions: {
       left() {
         navActions.dec();

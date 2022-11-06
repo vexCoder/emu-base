@@ -68,7 +68,7 @@ export namespace WinApi {
         throw new Error("Display not found");
       }
 
-      moveToMonitor(target, win, undefined, win.isMaximized());
+      moveToMonitor(target, win, false);
       await settings.set("display", id).write();
     }
 

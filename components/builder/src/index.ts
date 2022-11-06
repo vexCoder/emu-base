@@ -34,7 +34,7 @@ const main = async () => {
     },
   });
 
-  const releaseType = cli.flags.type as "debug" | "major" | "minor";
+  const releaseType = cli.flags.type as "debug" | "major" | "minor" | "patch";
   const test = true;
 
   const iconPath = join(components, "win", "assets", "game-controller128.ico");
@@ -104,6 +104,26 @@ const main = async () => {
     );
 
     const prebuilts = join(root, ".artifacts", "prebuilt");
+
+    const ovRelease = join(
+      root,
+      ".artifacts",
+      "release",
+      "node_modules",
+      "node-ovhook",
+      "build",
+      "release"
+    );
+
+    await copy(
+      join(prebuilts, "injector_helper.x64.exe"),
+      join(ovRelease, "injector_helper.x64.exe")
+    );
+    await copy(
+      join(prebuilts, "n_overlay.x64.dll"),
+      join(ovRelease, "n_overlay.x64.dll")
+    );
+
     const target = join(
       root,
       "node_modules",

@@ -85,7 +85,7 @@ const GameTGDB = ({
                   toggle.set(false);
                   onClose?.();
                   setFocus("game-troubleshoot");
-                }, 1500);
+                }, 150);
               });
           }
         }
@@ -121,16 +121,21 @@ const GameTGDB = ({
           </p>
         )}
       </div>
-
-      {(!!loading || loadingSave) && (
-        <div className="h-stack gap-3 mt-4">
-          <Loading align="center" loading={loading || loadingSave} />
-        </div>
-      )}
       <div
         ref={onRefChange}
-        className="v-stack mt-4 gap-3 max-h-[50vh] overflow-auto scroll1"
+        className="relative v-stack mt-4 gap-3 max-h-[50vh] min-h-[30vh] overflow-auto scroll1"
       >
+        {(!!loading || loadingSave) && (
+          <div className="h-stack gap-3 mt-4">
+            <Loading
+              align="center"
+              loading={loading || loadingSave}
+              classes={{
+                content: "rounded-xl",
+              }}
+            />
+          </div>
+        )}
         {!loading &&
           !loadingSave &&
           parent &&
@@ -202,16 +207,9 @@ const Result = ({ item, focused, selected, parent, loading }: ResultProps) => {
         />
         <div className="v-stack">
           <div className="h-stack justify-between">
-            <p className="w-full text-text text-lg line-clamp-1 font-bold">
+            <p className="w-full text-text text-xl line-clamp-1 font-bold">
               {item.name}
             </p>
-          </div>
-          <div className="h-stack items-center w-full gap-3 flex-1">
-            {item.genre.map((v) => (
-              <div key={v}>
-                <p className="px-2 rounded-xl bg-secondary font-bold">{v}</p>
-              </div>
-            ))}
           </div>
           <div className="h-stack w-full gap-2">
             <p className="text-text/60 text-md line-clamp-1">
@@ -223,8 +221,17 @@ const Result = ({ item, focused, selected, parent, loading }: ResultProps) => {
             </p>
             <p className="text-text/60 text-md">•</p>
             <p className="text-text/60 text-md line-clamp-1">
-              {dayjs(item.released, "X").format("MMMM DD, YYYY")}
+              {dayjs.unix(item.released).format("MMMM DD, YYYY")}
             </p>
+          </div>
+          <div className="h-stack items-end w-full gap-3 flex-1">
+            {item.genre.map((v) => (
+              <div key={v}>
+                <p className="px-2 rounded-xl bg-secondary/50 text-secondary text-sm font-bold">
+                  {v}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

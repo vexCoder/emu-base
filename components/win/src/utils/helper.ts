@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Rectangle, screen } from "electron";
+import { app, BrowserWindow, screen } from "electron";
 import { basename, dirname, join, resolve as pathResolve } from "path";
 import FileAsync from "lowdb/adapters/FileAsync";
 import low from "lowdb";
@@ -30,7 +30,7 @@ import { youtube } from "scrape-youtube";
 import recursiveReadDir from "recursive-readdir";
 import pMap from "p-map";
 import cp from "cp-file";
-import { setActiveWindow, ShowWindowFlags } from "./ffi";
+import { setActiveWindow, setWindowRect, ShowWindowFlags } from "./ffi";
 
 export interface WinSettings {
   x: number;
@@ -42,33 +42,56 @@ export interface WinSettings {
 export const moveToMonitor = (
   selected: number,
   win: BrowserWindow,
-  rect: WinSettings | ((rect: Rectangle) => WinSettings) = { x: 0, y: 0 },
   maximize?: boolean
 ) => {
   const displays = screen.getAllDisplays();
   if (selected >= displays.length) throw new Error("Primary monitor not found");
-  const { x, y } = displays[selected].workArea;
+  const winBounds = win.getBounds();
+  const whichScreen = screen.getDisplayNearestPoint({
+    x: winBounds.x,
+    y: winBounds.y,
+  });
+  const { x, y } = displays[selected].bounds;
 
-  const result =
-    typeof rect === "function" ? rect(displays[selected].workArea) : rect;
+  win.setPosition(x, y);
+  if (!maximize) {
+    const newWinSizeX =
+      (winBounds.width / whichScreen.bounds.width) *
+      displays[selected].bounds.width;
+    const newWinSizeY =
+      (winBounds.height / whichScreen.bounds.height) *
+      displays[selected].bounds.height;
+
+    win.setSize(newWinSizeX, newWinSizeY, false);
+  }
+
+  if (maximize) {
+    win.setSize(
+      displays[selected].bounds.width,
+      displays[selected].bounds.height,
+      true
+    );
+  }
 
   setActiveWindow(
     win.getNativeWindowHandle().readUInt32LE(0),
     ShowWindowFlags.SW_SHOW
   );
-  win.setPosition(x + result.x, y + result.y);
-  if (!maximize) {
-    win.setSize(
-      result.width ?? win.getSize()[0],
-      result.height ?? win.getSize()[1],
-      false
-    );
-  }
+};
 
-  if (maximize) {
-    win.maximize();
-    win.setFullScreen(true);
-  }
+export const moveToMonitorRA = (handle: number, selected: number) => {
+  const displays = screen.getAllDisplays();
+  if (selected >= displays.length) throw new Error("Primary monitor not found");
+  const { x, y, width, height } = displays[selected].bounds;
+
+  setWindowRect(handle, {
+    left: x,
+    top: y,
+    width,
+    height,
+  });
+
+  setActiveWindow(handle, ShowWindowFlags.SW_SHOW);
 };
 
 export const logToFile = async (msg: any) => {
@@ -138,26 +161,22 @@ export const createWindow = (opts?: CreateWindowOptions) => {
     win.loadFile("./index.html");
   }
 
-  const resize = isDev
-    ? () => ({ x: 0, y: 0, width: 1080, height: 810 })
-    : undefined;
-
   if (isRestarted && isDev) {
     // Bring to front
     win.minimize();
     win.showInactive();
     win.blur();
 
-    moveToMonitor(monitor, win, resize, fullscreen);
+    moveToMonitor(monitor, win, fullscreen);
     win.once("blur", () => {
       // Select which monitor to use
       console.log(opts?.urlOrPath, monitor);
-      moveToMonitor(monitor, win, resize, fullscreen);
+      moveToMonitor(monitor, win, fullscreen);
     });
   } else {
     // Select which monitor to use
     console.log(opts?.urlOrPath, monitor);
-    moveToMonitor(monitor, win, resize, fullscreen);
+    moveToMonitor(monitor, win, fullscreen);
   }
 
   if (browserOptions.alwaysOnTop) {
@@ -214,8 +233,16 @@ export const getEmuSettings = async () => {
   return db;
 };
 
+export const getDumpSettingsPath = async (consoleName?: string) => {
+  const settings = await getEmuSettings();
+  const dumpRoot = settings.get("pathing.dump").value();
+  const pathToDump = getDumpPath(consoleName, dumpRoot);
+
+  return pathToDump;
+};
+
 export const getDiscMappings = async (consoleName: string) => {
-  const pathToDump = getDumpPath(consoleName);
+  const pathToDump = await getDumpSettingsPath(consoleName);
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<GameDiscMappings>(
     join(pathToDump, `mappings.json`)
@@ -226,9 +253,7 @@ export const getDiscMappings = async (consoleName: string) => {
 };
 
 export const getConsoleDump = async (consoleName: string) => {
-  const settings = await getEmuSettings();
-  const dumpRoot = settings.get("pathing.dump").value();
-  const pathToDump = getDumpPath(consoleName, dumpRoot);
+  const pathToDump = await getDumpSettingsPath(consoleName);
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<ConsoleGameData[]>(
     join(pathToDump, `dump.json`)
@@ -239,9 +264,7 @@ export const getConsoleDump = async (consoleName: string) => {
 };
 
 export const getConsolePatchDump = async (consoleName: string) => {
-  const settings = await getEmuSettings();
-  const dumpRoot = settings.get("pathing.dump").value();
-  const pathToDump = getDumpPath(consoleName, dumpRoot);
+  const pathToDump = await getDumpSettingsPath(consoleName);
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<ConsoleGameData[]>(
     join(pathToDump, `dump.patch.json`),
@@ -255,9 +278,7 @@ export const getConsolePatchDump = async (consoleName: string) => {
 };
 
 export const getConsoleLinks = async (consoleName: string) => {
-  const settings = await getEmuSettings();
-  const dumpRoot = settings.get("pathing.dump").value();
-  const pathToDump = getDumpPath(consoleName, dumpRoot);
+  const pathToDump = await getDumpSettingsPath(consoleName);
   fs.ensureDirSync(pathToDump);
   const adapter = new FileAsync<ConsoleLinks>(join(pathToDump, `links.json`));
   const db = await low(adapter);
@@ -298,6 +319,28 @@ export const scoreMatchStrings = (
   // const averageScore = mean(ratings);
 
   return intersected.length / targetSegment.length;
+};
+
+export const scoreMatchStrings2 = (src: string, target: string) => {
+  const keywords = pipe(toLower, split(" "), map(trim))(target);
+  const bestMatch = (src2: string) => curry(findBestMatch)(src2)(keywords);
+
+  const sourceSegment = pipe(
+    split(" "),
+    map(replace(/([^a-z0-9])/g, "")),
+    map(trim),
+    map(toLower)
+  )(src);
+
+  const ratings = pipe(
+    map(bestMatch),
+    map((m) => m.bestMatch.rating),
+    (list) => list.filter((o) => o > 0.5)
+  )(sourceSegment);
+
+  const averageScore = mean(ratings);
+
+  return averageScore;
 };
 
 export const getDisplayById = (id?: number) => {
@@ -501,7 +544,7 @@ export const retry = async <T>(
 };
 
 export const updateCfg = async (cfg: PartialCFG, cons: string) => {
-  const dumpPath = getDumpPath(cons);
+  const dumpPath = await getDumpSettingsPath(cons);
   const emu = await getEmuSettings();
   const settings = emu.value();
 
@@ -680,9 +723,16 @@ export const scoreTitlesMusic = (video: Video) => {
 export const searchMusicVideo = async (keyword: string, cons: string) => {
   const search = `${keyword} ${cons} music opening`;
   const search2 = `${keyword} ${cons} ost`;
+  const search3 = `${keyword} ${cons} intro`;
+  const search4 = `${keyword} ${cons} theme song`;
   const results = await youtube.search(search);
   const results2 = await youtube.search(search2);
-  const merge = results.videos.concat(results2.videos);
+  const results3 = await youtube.search(search3);
+  const results4 = await youtube.search(search4);
+  const merge = results.videos
+    .concat(results2.videos)
+    .concat(results3.videos)
+    .concat(results4.videos);
 
   const uniquesIds = R2.pipe<
     [Video[]],

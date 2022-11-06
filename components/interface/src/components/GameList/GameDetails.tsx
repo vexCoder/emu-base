@@ -23,7 +23,7 @@ import GameDiscList from "./GameDiscList";
 import GameTroubleshoot from "./GameTroubleshoot";
 
 const selector = (v: MainStore) =>
-  pick(["selected", "console", "play", "set"], v);
+  pick(["selected", "console", "play", "set", "focused"], v);
 
 const renderer = (c: ChildNode) => {
   if (c.nodeName === "BR")
@@ -169,20 +169,21 @@ const GameDetails = () => {
 
   const handlePlay = () => {
     refresh();
-    if (!data) actionsModal.set(true);
+    if (!data) {
+      actionsModal.set(true);
+      return;
+    }
     actionsDownloader.set(true);
   };
 
   return (
     <>
       {gameData && (
-        <Modal
-          duration={0.3}
+        <GameTroubleshoot
+          onClose={() => tsActions.set(false)}
+          onOpen={() => tsActions.set(true)}
           open={tsOpen}
-          handleClose={() => tsActions.set(false)}
-        >
-          <GameTroubleshoot onClose={() => tsActions.set(false)} />
-        </Modal>
+        />
       )}
       {gameData && (
         <GameRegionSettings
@@ -192,7 +193,7 @@ const GameDetails = () => {
           onLinksSave={() => {
             setFocus("game-play");
             actionsModal.set(false);
-            actionsDownloader.set(true);
+            if (store.focused === "game-links") actionsDownloader.set(true);
           }}
           onClose={() => {
             setFocus("game-details");

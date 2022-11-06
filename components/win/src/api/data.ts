@@ -9,17 +9,18 @@ import {
   getConsoleLinks,
   getConsolePatchDump,
   getDiscMappings,
-  getDumpPath,
+  getDumpSettingsPath,
   getEmuSettings,
   logToFile,
   saveImage,
   scoreMatchStrings,
+  scoreMatchStrings2,
   searchMusicVideo,
 } from "@utils/helper";
 import dayjs from "dayjs";
 import extract from "extract-zip";
 import { createWriteStream } from "fs";
-import fs, { readdir } from "fs-extra";
+import fs, { ensureDir, readdir } from "fs-extra";
 import got from "got";
 import _, { CollectionChain, ObjectChain } from "lodash";
 import pMap from "p-map";
@@ -71,11 +72,20 @@ export namespace DataApi {
         };
       }
 
-      const filtered = db
+      const filtered = db.filter(
+        ({ official }: ConsoleGameData) =>
+          scoreMatchStrings(official, keyword) > 0.5
+      );
+
+      const filtered2 = db
         .filter(
           ({ official }: ConsoleGameData) =>
-            scoreMatchStrings(official, keyword) > 0.5
+            scoreMatchStrings2(official, keyword) > 0.5
         )
+        .concat(filtered.value());
+
+      const mapped = (filtered2 as CollectionChain<ConsoleGameData>)
+        .uniqBy(({ id }) => id)
         .map((v: ConsoleGameData) => ({
           ...v,
           ...((patch.find({ id: v.id }).value() as ConsoleGameData) ?? {}),
@@ -86,7 +96,7 @@ export namespace DataApi {
           ["asc", "desc"]
         ) as any as CollectionChain<ConsoleGameData>;
 
-      const sorted = filtered
+      const sorted = mapped
         .sort(
           (a, b) =>
             scoreMatchStrings((b as ConsoleGameData).official, keyword) -
@@ -379,7 +389,7 @@ export namespace DataApi {
 
     async getImage({ path, url }: GetImageParams) {
       // NOTE: Check if prod use electron static paths
-      const pathToDump = getDumpPath();
+      const pathToDump = await getDumpSettingsPath();
       const file = join(pathToDump, path);
       try {
         if (url) await saveImage(file, url);
@@ -391,7 +401,7 @@ export namespace DataApi {
     }
 
     async getGameFiles({ id, console: cons }: GetGameFilesParams) {
-      const pathToDump = getDumpPath(cons);
+      const pathToDump = await getDumpSettingsPath(cons);
       const db = await getConsoleDump(cons);
       const mappings = await getDiscMappings(cons);
       const game = db.find({ id }).value() as ConsoleGameData;
@@ -407,17 +417,18 @@ export namespace DataApi {
       const gameFilePath = join(pathToDump, game.id);
       const gameFiles = await pMap(region.serials, async (serial) => {
         const exts = ["iso", "bin"];
+        const link = mappings.get(`${id}.${serial}`).value();
         const extFiles = await pMap(exts, async (ext) => {
-          const pathToFile = join(gameFilePath, serial, `${serial}.${ext}`);
+          const pathToFile = join(gameFilePath, serial, `${link.id}.${ext}`);
           const check = await fs.pathExists(pathToFile);
           return check ? pathToFile : undefined;
         });
 
         return {
           serial,
-          playable: extFiles.some(is(String)),
-          link: mappings.get(`${id}.${serial}`).value(),
+          playable: !!link && extFiles.some(is(String)),
           path: head(filter(is(String), extFiles)),
+          link,
         };
       });
 
@@ -429,7 +440,7 @@ export namespace DataApi {
     }
 
     async getGameRegionSettings({ id, console: cons }: GetGameFilesParams) {
-      const pathToDump = getDumpPath(cons);
+      const pathToDump = await getDumpSettingsPath(cons);
       const db = await getConsoleDump(cons);
       const mappings = await getDiscMappings(cons);
       const game = db.find({ id }).value() as ConsoleGameData;
@@ -467,7 +478,9 @@ export namespace DataApi {
       const db = await getConsoleLinks(cons);
 
       const filtered = db.filter(({ title, tags: linkTags }: ParsedLinks) => {
-        const score = scoreMatchStrings(title, keyword) > 0.5;
+        const score =
+          scoreMatchStrings(title, keyword) > 0.5 ||
+          scoreMatchStrings2(title, keyword) > 0.5;
         const isPal =
           linkTags.some((t) =>
             Constants.PAL.map(toLower).includes(t.toLowerCase())
@@ -531,12 +544,15 @@ export namespace DataApi {
       const db = await getConsoleDump(cons);
       const mappings = await getDiscMappings(cons);
 
-      const pathToDump = getDumpPath(cons);
+      const pathToDump = await getDumpSettingsPath(cons);
       const game = db.find({ id }).value() as ConsoleGameData;
       const link = mappings.get(`${id}.${serial}`).value();
       if (!game || !link) return false;
 
       const gameFilePath = join(pathToDump, game.id, serial);
+      const gameFilePathExists = await fs.pathExists(gameFilePath);
+      if (gameFilePathExists) await fs.remove(gameFilePath);
+      await ensureDir(gameFilePath);
       const gameFileExists = (await readdir(gameFilePath)).some((v) => {
         const ext = extname(v);
         return (ext === ".iso" || ext === ".bin") && v.indexOf(serial) > -1;
@@ -545,11 +561,11 @@ export namespace DataApi {
       if (gameFileExists) await fs.remove(gameFilePath);
 
       await fs.ensureDir(gameFilePath);
-      const gameFile = join(pathToDump, game.id, `${serial}.zip`);
+      const gameFile = join(pathToDump, game.id, `${link.id}.zip`);
       const zipFileExists = await fs.pathExists(gameFile);
       if (zipFileExists) await fs.remove(gameFile);
       const downloadStream = got.stream(link.link);
-      const fileWriterStream = createWriteStream(gameFile, { flags: "a" });
+      const fileWriterStream = createWriteStream(gameFile, { flags: "w" });
 
       const handleRemove = (reason: string, error = true) => {
         logToFile(reason);
@@ -591,7 +607,7 @@ export namespace DataApi {
           extract(gameFile, { dir: gameFilePath }).then(() => {
             fs.readdirSync(gameFilePath).forEach((v) => {
               const ext = extname(v);
-              const newPath = join(gameFilePath, `${serial}${ext}`);
+              const newPath = join(gameFilePath, `${link.id}${ext}`);
               fs.renameSync(join(gameFilePath, v), newPath);
             });
 
@@ -627,7 +643,9 @@ export namespace DataApi {
         | undefined;
 
       const db = await getConsoleDump(cons);
-      const pathToDump = getDumpPath(cons);
+      const mappings = await getDiscMappings(cons);
+      const link = mappings.get(`${id}.${serial}`).value();
+      const pathToDump = await getDumpSettingsPath(cons);
       const game = db.find({ id }).value() as ConsoleGameData;
 
       if (!game) return defaultRes;
@@ -636,7 +654,7 @@ export namespace DataApi {
       await fs.ensureDir(gameFilePath);
       const check = (await readdir(gameFilePath)).some((v) => {
         const ext = extname(v);
-        return (ext === ".iso" || ext === ".bin") && v.indexOf(serial) > -1;
+        return (ext === ".iso" || ext === ".bin") && v.indexOf(link.id) > -1;
       });
 
       if (check && !progress) {

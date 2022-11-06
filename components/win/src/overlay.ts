@@ -2,14 +2,17 @@ import {
   getWindowRect,
   getWindowText,
   setActiveWindow,
-  setWindowRect,
   ShowWindowFlags,
 } from "@utils/ffi";
 import {
   createWindow,
   extractString,
+  getDisplayById,
+  getDisplayIndex,
+  getEmuSettings,
   getExeList2,
   logToFile,
+  moveToMonitorRA,
   retry,
 } from "@utils/helper";
 import { BrowserWindow, screen } from "electron";
@@ -169,11 +172,7 @@ class OverlayWindow {
       setTimeout(() => {
         if (this.win && this.parent && this.parent?.windowId) {
           const list = OVHook.getTopWindows();
-          const parent = list.find(
-            (v) =>
-              v.windowId === this.parent?.windowId &&
-              !!extractString(/(retroarch\s[^\s]+\s[^\s]+)/gi, v.title, true)
-          );
+          const parent = list.find((v) => v.windowId === this.parent?.windowId);
 
           if (!parent) {
             this.closeWindow();
@@ -209,15 +208,6 @@ class OverlayWindow {
         });
 
         OVHook.injectProcess(this.parent);
-
-        setWindowRect(this.parent.windowId, {
-          left: this.displayBound.x,
-          top: this.displayBound.y,
-          width: this.displayBound.width,
-          height: this.displayBound.height,
-        });
-
-        setActiveWindow(this.parent.windowId, ShowWindowFlags.SW_SHOW);
 
         this.events();
 
@@ -258,11 +248,6 @@ class OverlayWindow {
         logToFile([...filtered2.map((v) => v.name), pids, find2]);
         if (!find2) throw new Error("Retroarch not found");
 
-        console.log(
-          list.map((v) => `${v.title} ${v.processId} ${v.windowId}`),
-          testList.map((v) => `${v.name} ${v.handle}`),
-          find2.windowId
-        );
         return find2;
       },
       100,
@@ -276,6 +261,12 @@ class OverlayWindow {
   async attach() {
     const exe = await this.queryRetroarch();
     if (!exe) throw new Error("Retroarch not found");
+
+    const settings = (await getEmuSettings()).value();
+    const monitor = getDisplayById(settings.display);
+    const target = getDisplayIndex(monitor?.id ?? 0);
+    const window = this.parent?.windowId;
+    if (window) moveToMonitorRA(window, target);
 
     this.createWindow(this.app.icon);
 

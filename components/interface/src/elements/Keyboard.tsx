@@ -6,7 +6,9 @@ import {
 } from "@heroicons/react/24/outline";
 import useNavigate from "@hooks/useNavigate";
 import { cycleCounter } from "@utils/helper";
+import { useUpdateEffect } from "ahooks";
 import clsx from "clsx";
+import _ from "lodash";
 import { useCallback, useEffect, useState } from "react";
 
 type KeyboardProps = BaseProps & {
@@ -70,7 +72,7 @@ const Keyboard = ({
     if (initialValue) setValue(initialValue);
   }, [initialValue]);
 
-  useEffect(() => {
+  useUpdateEffect(() => {
     if (onInputChange) {
       onInputChange(value);
     }
@@ -105,14 +107,16 @@ const Keyboard = ({
         if (idx < 0) return;
 
         if (isRecent) {
-          const newX = Math.floor(
-            (x / keyMap[y - keySub].length) * recent.length
+          const newX = _.clamp(
+            Math.floor(((x + 1) / keyRender[0].length) * recent.length),
+            recent.length - 1
           );
 
           set(newX, idx);
         } else if (isRecentOut) {
-          const newX = Math.floor(
-            (x / keyMap[idx - keySub].length) * recent.length
+          const newX = _.clamp(
+            Math.floor(((x + 1) / recent.length) * keyRender[4].length),
+            keyRender[4].length - 1
           );
 
           set(newX, idx);
@@ -158,13 +162,17 @@ const Keyboard = ({
         if (idx > 4 + baseY) return;
 
         if (isRecent) {
-          const newX = Math.floor(
-            (x / keyMap[y - keySub].length) * recent.length
+          const newX = _.clamp(
+            Math.floor(((x + 1) / keyRender[4].length) * recent.length),
+            recent.length
           );
 
           set(newX, idx);
         } else if (isRecentOut) {
-          const newX = Math.floor((x / keyMap[idx].length) * recent.length);
+          const newX = _.clamp(
+            Math.floor(((x + 1) / recent.length) * keyRender[0].length),
+            keyRender[0].length - 1
+          );
 
           set(newX, idx);
         } else {

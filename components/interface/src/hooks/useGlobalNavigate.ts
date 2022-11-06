@@ -1,14 +1,7 @@
 import { mapButtons } from "@utils/gamepad.utils";
 import { useMainStore, useSoundStore } from "@utils/store.utils";
-import {
-  useInterval,
-  useLatest,
-  useMemoizedFn,
-  useMount,
-  // useSetState,
-} from "ahooks";
-import { keys } from "ramda";
-import { useEffect, useRef, useState } from "react";
+import { useInterval, useLatest, useMemoizedFn } from "ahooks";
+import { useRef } from "react";
 import useGamePad from "./useGamePad";
 
 type ActionType =
@@ -38,9 +31,9 @@ const mapActionToButtonType: Record<ActionType, ButtonKeys> = {
   ctrlLeft: "BUTTON_CONTROL_LEFT",
 };
 
-type Actions = Record<ActionType, (setFocus: (focus: string) => void) => void>;
+type Actions = Record<ActionType, () => void>;
 
-interface UseNavigateOptions {
+interface UseGlobalNavigateOptions {
   onFocus?: (key: string, setFocus: (focus: string) => void) => void;
   onBlur?: (key: string, setFocus: (focus: string) => void) => void;
   autoFocus?: boolean;
@@ -50,50 +43,18 @@ interface UseNavigateOptions {
   confirmSound?: boolean;
 }
 
-const useNavigate = (
-  key: string,
-  options?: UseNavigateOptions,
-  deps: any[] = []
-) => {
+const useGlobalNavigate = (options?: UseGlobalNavigateOptions) => {
   const mapRef = useRef(new Map());
   const mapStateRef = useRef(new Map());
   const store = useMainStore();
   const soundStore = useSoundStore();
-  const [active, setActive] = useState(false);
-  const isFocused = store.focused === key;
-  const onFocus = useMemoizedFn(options?.onFocus ?? (() => {}));
-  const onBlur = useMemoizedFn(options?.onBlur ?? (() => {}));
 
   const latestData = useLatest({
-    key,
     gamepad: store.gamepad,
-    active,
-    isFocused,
 
     actions: options?.actions,
     globalActions: options?.globalActions,
   });
-
-  useMount(() => {
-    if (options?.autoFocus) {
-      setFocus(key);
-    }
-  });
-
-  useEffect(() => {
-    if (isFocused) {
-      onFocus?.(key, setFocus);
-      setActive(true);
-    } else {
-      onBlur?.(key, setFocus);
-      setActive(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isFocused, key, onFocus, onBlur, ...deps]);
-
-  const setFocus = (focus: string) => {
-    store.set((prev) => ({ lastFocused: prev.focused, focused: focus }));
-  };
 
   const beepSound = options?.directionalSound ?? true;
   const confirmSound = options?.confirmSound ?? true;
@@ -132,22 +93,10 @@ const useNavigate = (
   };
 
   const press = (fn: ActionType, checkBtn = true) => {
-    if (latestData.current.globalActions?.[fn]) {
+    if (latestData.current.gamepad && latestData.current.actions?.[fn]) {
       checkButton(fn, checkBtn);
       beep(fn);
-      latestData.current.globalActions[fn]?.(setFocus);
-    }
-
-    if (store.focused !== key) return;
-
-    if (
-      latestData.current.gamepad &&
-      latestData.current.active &&
-      latestData.current.actions?.[fn]
-    ) {
-      checkButton(fn, checkBtn);
-      beep(fn);
-      latestData.current.actions?.[fn]?.(setFocus);
+      latestData.current.actions?.[fn]?.();
     }
   };
 
@@ -167,8 +116,6 @@ const useNavigate = (
 
   const handlePress = useMemoizedFn((action: ActionType, bool: boolean) => {
     // if (action === "bottom") console.log(action, bool);
-
-    if (store.focused !== key) return;
     const pressed = mapRef.current.get(action);
 
     if (bool) {
@@ -204,10 +151,9 @@ const useNavigate = (
     if (downRef.current.ctrlRight) press("ctrlRight");
   }, 100);
 
-  const globalKeys = keys(options?.globalActions ?? {});
   useGamePad(
     {
-      focused: isFocused || !!globalKeys.length,
+      focused: true,
       onConnect: (gp) => {
         store.set({ gamepad: gp });
       },
@@ -237,15 +183,8 @@ const useNavigate = (
       },
       delay: 50,
     },
-    [key, isFocused, ...deps]
+    []
   );
-
-  return {
-    focused: isFocused,
-    setFocus,
-    focus: () => setFocus(key),
-    current: store.focused,
-  };
 };
 
-export default useNavigate;
+export default useGlobalNavigate;

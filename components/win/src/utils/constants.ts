@@ -11,9 +11,18 @@ class Constants {
     "Netherlands",
     "Belgium",
     "Austria",
+    "Europe",
   ];
 
-  static NTSCU = ["USA", "Canada", "Mexico", "Brazil", "Argentina", "Chile"];
+  static NTSCU = [
+    "USA",
+    "Europe",
+    "Canada",
+    "Mexico",
+    "Brazil",
+    "Argentina",
+    "Chile",
+  ];
 
   static NTSCJ = ["Japan", "Korea", "Taiwan"];
 

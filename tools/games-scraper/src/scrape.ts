@@ -29,10 +29,11 @@ const scrape = async (cli: CLISettings) => {
         linksDb.data = links;
 
         await linksDb.write();
-        if (!linkOnly)
+        if (!linkOnly) {
           await PSXDTGDB.getDescriptions({
             console: c,
           });
+        }
       }
       performance.mark(`${consoleName}-end`);
 

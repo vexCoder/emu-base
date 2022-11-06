@@ -115,7 +115,7 @@ export class Application {
       urlOrPath: path,
       isDev,
       monitor: target,
-      fullscreen: !isDev,
+      fullscreen: true,
       browserOptions: {
         icon: this.icon,
         frame: false,

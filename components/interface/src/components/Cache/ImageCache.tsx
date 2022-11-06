@@ -38,7 +38,7 @@ const ImageCache = ({
       {image && (
         <img
           {...imageProps}
-          className={clsx(imageProps.className, "image-cache-image")}
+          className={clsx("image-cache-image", imageProps.className)}
           src={image.src}
           alt="test"
         />

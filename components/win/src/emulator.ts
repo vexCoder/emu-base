@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/naming-convention */
 import Constants from "@utils/constants";
-import { getWindowRect } from "@utils/ffi";
+import { closeWindow, getWindowRect } from "@utils/ffi";
 import {
   getConsoleDump,
   getDisplayIndex,
-  getDumpPath,
+  getDumpSettingsPath,
   getEmuSettings,
   logToFile,
   sleep,
@@ -105,7 +105,7 @@ class Emulator {
           ...(!!target && { screen: target.id }),
         }).then(async (buf) => {
           const db = await getConsoleDump(this.console.key);
-          const pathToDump = getDumpPath(this.console.key);
+          const pathToDump = await getDumpSettingsPath(this.console.key);
           const game = db.find({ id: this.game }).value() as ConsoleGameData;
           const pathToGame = join(pathToDump, game.id);
           const savestate_directory = join(pathToGame, "savestate");
@@ -258,11 +258,27 @@ class Emulator {
     if (this.process && this.handle) {
       console.log("quit");
 
+      if (this.console.key === "ps2") {
+        closeWindow(this.handle);
+        this.client?.close();
+        return;
+      }
+
       await this.sendMessage("QUIT", () => {
         setTimeout(() => {
           this.client?.close();
         }, 1500);
       });
+
+      if (
+        this.app.overlay?.win &&
+        this.app.overlay?.parent &&
+        this.app.overlay?.parent?.windowId
+      ) {
+        this.app.overlay?.closeWindow();
+        this.app.overlay?.cleanUp();
+        this.app.overlay?.onDetach?.();
+      }
     }
   }
 
@@ -324,6 +340,7 @@ class Emulator {
     }
 
     this.showFps = !!this.console.retroarch?.showFps;
+    console.log(this.console);
     this.app?.overlay?.sendData({
       evt: "event.play",
       value: {
@@ -340,11 +357,10 @@ class Emulator {
   }
 
   async play(id: string, serial: string) {
-    const isDev = process.env.NODE_ENV === "development";
     const { pathing } = this.settings;
     const db = await getConsoleDump(this.console.key);
     const settings = await getEmuSettings();
-    const pathToDump = getDumpPath(this.console.key);
+    const pathToDump = await getDumpSettingsPath(this.console.key);
 
     const monitor = settings.get("display").value();
     const display = screen.getAllDisplays();
@@ -361,6 +377,11 @@ class Emulator {
       return false;
     });
 
+    console.log(
+      monitor,
+      target,
+      display.map((v) => v.id)
+    );
     const disc = head(gameFile.filter(is(String))) as string;
     const corePath = join(
       pathing.backend,
@@ -395,11 +416,15 @@ class Emulator {
         fastforward_ratio: `${
           this.console.retroarch.turboRate ?? this.turboRate
         }.000000`,
-        video_monitor_index: `${target !== -1 ? target : 0}`,
+        video_monitor_index: `${target !== -1 ? target + 1 : 1}`,
         video_font_enable: "false",
+        // ...(this.console.retroarch.fullscreen && {
+        //   video_fullscreen: isDev ? "false" : "true",
+        //   video_windowed_fullscreen: isDev ? "false" : "true",
+        // }),
         ...(this.console.retroarch.fullscreen && {
-          video_fullscreen: isDev ? "false" : "true",
-          video_windowed_fullscreen: isDev ? "false" : "true",
+          video_fullscreen: "true",
+          video_windowed_fullscreen: "true",
         }),
       },
       this.console.key
@@ -413,6 +438,12 @@ class Emulator {
       config,
       disc,
     ]);
+
+    console.log("Starting Retroarch");
+    console.log(`Exe: ${join(pathing.backend, "retroarch.exe")}`);
+    console.log(`Core: ${corePath}`);
+    console.log(`Config: ${config}`);
+    console.log(`Disc: ${disc}`);
 
     this.client = dgram.createSocket("udp4");
 

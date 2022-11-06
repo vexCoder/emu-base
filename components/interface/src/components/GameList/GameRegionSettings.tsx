@@ -48,6 +48,16 @@ const GameRegionSettings = ({
   const isComplete =
     selectedDiscs.filter((o) => !!o.playable)?.length >= selectedDiscs?.length;
 
+  const handleClose = () => {
+    setEdit(undefined);
+    onClose?.();
+  };
+
+  const handleSelect = (v: GameRegionFiles) => {
+    select(v);
+    onRegionSet?.(v);
+  };
+
   const { focused, setFocus } = useNavigate(
     focusKey ?? "game-disc",
     {
@@ -75,16 +85,6 @@ const GameRegionSettings = ({
     },
     [id]
   );
-
-  const handleClose = () => {
-    setEdit(undefined);
-    onClose?.();
-  };
-
-  const handleSelect = (v: GameRegionFiles) => {
-    select(v);
-    onRegionSet?.(v);
-  };
 
   return (
     <>
@@ -120,6 +120,7 @@ const GameRegionSettings = ({
           onLinksSave={() => {
             if (edit) {
               onLinksSave?.(edit);
+              setEdit(undefined);
             }
           }}
         />
