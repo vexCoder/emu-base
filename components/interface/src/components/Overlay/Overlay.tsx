@@ -235,6 +235,7 @@ const OverlayContent = () => {
       BUTTON_CONTROL_MIDDLE: (p) => {
         if (p) {
           store.set((prev) => {
+            if (!prev.enabled) return prev;
             const open = !prev.open;
             window.emulator.intercept(open);
             return {
@@ -256,6 +257,8 @@ const OverlayContent = () => {
         } else if (val?.evt === "event.toggleFPS") {
           store.set({ fps: val?.value });
         } else if (val?.evt === "event.play") {
+          store.set(val?.value ?? {});
+        } else if (val?.evt === "event.quit") {
           store.set(val?.value ?? {});
         } else if (val?.evt === "event.update") {
           store.set(val?.value ?? {});

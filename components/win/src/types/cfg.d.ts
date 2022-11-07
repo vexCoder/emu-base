@@ -3,6 +3,7 @@ type CFG = Record<CFGKeys, string>
 type PartialCFG = Partial<CFG>
 
 type CFGKeys =
+  | 'rewind_granularity'
   | "accessibility_enable"
   | "accessibility_narrator_speech_speed"
   | "ai_service_enable"

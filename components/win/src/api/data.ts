@@ -15,6 +15,7 @@ import {
   saveImage,
   scoreMatchStrings,
   scoreMatchStrings2,
+  scoreStrings,
   searchMusicVideo,
 } from "@utils/helper";
 import dayjs from "dayjs";
@@ -480,7 +481,9 @@ export namespace DataApi {
       const filtered = db.filter(({ title, tags: linkTags }: ParsedLinks) => {
         const score =
           scoreMatchStrings(title, keyword) > 0.5 ||
-          scoreMatchStrings2(title, keyword) > 0.5;
+          scoreMatchStrings2(title, keyword) > 0.5 ||
+          scoreStrings(title, keyword) > 0.5;
+
         const isPal =
           linkTags.some((t) =>
             Constants.PAL.map(toLower).includes(t.toLowerCase())
@@ -502,8 +505,8 @@ export namespace DataApi {
       const sorted = filtered
         .sort(
           (a, b) =>
-            scoreMatchStrings((b as ParsedLinks).title, keyword) -
-            scoreMatchStrings((a as ParsedLinks).title, keyword)
+            scoreStrings((b as ParsedLinks).title, keyword) -
+            scoreStrings((a as ParsedLinks).title, keyword)
         )
         .value() as ConsoleLinks;
 

@@ -22,7 +22,7 @@ import {
 } from "ramda";
 import * as R2 from "ramda";
 import * as R from "rambda";
-import { findBestMatch } from "string-similarity";
+import { findBestMatch, compareTwoStrings } from "string-similarity";
 import execa from "execa";
 import _ from "lodash";
 import dayjs from "dayjs";
@@ -404,6 +404,9 @@ export const scoreMatchStringsSc = (
 
   return check;
 };
+
+export const scoreStrings = (src: string, target: string) =>
+  compareTwoStrings(src, target);
 
 export const extractString = curry(
   (regexp: RegExp, text: string, trimText?: boolean) => {

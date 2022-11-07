@@ -60,6 +60,8 @@ class Constants {
     input_player1_joypad_index: "1",
     input_enable_hotkey: "shift",
     video_font_enable: "false",
+    rewind_enable: "true",
+    rewind_granularity: "60",
   };
 
   static TGDBPlatform = {

@@ -64,7 +64,12 @@
         "https://archive.org/download/sony_playstation2_w",
         "https://archive.org/download/sony_playstation2_x",
         "https://archive.org/download/sony_playstation2_y",
-        "https://archive.org/download/sony_playstation2_z"
+        "https://archive.org/download/sony_playstation2_z",
+        "https://archive.org/download/redumpSonyPlaystation2UsaGames2018Aug01",
+        "https://archive.org/download/redumpSonyPlaystation2UsaGames2018Aug01Part2",
+        "https://archive.org/download/redumpSonyPlaystation2UsaGames2018Aug01Part3",
+        "https://archive.org/download/redumpSonyPlaystation2UsaGames2018Aug01Part4",
+        "https://archive.org/download/redumpSonyPlaystation2UsaOther2018Aug01"
       ],
       "scraper": "psxd-tgdb"
     }

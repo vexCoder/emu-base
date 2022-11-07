@@ -254,6 +254,7 @@ export interface OverlaySettings {
   slot: number;
   states: number[];
   id?: string;
+  enabled: boolean;
 }
 export interface OverlayActions {
   set: Setter<OverlaySettings>;
@@ -276,6 +277,7 @@ export const useOverlayStore = create(
     disableTurbo: false,
     focus: 0,
     states: [],
+    enabled: false,
     set(state) {
       set(typeof state === "function" ? state(get()) : state);
     },

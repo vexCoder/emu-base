@@ -65,14 +65,15 @@ class Emulator {
       const emu = await getEmuSettings();
       const diff = Math.abs(this.state_slot - slot);
       const isDecrease = slot < this.state_slot;
+      await this.sendMessage("PAUSE_TOGGLE");
       if (slot !== this.state_slot)
         await pMap(
           range(0, diff),
           async (__, i) => {
             console.log(`Savestate Slot: ${this.state_slot + i}`);
-            await sleep(150);
             if (isDecrease) await this.sendMessage("STATE_SLOT_MINUS");
             else await this.sendMessage("STATE_SLOT_PLUS");
+            await sleep(250);
           },
           { concurrency: 1 }
         );
@@ -133,8 +134,6 @@ class Emulator {
         });
       }
 
-      await this.sendMessage("PAUSE_TOGGLE");
-      await sleep(50);
       await this.sendMessage("SAVE_STATE");
       this.state_slot = slot;
     }
@@ -146,20 +145,18 @@ class Emulator {
       const diff = Math.abs(this.state_slot - slot);
       const isDecrease = slot < this.state_slot;
 
+      await this.sendMessage("PAUSE_TOGGLE");
       if (slot !== this.state_slot)
         await pMap(
           range(0, diff),
           async () => {
-            await sleep(150);
             if (isDecrease) await this.sendMessage("STATE_SLOT_MINUS");
             else await this.sendMessage("STATE_SLOT_PLUS");
+            await sleep(250);
           },
           { concurrency: 1 }
         );
 
-      await sleep(250);
-      await this.sendMessage("PAUSE_TOGGLE");
-      await sleep(50);
       await this.sendMessage("LOAD_STATE");
       this.state_slot = slot;
     }
@@ -309,6 +306,20 @@ class Emulator {
       .get("retroarch")
       .value();
     const savestates = emu.get(`savestates.${game.id}`).value() ?? [];
+    this.app?.overlay?.sendData({
+      evt: "event.play",
+      value: {
+        fps: this.showFps,
+        turbo: this.turbo,
+        console: this.console.key,
+        game: game.id,
+        slot: this.state_slot,
+        states: savestates,
+        volume: this.volume,
+        mute: this.mute,
+        enabled: true,
+      },
+    });
 
     this.turbo = !!settings.turbo;
     if (settings.turbo) {
@@ -340,20 +351,6 @@ class Emulator {
     }
 
     this.showFps = !!this.console.retroarch?.showFps;
-    console.log(this.console);
-    this.app?.overlay?.sendData({
-      evt: "event.play",
-      value: {
-        fps: this.showFps,
-        turbo: this.turbo,
-        console: this.console.key,
-        game: game.id,
-        slot: this.state_slot,
-        states: savestates,
-        volume: this.volume,
-        mute: this.mute,
-      },
-    });
   }
 
   async play(id: string, serial: string) {

@@ -140,6 +140,11 @@ export class Application {
             ShowWindowFlags.SW_SHOW
           );
           this.win?.webContents.send("emulator:onDetach");
+          this.win?.webContents?.send("event.quit", {
+            value: {
+              enabled: false,
+            },
+          });
         }
       },
     });
