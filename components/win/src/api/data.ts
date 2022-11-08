@@ -75,17 +75,12 @@ export namespace DataApi {
 
       const filtered = db.filter(
         ({ official }: ConsoleGameData) =>
-          scoreMatchStrings(official, keyword) > 0.5
+          scoreStrings(official, keyword) > 0.3 ||
+          scoreMatchStrings(official, keyword) > 0.5 ||
+          scoreMatchStrings2(official, keyword) > 0.5
       );
 
-      const filtered2 = db
-        .filter(
-          ({ official }: ConsoleGameData) =>
-            scoreMatchStrings2(official, keyword) > 0.5
-        )
-        .concat(filtered.value());
-
-      const mapped = (filtered2 as CollectionChain<ConsoleGameData>)
+      const mapped = (filtered as CollectionChain<ConsoleGameData>)
         .uniqBy(({ id }) => id)
         .map((v: ConsoleGameData) => ({
           ...v,
@@ -100,8 +95,8 @@ export namespace DataApi {
       const sorted = mapped
         .sort(
           (a, b) =>
-            scoreMatchStrings((b as ConsoleGameData).official, keyword) -
-            scoreMatchStrings((a as ConsoleGameData).official, keyword)
+            scoreStrings((b as ConsoleGameData).official, keyword) -
+            scoreStrings((a as ConsoleGameData).official, keyword)
         )
         .slice(counter, counter + limit)
         .value() as ConsoleGameData[];
@@ -477,13 +472,7 @@ export namespace DataApi {
 
     async getGameLinks({ keyword, tags, console: cons }: GetGameLinksParams) {
       const db = await getConsoleLinks(cons);
-
-      const filtered = db.filter(({ title, tags: linkTags }: ParsedLinks) => {
-        const score =
-          scoreMatchStrings(title, keyword) > 0.5 ||
-          scoreMatchStrings2(title, keyword) > 0.5 ||
-          scoreStrings(title, keyword) > 0.5;
-
+      const mapRegionFiltered = (linkTags: string[]) => {
         const isPal =
           linkTags.some((t) =>
             Constants.PAL.map(toLower).includes(t.toLowerCase())
@@ -499,16 +488,42 @@ export namespace DataApi {
             Constants.NTSCJ.map(toLower).includes(t.toLowerCase())
           ) && tags.map(toLower).includes("ntsc-j");
 
-        return score && (isPal || isNTSCU || isNTSCJ);
+        return isPal || isNTSCU || isNTSCJ;
+      };
+
+      let sorted: ConsoleLinks = [];
+
+      let filtered = db.filter(({ title, tags: linkTags }: ParsedLinks) => {
+        const score = scoreStrings(title, keyword) > 0.6;
+
+        return score && mapRegionFiltered(linkTags);
       });
 
-      const sorted = filtered
-        .sort(
-          (a, b) =>
-            scoreStrings((b as ParsedLinks).title, keyword) -
-            scoreStrings((a as ParsedLinks).title, keyword)
-        )
-        .value() as ConsoleLinks;
+      if (!filtered.value().length) {
+        filtered = db.filter(({ title, tags: linkTags }: ParsedLinks) => {
+          const score =
+            scoreMatchStrings(title, keyword) > 0 &&
+            scoreStrings(title, keyword) > 0.1;
+
+          return score && mapRegionFiltered(linkTags);
+        });
+
+        sorted = filtered
+          .sort(
+            (a, b) =>
+              scoreStrings((b as ParsedLinks).title, keyword) -
+              scoreStrings((a as ParsedLinks).title, keyword)
+          )
+          .value() as ConsoleLinks;
+      } else {
+        sorted = filtered
+          .sort(
+            (a, b) =>
+              scoreStrings((b as ParsedLinks).title, keyword) -
+              scoreStrings((a as ParsedLinks).title, keyword)
+          )
+          .value() as ConsoleLinks;
+      }
 
       return sorted;
     }

@@ -321,7 +321,11 @@ export const scoreMatchStrings = (
   return intersected.length / targetSegment.length;
 };
 
-export const scoreMatchStrings2 = (src: string, target: string) => {
+export const scoreMatchStrings2 = (
+  src: string,
+  target: string,
+  outlier = 0.5
+) => {
   const keywords = pipe(toLower, split(" "), map(trim))(target);
   const bestMatch = (src2: string) => curry(findBestMatch)(src2)(keywords);
 
@@ -335,7 +339,7 @@ export const scoreMatchStrings2 = (src: string, target: string) => {
   const ratings = pipe(
     map(bestMatch),
     map((m) => m.bestMatch.rating),
-    (list) => list.filter((o) => o > 0.5)
+    (list) => list.filter((o) => o > outlier)
   )(sourceSegment);
 
   const averageScore = mean(ratings);
@@ -406,7 +410,7 @@ export const scoreMatchStringsSc = (
 };
 
 export const scoreStrings = (src: string, target: string) =>
-  compareTwoStrings(src, target);
+  compareTwoStrings(src.toLowerCase(), target.toLowerCase());
 
 export const extractString = curry(
   (regexp: RegExp, text: string, trimText?: boolean) => {
